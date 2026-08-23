@@ -163,27 +163,10 @@ export function renderOverworldHTML({locations,currentId,previousId,traveling}){
   const travelProgress = traveling ? Math.floor((traveling.progress || 0) * 100) : 0;
   return `
     <div class="overworld-shell ${traveling ? "is-traveling" : ""} map-mood-${mapMood}">
-      <div class="map-command-bar">
-        <div class="map-command-copy">
-          <span class="map-kicker">${tx("worldMap")}</span>
-          <strong>${esc(text(current.name))}</strong>
-          <small>${esc(text(current.desc))}</small>
-        </div>
-        <div class="map-legend" aria-hidden="true">
-          <span class="map-legend-item"><i class="map-legend-swatch map-legend-you"></i>${tx("playerMarker")}</span>
-          <span class="map-legend-item"><i class="map-legend-swatch map-legend-route"></i>${tx("connectedRoutes")}</span>
-          <span class="map-legend-item"><i class="map-legend-swatch map-legend-stop"></i>${tx("travelRoadStop")}</span>
-        </div>
-      </div>
       <div class="map-canvas-frame">
-        <span class="map-frame-corner map-frame-corner-tl" aria-hidden="true"></span>
-        <span class="map-frame-corner map-frame-corner-tr" aria-hidden="true"></span>
-        <span class="map-frame-corner map-frame-corner-bl" aria-hidden="true"></span>
-        <span class="map-frame-corner map-frame-corner-br" aria-hidden="true"></span>
         <div class="overworld-map ${ROUTE_DEBUG ? "route-debug-on" : ""}" role="img" aria-label="${tx("overworldMap")}">
           <span class="map-parchment-wash" aria-hidden="true"></span>
           <span class="map-light-sweep" aria-hidden="true"></span>
-          <span class="map-compass" aria-hidden="true"><span class="map-compass-needle">N</span></span>
           <svg class="overworld-roads" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
             ${roads}
           </svg>
@@ -214,15 +197,11 @@ export function renderOverworldHTML({locations,currentId,previousId,traveling}){
               </div>
               <div class="travel-progress-track" aria-hidden="true"><span style="width:${travelProgress}%"></span></div>
             </div>
-          ` : `
-            <div class="travel-banner travel-banner-premium">
-              <div class="travel-banner-copy">
-                <span class="travel-banner-kicker">${tx("currentLocation")}</span>
-                <strong>${esc(text(current.name))}</strong>
-              </div>
-              ${previousId && locations[previousId] ? `<button class="secondary" onclick="FE.returnToPreviousLocation()">${tx("returnTo")} ${esc(text(locations[previousId].name))}</button>` : ""}
+          ` : previousId && locations[previousId] ? `
+            <div class="travel-banner travel-banner-premium travel-banner-return">
+              <button class="secondary" onclick="FE.returnToPreviousLocation()">${tx("returnTo")} ${esc(text(locations[previousId].name))}</button>
             </div>
-          `}
+          ` : ""}
         </div>
       </div>
     </div>
@@ -293,7 +272,6 @@ function nodeHTML(loc,current,traveling){
         <span class="node-sigil-core" aria-hidden="true"></span>
       </span>
       <span class="node-label">${esc(text(loc.name))}</span>
-      <span class="node-danger-pill">${tx("danger")} ${loc.danger}</span>
     </button>
   `;
 }
@@ -494,6 +472,7 @@ export function renderRoadStopSceneStageHTML({place,hero,traversal,worldScene,ar
         <button class="primary" ${place.canContinueJourney ? `onclick="FE.continueJourney()"` : "disabled"}>${tx("continueJourney")}</button>
         <button ${place.canInspectArea ? `onclick="FE.inspectRoadStop()"` : "disabled"}>${tx("inspectArea")}</button>
         <button onclick="FE.show('map')">${tx("openMap")}</button>
+        <button class="secondary" ${place.canTurnBack ? `onclick="FE.turnBackJourney()"` : "disabled"}>${tx("turnBack")}</button>
       </div>
       ${activeTraversal ? `<div class="world-traversal-caption">${esc(tx("travelingTo"))} ${esc(traversalLabel)}</div>` : ""}
     </div>

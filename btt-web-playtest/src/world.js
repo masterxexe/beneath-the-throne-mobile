@@ -574,7 +574,6 @@ export function renderWorldHome(){
   }
   const loc = place.location;
   const services = place.services;
-  const routes = loc.routes.map(route=>locationText(route,"name")).join(" | ");
   const cinematicScene = resolveWorldScene(loc);
   const showLocationHead = !cinematicScene && loc.id !== START_LOCATION;
   if(cinematicScene)preloadWorldSceneTraversalAssets();
@@ -591,19 +590,14 @@ export function renderWorldHome(){
       ${loc.id === START_LOCATION ? renderSlumProloguePanel() : ""}
       ${loc.id === "lower_ward" ? renderLowerWardPanel() : ""}
       ${renderLocationStageHTML({location:loc,services,worldState:state.world.locationStates?.[loc.id],hero:state.hero,traversal:activeWorldSceneTraversal,story:state.world.story})}
-      ${cinematicScene ? renderCinematicLocationMeta(loc, services, routes) : `<div class="location-info-grid">
+      ${cinematicScene ? "" : `<div class="location-info-grid">
         <div class="card">
           <h3>${tx("danger")}</h3>
           <span class="pill ${loc.danger ? "warn" : "good"}">${tx("danger")} ${loc.danger}</span>
-          <p>${tx("localActionsHelp")}</p>
         </div>
         <div class="card">
           <h3>${tx("services")}</h3>
           <p>${services.length ? services.map(service=>tx(service)).join(" | ") : tx("noServicesHere")}</p>
-        </div>
-        <div class="card">
-          <h3>${tx("connectedRoutes")}</h3>
-          <p>${routes || tx("routeLocked")}</p>
         </div>
       </div>`}
     </div>
@@ -688,23 +682,12 @@ function renderRoadStopHome(place){
         <button class="primary" onclick="FE.show('map')">${tx("openMap")}</button>
       </div>`}
       ${renderRoadStopStageHTML(place)}
-      <div class="location-info-grid">
-        <div class="card">
-          <h3>${tx("destination")}</h3>
-          <p>${esc(place.journeyDestination?.name || "")}</p>
-          <span class="pill">${tx("journeyProgress")}: ${place.journeyProgress.current} / ${place.journeyProgress.total}</span>
-        </div>
-        <div class="card">
-          <h3>${tx("danger")}</h3>
-          <span class="pill ${place.danger >= 3 ? "warn" : "good"}">${tx("danger")} ${place.danger}</span>
-          <p>${esc(nodeText(place.roadNode,"condition") || tx("roadConditionUncertain"))}</p>
-        </div>
-        <div class="card">
-          <h3>${tx("services")}</h3>
-          <p>${tx("noServicesOnRoad")}</p>
-        </div>
-      </div>
-      <div class="actions">
+      ${cinematicScene ? `<div class="road-stop-toolbar">
+        <button class="secondary" ${place.canTurnBack ? `onclick="FE.turnBackJourney()"` : `disabled title="${esc(tx("turnBackDisabled"))}"`}>${tx("turnBack")}</button>
+        <button class="secondary" ${place.build.hasCamp ? "disabled" : place.build.canBuild ? `onclick="FE.establishCamp()"` : `disabled title="${esc(place.build.disabledReason)}"`}>${place.build.hasCamp ? (place.build.fortified ? tx("campFortified") : tx("campEstablished")) : tx("establishCamp")}</button>
+        ${place.build.hasCamp && !place.build.fortified ? `<button class="secondary" ${place.build.canFortify ? `onclick="FE.fortifyCamp()"` : `disabled title="${esc(place.build.fortifyDisabledReason)}"`}>${tx("fortifyCamp")}</button>` : ""}
+        <button class="secondary" onclick="FE.cancelTravel()">${tx("cancelTravel")}</button>
+      </div>` : `<div class="actions">
         <div class="grid3">
           <button class="primary" ${place.canContinueJourney ? `onclick="FE.continueJourney()"` : "disabled"}>${tx("continueJourney")}</button>
           <button ${place.canInspectArea ? `onclick="FE.inspectRoadStop()"` : "disabled"}>${tx("inspectArea")}</button>
@@ -712,19 +695,8 @@ function renderRoadStopHome(place){
           <button class="secondary" onclick="FE.cancelTravel()">${tx("cancelTravel")}</button>
           <button class="secondary" ${place.canTurnBack ? `onclick="FE.turnBackJourney()"` : `disabled title="${esc(tx("turnBackDisabled"))}"`}>${tx("turnBack")}</button>
           <button class="secondary" ${place.build.hasCamp ? "disabled" : place.build.canBuild ? `onclick="FE.establishCamp()"` : `disabled title="${esc(place.build.disabledReason)}"`}>${place.build.hasCamp ? tx("campEstablished") : tx("establishCamp")}</button>
-          ${place.build.hasCamp && !place.build.fortified ? `<button class="secondary" ${place.build.canFortify ? `onclick="FE.fortifyCamp()"` : `disabled title="${esc(place.build.fortifyDisabledReason)}"`}>${tx("fortifyCamp")}</button>` : ""}
-          ${place.build.fortified ? `<span class="pill good">${tx("campFortified")}</span>` : ""}
         </div>
-      </div>
-      <div class="card">
-        <h3>${place.build.hasCamp ? (place.build.fortified ? tx("campFortified") : tx("establishCamp")) : tx("establishCamp")}</h3>
-        <p>${esc(place.build.fortifySummary || place.build.summary)}</p>
-      </div>
-    </div>
-    <div class="panel">
-      <h2>${tx("story")}</h2>
-      <div class="event-feed">${state.world.story.slice(-8).map(e=>`<div class="entry">${esc(e)}</div>`).join("")}</div>
-    </div>
+      </div>`}
     ${debugHTML()}
   `;
 }
@@ -1762,38 +1734,9 @@ function makeHardAreaEnemy(area,index = 0){
 
 export function renderWorldMap(){
   const current = ensureWorld();
-  const place = getCurrentPlaceContext();
-  const connected = current.routes.map(id=>locationById(id)).filter(Boolean);
   byId("map").innerHTML = `
-    <div class="map-screen">
-      <div class="map-screen-hero panel">
-        <div class="map-screen-hero-copy">
-          <span class="pill good">${place.type === "roadStop" ? tx("currentRoadStop") : tx("currentLocation")}: ${esc(place.name)}</span>
-          ${activeTravel ? `<span class="pill warn">${tx("travelInProgress")}: ${esc(locationText(activeTravel.destinationLocationId,"name"))}</span>` : ""}
-          <h1>${tx("worldMap")}</h1>
-          <p>${tx("worldMapBody")}</p>
-        </div>
-        <div class="card map-screen-location-card">
-          <span class="map-screen-location-kicker">${tx("currentLocation")}</span>
-          <h2>${esc(locationText(current,"name"))}</h2>
-          <p>${esc(locationText(current,"lore") || locationText(current,"desc"))}</p>
-          <div class="map-screen-location-meta">
-            <span class="pill ${current.danger >= 3 ? "warn" : "good"}">${tx("danger")} ${current.danger}</span>
-            <span class="pill">${tx("services")}: ${locationServices(current.id).length || 0}</span>
-          </div>
-        </div>
-      </div>
+    <div class="map-screen map-screen-clean">
       ${renderOverworldHTML({locations:WORLD_LOCATIONS,currentId:current.id,previousId:state.world.previousLocationId,traveling:activeTravel})}
-      ${roadStopPanelHTML(activeTravel)}
-      <div class="panel route-overview-panel">
-        <div class="route-overview-head">
-          <h2>${tx("connectedRoutes")}</h2>
-          <p>${tx("travelFromMapHelp")}</p>
-        </div>
-        <div class="map-route-list">
-          ${connected.map(loc=>mapRouteHTML(loc)).join("") || `<p>${tx("routeLocked")}</p>`}
-        </div>
-      </div>
     </div>
   `;
 }

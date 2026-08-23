@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.23-overnight-36",
-  "build": 36,
-  "cache": "v111",
-  "notes": "Premium map redesign: v20 cartography, ornate frame, route glow, route cards"
+  "version": "2026.08.23-overnight-37",
+  "build": 37,
+  "cache": "v112",
+  "notes": "UI declutter: slim HUD, icon dock, clean map, compact combat"
 }

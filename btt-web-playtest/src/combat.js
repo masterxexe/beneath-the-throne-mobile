@@ -202,27 +202,22 @@ export function renderCombat(){
         <div class="combat-header-main">
           <span class="combat-round-pill">${tx("round")} ${battle.round}</span>
           <h2>${a?esc(a.name):tx("combat")}</h2>
-          <p>${playerTurn?tx("combatTurnPlayer"):tx("combatTurnResolving")}</p>
         </div>
         <div class="turn-order turn-order-cinematic" aria-label="${tx("turnOrder")}">
-          ${battle.queue.map(x=>`<span class="pill ${x===a?'good':''}">${esc(x.name)} ${x.speed}</span>`).join("")}
+          ${battle.queue.slice(0,2).map((x,i)=>`<span class="pill ${x===a?'good':''}">${i===0?esc(x.name):tx("nextUp")}</span>`).join("")}
         </div>
       </div>
       <div class="combat-stage combat-battlefield ${composition.stageClass}" data-combat-viewport="stable" ${directorStageAttributes(composition)} style="${esc(composition.stageStyle)}">
         <div class="combat-atmosphere-layer" aria-hidden="true">
-          <span class="combat-fog"></span>
           <span class="combat-embers"></span>
-          <span class="combat-light-sweep"></span>
         </div>
         <div class="combat-area party-area">
-          <h2>${tx("party")}</h2>
           <div class="combat-party-grid">
             ${unitHTML(h,true,0,composition.partyActors[0])}
             ${comps.map((c,slot)=>unitHTML(c,false,slot + 1,composition.partyActors[slot + 1])).join("")}
           </div>
         </div>
         <div class="combat-area enemy-area">
-          <h2>${tx("enemies")}</h2>
           <div class="combat-enemy-grid">${enemyPresentations.map((entry,slot)=>enemyHTML(entry.enemy,live.indexOf(entry.enemy),playerTurn,slot,entry,composition.enemyActors[slot])).join("")}</div>
         </div>
       </div>
@@ -238,10 +233,10 @@ export function renderCombat(){
           <button class="${autoFight?'good':'secondary'}" onclick="FE.toggleAuto()">${tx("auto")}: ${autoFight?'ON':'OFF'}</button>
         </div>
         ${skillOpen?skillDrawerHTML(playerTurn):""}
-        <div class="battle-log">
-          <h3>${tx("battleLog")}</h3>
-          <div class="log">${battle.log.slice(-16).map(esc).join("<br>")}</div>
-        </div>
+        <details class="battle-log">
+          <summary>${tx("battleLog")}</summary>
+          <div class="log">${battle.log.slice(-8).map(esc).join("<br>")}</div>
+        </details>
       </div>
     </div>
   `;
@@ -291,7 +286,6 @@ function potionButtonsHTML(playerTurn,h){
 
 function unitHTML(unit,isHero,slotIndex = 0,directorActor = null){
   const id = isHero ? "hero" : `comp_${unit.id}`;
-  const role = isHero ? title(state.hero.class) : tx("companion");
   const manaMax = unit.maxMana || unit.mana || 0;
   const mana = unit.mana || 0;
   const portrait = isHero ? null : companionPortrait(unit);
@@ -306,11 +300,8 @@ function unitHTML(unit,isHero,slotIndex = 0,directorActor = null){
         ${effectHTML(id)}
       </div>
       <div class="combat-card-body">
-        <div class="combat-name"><b>${esc(unit.name)}</b><span>${tx("level")} ${unit.level}</span></div>
-        <span class="pill">${esc(role)}</span>
-        <div class="meter-line"><span>${tx("hp")}</span><span>${unit.hp}/${unit.maxHp}</span></div>
+        <div class="combat-name"><b>${esc(unit.name)}</b><span>${unit.level}</span></div>
         ${bar(unit.hp,unit.maxHp)}
-        <div class="meter-line"><span>${tx("mana")}</span><span>${mana}/${manaMax}</span></div>
         ${bar(mana,manaMax || 1,"mana")}
       </div>
     </div>
@@ -349,17 +340,14 @@ function enemyHTML(enemy,index,playerTurn,slotIndex = 0,presentation = null,dire
   const targetable = enemy.hp > 0 && index >= 0;
   const selected = targetable && index === targetIndex;
   return `
-    <div class="enemy combat-card combat-actor combat-actor-enemy combat-slot-${slotIndex} enemy-scale-${scaleTier} ${majorClass} ${selected?'target':''} ${effectClass(id)}" data-combat-actor="enemy" data-combat-slot="${slotIndex}" data-enemy-scale="${scaleTier}" data-enemy-state="${pose}" ${actorDirectorAttributes(directorActor)}>
+    <div class="enemy combat-card combat-actor combat-actor-enemy combat-slot-${slotIndex} enemy-scale-${scaleTier} ${majorClass} ${selected?'target':''} ${effectClass(id)}" data-combat-actor="enemy" data-combat-slot="${slotIndex}" data-enemy-scale="${scaleTier}" data-enemy-state="${pose}" ${actorDirectorAttributes(directorActor)} ${playerTurn && targetable?`onclick="FE.setTarget(${index})" role="button"`:""}>
       <div class="portrait-wrap">
         ${poseArt || portraitHTML(portrait)}
         ${effectHTML(id)}
       </div>
       <div class="combat-card-body">
-        <div class="combat-name"><b>${selected?"* ":""}${esc(enemy.name)}</b><span>${tx("level")} ${enemy.level}</span></div>
-        <span class="pill red">${esc(enemy.role)}</span>
-        <div class="meter-line"><span>${tx("hp")}</span><span>${enemy.hp}/${enemy.maxHp}</span></div>
+        <div class="combat-name"><b>${esc(enemy.name)}</b><span>${enemy.hp}</span></div>
         ${bar(enemy.hp,enemy.maxHp)}
-        <button ${playerTurn && targetable?`onclick="FE.setTarget(${index})"`:"disabled"}>${tx("combatTarget")}</button>
       </div>
     </div>
   `;

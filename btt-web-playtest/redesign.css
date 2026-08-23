@@ -147,7 +147,7 @@ body.btt-redesign .top-vital-readout {
 
 body.btt-redesign .top-vital-line {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 6px;
   align-items: center;
 }
@@ -258,16 +258,19 @@ body.btt-redesign .pill.red {
 
 body.btt-redesign .topline-actions {
   display: flex;
+  justify-content: flex-end;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
-body.btt-redesign .topline-actions button {
-  flex: 1;
-  min-height: 34px;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+body.btt-redesign .hud-icon-btn {
+  width: 36px;
+  min-width: 36px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  line-height: 1;
 }
 
 /* Bottom dock navigation */
@@ -279,7 +282,7 @@ body.btt-redesign .game-dock {
   z-index: 80;
   width: min(480px, 100%);
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 4px;
   padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
   margin: 0;
@@ -298,22 +301,26 @@ body.btt-redesign .game-dock button::after {
 
 body.btt-redesign .game-dock button {
   display: grid;
-  gap: 3px;
+  gap: 0;
   place-items: center;
   min-width: 0;
-  min-height: 52px;
+  min-height: 48px;
   padding: 6px 4px;
   border: 1px solid transparent;
   border-radius: 12px;
   background: transparent;
   color: var(--btt-ash);
   font-family: var(--btt-font-body);
-  font-size: 0.62rem;
+  font-size: 0;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  line-height: 1.1;
-  white-space: normal;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+body.btt-redesign .game-dock .dock-label {
+  display: none;
 }
 
 body.btt-redesign .game-dock button::before {
@@ -1055,9 +1062,14 @@ body.btt-redesign .cinematic-world-stage.world-scene-lower-ward-v71 .scene-hotsp
   border-color: rgba(212, 168, 75, 0.45);
 }
 
-body.btt-redesign .combat-dock-locked .game-dock button {
-  opacity: 0.55;
-  pointer-events: none;
+body.btt-redesign.combat-dock-locked .game-dock,
+body.btt-redesign.cinematic-combat-active .game-dock {
+  display: none;
+}
+
+body.btt-redesign.combat-dock-locked #app,
+body.btt-redesign.cinematic-combat-active #app {
+  padding-bottom: 12px;
 }
 
 /* Combat feedback polish */
@@ -1429,6 +1441,105 @@ body.cinematic-world-home-active.btt-redesign .top-status-pills {
   body.btt-redesign .overworld-marker .marker-pulse {
     animation: none !important;
   }
+}
+
+/* Declutter: keep one decision surface per screen */
+body.btt-redesign .map-screen-clean {
+  display: block;
+}
+
+body.btt-redesign .map-canvas-frame {
+  padding: 6px;
+}
+
+body.btt-redesign .travel-banner-return {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px;
+}
+
+body.btt-redesign .road-stop-toolbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+body.btt-redesign .cinematic-location-title p,
+body.btt-redesign .cinematic-home-panel .location-home-head {
+  display: none;
+}
+
+body.btt-redesign .cinematic-location-title {
+  pointer-events: none;
+}
+
+body.btt-redesign .world-narration-card span {
+  display: none;
+}
+
+body.btt-redesign .slum-hero-compact > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+body.btt-redesign .slum-hero-compact h1,
+body.btt-redesign .slum-hero-compact p {
+  display: none;
+}
+
+body.btt-redesign .slum-action-compact {
+  grid-template-columns: 1fr 1fr;
+}
+
+body.btt-redesign .slum-group-button small {
+  display: none;
+}
+
+body.btt-redesign .town-hub-head p,
+body.btt-redesign .scene-service-note p,
+body.btt-redesign .town-service-hero {
+  display: none;
+}
+
+body.btt-redesign .town-hub-button small {
+  display: none;
+}
+
+body.btt-redesign .battle-log {
+  margin-top: 8px;
+}
+
+body.btt-redesign .battle-log summary {
+  cursor: pointer;
+  font-family: var(--btt-font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--btt-gold);
+  list-style: none;
+}
+
+body.btt-redesign .battle-log .log {
+  margin-top: 8px;
+}
+
+body.btt-redesign .combat-area > h2 {
+  display: none;
+}
+
+body.btt-redesign .enemy.combat-card {
+  cursor: pointer;
+}
+
+body.btt-redesign.cinematic-world-home-active .topbar {
+  padding: 6px 10px 4px;
+}
+
+body.btt-redesign.cinematic-combat-active .topbar {
+  display: none;
 }
 
 @media (min-width: 520px) {

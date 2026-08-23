@@ -77,8 +77,8 @@
       background:linear-gradient(180deg,#30302c,#111);
     }
   </style>
-  <link rel="stylesheet" href="./styles.css?v=111" />
-  <link rel="stylesheet" href="./redesign.css?v=6" />
+  <link rel="stylesheet" href="./styles.css?v=112" />
+  <link rel="stylesheet" href="./redesign.css?v=7" />
   <script>
     document.addEventListener("error", function(event) {
       const img = event.target;
@@ -159,8 +159,7 @@
       <header class="topbar">
         <div id="topStats"></div>
         <div class="topline-actions">
-          <button class="secondary" data-action="save-slots">Save</button>
-          <button class="secondary" data-action="app-update">Update</button>
+          <button class="hud-icon-btn" data-action="save-slots" aria-label="Save" title="Save">💾</button>
         </div>
       </header>
       <main class="game-main">
@@ -175,15 +174,14 @@
       <section id="combat" class="screen"></section>
       </main>
       <nav class="topline game-dock" aria-label="Main navigation">
-        <button data-screen="home" data-icon="⌂">Home</button>
-        <button data-screen="gear" data-icon="⚔">Gear</button>
-        <button data-screen="party" data-icon="◈">Party</button>
-        <button data-screen="progression" data-icon="✦">Growth</button>
-        <button data-screen="map" data-icon="◎">Map</button>
-        <button data-screen="kingdoms" data-icon="♜">Realms</button>
+        <button data-screen="home" data-icon="⌂" aria-label="Home"><span class="dock-label">Home</span></button>
+        <button data-screen="gear" data-icon="⚔" aria-label="Gear"><span class="dock-label">Gear</span></button>
+        <button data-screen="party" data-icon="◈" aria-label="Party"><span class="dock-label">Party</span></button>
+        <button data-screen="progression" data-icon="✦" aria-label="Growth"><span class="dock-label">Growth</span></button>
+        <button data-screen="map" data-icon="◎" aria-label="Map"><span class="dock-label">Map</span></button>
       </nav>
     </div>
   </div>
-  <script type="module" src="./src/main.js?v=111"></script>
+  <script type="module" src="./src/main.js?v=112"></script>
 </body>
 </html>

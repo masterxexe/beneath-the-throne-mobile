@@ -85,7 +85,8 @@ function hudVitalClass(value, max){
 
 export function updateTop(){
   const h = state.hero;
-  const p = state.prologue;
+  const screen = currentScreen;
+  const showSupplies = screen === "gear" || screen === "town" || screen === "party";
   applyUiTheme(h);
   updateNavLabels();
   byId("topStats").innerHTML = `
@@ -93,36 +94,22 @@ export function updateTop(){
       <div class="top-status-portrait">${renderPlayerHudPortrait(h)}</div>
       <div class="top-vital-readout" aria-label="${tx("hp")} ${h.hp}/${h.maxHp}, ${tx("mana")} ${h.mana}/${h.maxMana}">
         <div class="top-vital-line ${hudVitalClass(h.hp, h.maxHp)}">
-          <span class="top-vital-label">${tx("hp")}</span>
           ${bar(h.hp, h.maxHp, "hp vital-hp")}
-          <span class="top-vital-value">${h.hp}/${h.maxHp}</span>
+          <span class="top-vital-value">${h.hp}</span>
         </div>
         <div class="top-vital-line ${hudVitalClass(h.mana, h.maxMana)}">
-          <span class="top-vital-label">${tx("mana")}</span>
           ${bar(h.mana, h.maxMana, "mana vital-mana")}
-          <span class="top-vital-value">${h.mana}/${h.maxMana}</span>
+          <span class="top-vital-value">${h.mana}</span>
         </div>
       </div>
     </div>
     <div class="top-status-meta">
       <div class="top-status-pills top-pills-core">
-        <span class="pill good hud-token hud-token-hero">${esc(h.name)} ${tx("level")} ${h.level}</span>
-        <span class="pill hud-token hud-token-class">${title(h.class)}</span>
-        <span class="pill hud-token hud-token-gold">${tx("gold")} ${h.gold}</span>
-        <span class="pill hud-token hud-token-day">${tx("day")} ${state.world.day}</span>
-      </div>
-      <div class="top-status-pills top-pills-extra">
-        <span class="pill hud-token hud-token-supply">${tx("food")} ${h.food}</span>
-        <span class="pill hud-token hud-token-craft">${tx("ore")} ${h.ore}</span>
-        <span class="pill hud-token hud-token-potion">${tx("healthPotions")} ${h.potions}</span>
-        <span class="pill hud-token hud-token-potion">${tx("manaPotions")} ${h.manaPotions}</span>
-        ${p?.phase === "active" ? `
-          <span class="pill warn hud-token">Rep ${p.status}/${p.statusGoal}</span>
-          <span class="pill hud-token">Safety ${p.safety}</span>
-          <span class="pill red hud-token">Danger ${p.danger}</span>
-        ` : p?.lowerWardGate?.unlocked ? `
-          <span class="pill good hud-token">Lower Ward Gate</span>
-          <span class="pill hud-token">Ward Influence ${state.world?.lowerWard?.influence || 0}</span>
+        <span class="pill good hud-token hud-token-hero">${esc(h.name)} ${h.level}</span>
+        <span class="pill hud-token hud-token-gold">${h.gold}g</span>
+        ${showSupplies ? `
+          <span class="pill hud-token hud-token-supply">${h.food} ${tx("food")}</span>
+          <span class="pill hud-token hud-token-craft">${h.ore} ${tx("ore")}</span>
         ` : ""}
       </div>
     </div>
@@ -158,12 +145,16 @@ function applyUiTheme(hero){
 function updateNavLabels(){
   const labels = {home:tx("home"),gear:tx("gear"),party:tx("party"),progression:tx("progression"),map:tx("map"),kingdoms:tx("kingdoms")};
   document.querySelectorAll(".topline button[data-screen]").forEach(btn=>{
-    btn.textContent = labels[btn.dataset.screen] || btn.textContent;
+    const label = labels[btn.dataset.screen] || btn.getAttribute("aria-label") || "";
+    btn.setAttribute("aria-label", label);
+    const text = btn.querySelector(".dock-label");
+    if(text)text.textContent = label;
   });
   const saveBtn = document.querySelector("[data-action='save-slots']");
-  if(saveBtn)saveBtn.textContent = tx("save");
-  const updateBtn = document.querySelector("[data-action='app-update']");
-  if(updateBtn && !updateBtn.classList.contains("app-update-ready"))updateBtn.textContent = "Update";
+  if(saveBtn){
+    saveBtn.setAttribute("aria-label", tx("save"));
+    saveBtn.title = tx("save");
+  }
 }
 
 export function showSaveSlots(mode){

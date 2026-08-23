@@ -565,48 +565,29 @@ export function renderSlumProloguePanel(){
   const p = prologue();
   const complete = p.phase === "gateUnlocked" || p.lowerWardGate.unlocked;
   const gangDemand = p.gang.state === "demand" && !p.gang.defeated;
-  const companionReady = p.companion.recruited;
-  const canRecruit = p.companion.met && !p.companion.recruited;
   const gateLabel = complete ? tx("slumGateReady") : tx("slumGateTest");
   return `
     <div class="panel slum-prologue-panel ${complete ? "slum-prologue-complete" : ""}">
-      <div class="slum-hero">
+      <div class="slum-hero slum-hero-compact">
         <div>
-          <span class="pill ${gangDemand ? "red" : "warn"}">${tx("slumPrologue")}</span>
-          <h1>${esc(p.title || tx("slumPrologueTitle"))}</h1>
-          <p>${complete ? tx("slumPrologueComplete") : tx("slumPrologueDesc")}</p>
-        </div>
-        <div class="slum-goal-card">
-          <span>${esc(p.goal || tx("slumGateTest"))}</span>
+          <span class="pill ${gangDemand ? "red" : "warn"}">${tx("slumPrologueTitle")}</span>
           ${gateReady() || complete ? statPill("Gate", complete ? tx("slumGateOpened") : tx("slumGateReadyLabel"),"good") : statPill("Gate",tx("slumGateLocked"),"warn")}
         </div>
       </div>
-      <div class="slum-status-row">
-        ${statPill("Coin",state.hero.gold,state.hero.gold >= p.coinGoal ? "good" : "")}
-        ${statPill("Food",state.hero.food,state.hero.food > 1 ? "good" : "warn")}
-        ${statPill("Debt",p.debt,p.debt <= 0 ? "good" : "warn")}
-        ${statPill("Gang",p.gang.defeated ? "broken" : gangDemand ? "demanding" : "watching",p.gang.defeated ? "good" : gangDemand ? "red" : "warn")}
-        ${statPill("Companion",companionReady ? "Mira" : p.companion.met ? "waiting" : "unknown",companionReady ? "good" : "")}
-      </div>
       ${contractSummaryHTML(p, complete)}
-      <div class="slum-action-grid slum-action-groups">
+      <div class="slum-action-grid slum-action-groups slum-action-compact">
         <button class="primary slum-group-button" onclick="FE.slumOpenContractBoard()" ${actionDisabled(complete ? "The prologue gate is already reached." : "")}>
           <span>${tx("slumContracts")}</span>
-          <small>${activeContract() ? "Resume active job" : "Chapter jobs and boss"}</small>
-        </button>
-        <button class="slum-group-button" onclick="FE.slumOpenActionGroup('town')">
-          <span>${tx("slumTownWork")}</span>
-          <small>Earn, services, alleys</small>
-        </button>
-        <button class="slum-group-button" onclick="FE.slumOpenActionGroup('shelter')">
-          <span>${tx("slumShelterAlly")}</span>
-          <small>Rest, recover, or find Mira</small>
         </button>
         <button class="${gateReady() ? "primary" : "secondary"} slum-group-button" onclick="FE.slumSeekGate()">
           <span>${esc(gateLabel)}</span>
-          <small>${gateReady() || complete ? "Ready" : "Needs coin, rep, safety"}</small>
         </button>
-        ${slumSupportButtonHTML(complete)}
+        <button class="slum-group-button" onclick="FE.slumOpenActionGroup('town')">
+          <span>${tx("slumTownWork")}</span>
+        </button>
+        <button class="slum-group-button" onclick="FE.slumOpenActionGroup('shelter')">
+          <span>${tx("slumShelterAlly")}</span>
+        </button>
       </div>
       <div class="slum-progress-grid">
         ${progress("Reputation",p.status,p.statusGoal,p.status >= p.statusGoal ? "good" : "")}

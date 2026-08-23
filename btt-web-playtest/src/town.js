@@ -59,12 +59,10 @@ export function renderTown(){
   const tabs = availableTabs();
   if(!tabs.includes(townTab))townTab = tabs[0] || "inn";
   byId("town").innerHTML = `
-    <div class="panel">
-      ${townServiceHeroHTML()}
+    <div class="panel town-list-panel">
       <button class="secondary world-return" onclick="FE.show('home')">${tx("backToLocation")}</button>
     </div>
-    ${resourcesHTML()}
-    ${townHubHTML({currentService:townTab})}
+    ${townHubHTML({currentService:townTab, compact:true})}
     ${tabs.length ? serviceHTML(townTab) : `<div class="panel"><p>${tx("noServicesHere")}</p></div>`}
   `;
 }
@@ -314,9 +312,7 @@ function sceneDialogueHTML(scene){
 function sceneEventHTML(event){
   return `
     <div class="panel scene-event-panel">
-      <h2>Current Event</h2>
       <p>${esc(event.text)}</p>
-      <p class="muted">Events remain stable for this service and day.</p>
     </div>
   `;
 }
@@ -656,20 +652,7 @@ function serviceHTML(tab, contextAnchor = null){
 
 function serviceContextHTML(tab, contextAnchor){
   if(!contextAnchor)return "";
-  const copy = {
-    market: "Trade and forge work now share one commerce surface while preserving the existing stock, purchase, and upgrade rules.",
-    blacksmith: "Forge work and market trade now share one commerce surface while preserving the existing gold and ore costs.",
-    inn: "Rest and camp still use the existing gold, food, healing, and day-advance rules.",
-    tavern: "Recruit hiring still happens through visible tavern NPCs and the existing party economy.",
-    townCenter: "Civic interactions are lightweight hooks for the current town state and daily events.",
-    mine: "Ore gathering still uses the existing day cost, ore payout, and blacksmith upgrade flow."
-  };
-  return `
-    <div class="scene-service-note">
-      <span class="pill">${esc(contextAnchor.name)}</span>
-      <p>${esc(copy[tab] || "Existing service rules are preserved.")}</p>
-    </div>
-  `;
+  return `<div class="scene-service-note"><span class="pill">${esc(contextAnchor.name)}</span></div>`;
 }
 
 function townHubHTML({currentService = "", compact = false} = {}){
@@ -678,11 +661,7 @@ function townHubHTML({currentService = "", compact = false} = {}){
   return `
     <div class="panel town-hub-panel ${compact ? "town-hub-compact" : ""}">
       <div class="town-hub-head">
-        <div>
-          <span class="pill">${tx("services")}</span>
-          <h2>Town Hub</h2>
-        </div>
-        <p>Grouped actions keep the town readable while the old systems keep working underneath.</p>
+        <h2>${tx("services")}</h2>
       </div>
       <div class="town-hub-grid">
         ${groups.map(group=>townHubButtonHTML(group,currentService)).join("")}
