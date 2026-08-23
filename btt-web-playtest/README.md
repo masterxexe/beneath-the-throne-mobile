@@ -8,7 +8,7 @@ Mobile-first dark fantasy RPG playtest (static PWA). No build step — vanilla E
 npm run dev
 ```
 
-Open `http://127.0.0.1:43123` in your browser. Use mobile viewport or a phone on the same network for the intended experience (portrait).
+Open `http://127.0.0.1:43123` in your browser.
 
 ### Debug mode
 
@@ -22,20 +22,10 @@ btt-web-playtest/
 ├── styles.css
 ├── manifest.webmanifest
 ├── icons/
-├── assets/          # sprites, backdrops, UI art
+├── assets/
 └── src/
-    ├── main.js
-    ├── state.js
-    ├── combat.js
-    ├── town.js
-    ├── ui.js
-    └── …
 ```
 
-## Syncing from your machine
+## Note on assets
 
-Copy your Desktop folder contents into this directory (or upload a zip in the Cursor chat). The cloud agent cannot read `c:\Users\NEREYDA\Desktop\btt-web-playtest` directly.
-
-## Deploy
-
-Static upload to any host (e.g. `hillbillyai.com/games/beneath-the-throne/game/`). Bump cache-bust query params on `styles.css` and `main.js` when shipping a new build.
+The uploaded zip contains source code only. Copy `assets/` and `icons/` from your full local build (or the deployed site) for art/sprites to load in dev.

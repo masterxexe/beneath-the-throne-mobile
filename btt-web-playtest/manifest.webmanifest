@@ -1,0 +1,29 @@
+{
+  "name": "Beneath the Throne",
+  "short_name": "Beneath",
+  "description": "A dark fantasy mobile/browser RPG playtest build.",
+  "id": "beneath-the-throne-mobile-playtest",
+  "start_url": "./index.html?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "browser"],
+  "orientation": "portrait",
+  "background_color": "#090706",
+  "theme_color": "#090706",
+  "categories": ["games", "roleplaying"],
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": []
+}

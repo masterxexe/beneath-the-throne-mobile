@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="Beneath the Throne - a dark fantasy browser RPG with world-first settlement scenes and tactical combat." />
+  <meta name="theme-color" content="#090706" />
+  <meta name="application-name" content="Beneath the Throne" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Beneath the Throne" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>Beneath the Throne</title>
+  <link rel="icon" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="preload" as="image" href="./assets/tutorial/generated/v80/title-bg-mobile-v80.webp" />
+  <style>
+    .boot-fallback{
+      min-height:100svh;
+      display:grid;
+      place-items:center;
+      padding:22px;
+      color:#f1dec0;
+      background:
+        linear-gradient(180deg,rgba(0,0,0,.28),rgba(0,0,0,.86)),
+        url("./assets/tutorial/generated/v80/title-bg-mobile-v80.webp") center/cover no-repeat,
+        #020303;
+      font-family:Georgia,"Times New Roman",serif;
+      text-align:center;
+    }
+    .boot-fallback-card{
+      width:min(430px,100%);
+      padding:18px 16px;
+      border:1px solid rgba(208,153,73,.42);
+      border-radius:8px;
+      background:rgba(4,5,5,.78);
+      box-shadow:0 18px 46px rgba(0,0,0,.68);
+    }
+    .boot-fallback-kicker{
+      display:block;
+      margin-bottom:7px;
+      color:#d9a451;
+      font:800 11px/1 system-ui,sans-serif;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    .boot-fallback h1{
+      margin:0 0 8px;
+      font-size:34px;
+      line-height:.95;
+      letter-spacing:0;
+    }
+    .boot-fallback-status{
+      margin:0;
+      color:#dbc4a0;
+      font:700 13px/1.35 system-ui,sans-serif;
+    }
+    .boot-fallback-actions{
+      display:none;
+      grid-template-columns:1fr;
+      gap:8px;
+      margin-top:14px;
+    }
+    .boot-fallback.is-slow .boot-fallback-actions{
+      display:grid;
+    }
+    .boot-fallback button{
+      min-height:42px;
+      border:1px solid rgba(218,162,81,.52);
+      border-radius:6px;
+      background:linear-gradient(180deg,#65401f,#27150c);
+      color:#ffe8bd;
+      font:900 14px/1 system-ui,sans-serif;
+    }
+    .boot-fallback button.secondary{
+      background:linear-gradient(180deg,#30302c,#111);
+    }
+  </style>
+  <link rel="stylesheet" href="./styles.css?v=102" />
+  <script>
+    (function(){
+      function fallback(){
+        return document.querySelector(".boot-fallback");
+      }
+      function setStatus(message){
+        const root = fallback();
+        if(!root || window.__BTT_BOOTED)return;
+        root.classList.add("is-slow");
+        const status = root.querySelector(".boot-fallback-status");
+        if(status)status.textContent = message;
+      }
+      window.BTT_RETRY_BOOT = function(){
+        location.reload();
+      };
+      window.BTT_CLEAR_BOOT_CACHE = async function(){
+        setStatus("Clearing the phone app cache...");
+        try{
+          if("caches" in window){
+            const keys = await caches.keys();
+            await Promise.all(keys.filter(key => key.startsWith("beneath-throne-")).map(key => caches.delete(key)));
+          }
+          if(navigator.serviceWorker?.getRegistrations){
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map(registration => registration.unregister()));
+          }
+        }catch(error){
+          console.warn("Boot cache clear failed", error);
+        }
+        const next = new URL(location.href);
+        next.searchParams.set("fresh", Date.now());
+        location.replace(next.href);
+      };
+      window.addEventListener("error", function(){
+        setStatus("Startup paused on this device. Tap Clear App Cache, then reload.");
+      });
+      window.addEventListener("unhandledrejection", function(){
+        setStatus("Startup paused on this device. Tap Clear App Cache, then reload.");
+      });
+      setTimeout(function(){
+        setStatus("Still loading. If this stays here, clear the app cache once.");
+      }, 4500);
+    })();
+  </script>
+</head>
+<body>
+  <div id="app">
+    <div id="setup">
+      <div class="boot-fallback" role="status" aria-live="polite">
+        <div class="boot-fallback-card">
+          <span class="boot-fallback-kicker">Phone Playtest</span>
+          <h1>Beneath the Throne</h1>
+          <p class="boot-fallback-status">Loading playtest build...</p>
+          <div class="boot-fallback-actions">
+            <button onclick="BTT_RETRY_BOOT()">Retry</button>
+            <button class="secondary" onclick="BTT_CLEAR_BOOT_CACHE()">Clear App Cache</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="game" style="display:none">
+      <div class="topbar">
+        <div id="topStats"></div>
+        <div class="topline">
+          <button data-screen="home">Home</button>
+          <button data-screen="gear">Gear</button>
+          <button data-screen="party">Party</button>
+          <button data-screen="progression">Progression</button>
+          <button data-screen="map">Map</button>
+          <button data-screen="kingdoms">Kingdoms</button>
+          <button data-action="save-slots">Save</button>
+          <button data-action="app-update">Update</button>
+        </div>
+      </div>
+      <section id="home" class="screen"></section>
+      <section id="town" class="screen"></section>
+      <section id="gear" class="screen"></section>
+      <section id="party" class="screen"></section>
+      <section id="progression" class="screen"></section>
+      <section id="map" class="screen"></section>
+      <section id="kingdoms" class="screen"></section>
+      <section id="support" class="screen"></section>
+      <section id="combat" class="screen"></section>
+    </div>
+  </div>
+  <script type="module" src="./src/main.js?v=102"></script>
+</body>
+</html>

@@ -1,0 +1,1003 @@
+import { advanceDays, clamp, companionTrainingNeed, grantCompanionBond, normalizeCompanion, rnd, save, state } from "./state.js";
+import { startBattle } from "./combat.js";
+import { modal, toast, updateTop } from "./ui.js";
+import { NPC_ACTOR_ASSETS } from "./npcRegistry.js";
+
+const SLUM_COMPANION_ID = "slum_mira";
+const GATE_BRIBE_COST = 25;
+
+const CHAPTER_ONE_CONTRACTS = [
+  {
+    id:"ration_marks",
+    name:"Recover Stolen Food",
+    contact:"Seda Vell",
+    kind:"scavenge",
+    tag:"Market",
+    desc:"Trace missing food sacks through the drain alleys before the Dock Rats sell them back.",
+    action:"Search Drains",
+    reward:{gold:5,food:1,status:1,safety:1,danger:1,bond:6,training:5},
+    log:"You recover marked ration sacks and return them before the market opens."
+  },
+  {
+    id:"forge_scrap",
+    name:"Bring Borin Scrap",
+    contact:"Borin Ashhand",
+    kind:"work",
+    tag:"Blacksmith",
+    requires:["ration_marks"],
+    desc:"Work the ash heaps for usable scrap so Borin can patch weapons without asking questions.",
+    action:"Work Scrap Run",
+    reward:{gold:6,ore:1,status:1,safety:0,danger:1,bond:5,training:10},
+    log:"You haul usable scrap to Borin. He marks your name on the honest side of the ledger."
+  },
+  {
+    id:"knife_corner",
+    name:"Clear Knife-Corner",
+    contact:"Mira",
+    kind:"combat",
+    tag:"Alley Fight",
+    requires:["ration_marks"],
+    desc:"A corner crew waits near the smoke ditch. Clear it and the shelter route gets safer.",
+    action:"Start Fight",
+    reward:{gold:7,status:2,safety:1,danger:-1,bond:12,training:10},
+    log:"Knife-Corner empties out. Doors open a little wider when you pass."
+  },
+  {
+    id:"dock_rat_ledger",
+    name:"Break the Dock Rat Ledger",
+    contact:"Vale",
+    kind:"combat",
+    tag:"Gang",
+    requires:["forge_scrap","knife_corner"],
+    desc:"Vale knows where the Dock Rats keep the debt list. Burn it before they move collections.",
+    action:"Raid Ledger",
+    reward:{gold:10,status:2,safety:1,danger:0,debt:-8,bond:13,training:12},
+    log:"The Dock Rat debt ledger burns in a tavern stove. Several families stop whispering your name like a warning."
+  },
+  {
+    id:"gate_lieutenant",
+    name:"Defeat the Gate Lieutenant",
+    contact:"Lower Ward Gate",
+    kind:"boss",
+    tag:"Chapter Boss",
+    requires:["dock_rat_ledger"],
+    desc:"The gang lieutenant who sells gate access has stopped hiding behind collectors. Beat him and Chapter 1 has a real ending.",
+    action:"Challenge Lieutenant",
+    reward:{gold:12,status:3,safety:1,danger:-1,debt:-99,bond:18,training:16},
+    log:"The gate lieutenant drops to one knee. Cinderhook sees the Lower Ward path crack open."
+  }
+];
+
+const COMPANION_CONTRACT_UNLOCKS = {
+  scout:["trap_snare","smoke_step","quick_strike"],
+  fighter:["guard_wall","cleave","strike"],
+  guard:["shield_bash","taunt","guard_wall"],
+  healer:["minor_mend","holy_guard","renew"],
+  mystic:["fire_bolt","arcane_burst","minor_mend"]
+};
+
+function esc(value){
+  return String(value ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+}
+
+function prologue(){
+  state.prologue ||= {};
+  state.prologue.companion ||= {met:false,recruited:false,id:null};
+  state.prologue.gang ||= {state:"warning",paid:0,defeated:false,nextDemandDay:3};
+  state.prologue.lowerWardGate ||= {visited:false,unlocked:false};
+  state.prologue.contracts ||= {active:null,completed:[],failed:[],chapterBossUnlocked:false,chapterBossDefeated:false};
+  state.prologue.contracts.completed ||= [];
+  state.prologue.contracts.failed ||= [];
+  state.prologue.log ||= [];
+  return state.prologue;
+}
+
+function addLog(text){
+  const p = prologue();
+  p.log.push(text);
+  p.log = p.log.slice(-18);
+  state.world.story ||= [];
+  state.world.story.push(text);
+  state.world.story = state.world.story.slice(-24);
+}
+
+function refresh(forceHome = false){
+  save();
+  updateTop();
+  const homeVisible = typeof document !== "undefined" && document.getElementById("home")?.classList.contains("active");
+  if(forceHome || homeVisible){
+    window.FE?.show?.("home");
+  }
+}
+
+function actionDay(){
+  const p = prologue();
+  p.actionsTaken++;
+  advanceDays(1);
+  state.hero.food = Math.max(0,state.hero.food - 1);
+  if(state.hero.food <= 0){
+    state.hero.hp = Math.max(1,state.hero.hp - 8);
+    p.safety = clamp(p.safety - 1,0,10);
+    addLog("Hunger follows you through the alleys. You lose health and safety.");
+  }
+  if(!p.gang.defeated && state.world.day >= p.gang.nextDemandDay){
+    p.gang.state = "demand";
+    p.danger = clamp(p.danger + 1,0,10);
+    p.heat = clamp(p.heat + 1,0,10);
+  }
+}
+
+function gateReady(){
+  const p = prologue();
+  return state.hero.gold >= p.coinGoal && p.status >= p.statusGoal && p.safety >= p.safetyGoal && (p.gang.defeated || p.gang.paid > 0);
+}
+
+function contractById(id){
+  return CHAPTER_ONE_CONTRACTS.find(contract=>contract.id === id) || null;
+}
+
+function contractState(){
+  return prologue().contracts;
+}
+
+function completedContracts(){
+  return new Set(contractState().completed || []);
+}
+
+function contractUnlocked(contract,p = prologue()){
+  if(!contract)return false;
+  const done = completedContracts();
+  if(done.has(contract.id))return false;
+  if(contract.id === "gate_lieutenant"){
+    return !p.contracts.chapterBossDefeated
+      && p.companion.recruited
+      && (p.contracts.completed || []).length >= 3
+      && (contract.requires || []).every(id=>done.has(id));
+  }
+  return (contract.requires || []).every(id=>done.has(id));
+}
+
+function visibleContracts(p = prologue()){
+  return CHAPTER_ONE_CONTRACTS.filter(contract=>contractUnlocked(contract,p));
+}
+
+function activeContract(){
+  return contractById(contractState().active);
+}
+
+function contractRewardLine(reward = {}){
+  const parts = [];
+  if(reward.gold)parts.push(`${reward.gold}g`);
+  if(reward.food)parts.push(`${reward.food} food`);
+  if(reward.ore)parts.push(`${reward.ore} ore`);
+  if(reward.status)parts.push(`+${reward.status} rep`);
+  if(reward.safety)parts.push(`${reward.safety > 0 ? "+" : ""}${reward.safety} safety`);
+  if(reward.danger)parts.push(`${reward.danger > 0 ? "+" : ""}${reward.danger} danger`);
+  if(reward.heat)parts.push(`${reward.heat > 0 ? "+" : ""}${reward.heat} heat`);
+  if(reward.debt)parts.push(`${reward.debt} debt`);
+  if(reward.bond)parts.push(`+${reward.bond} bond`);
+  if(reward.training)parts.push(`+${reward.training} training`);
+  return parts.join(" | ");
+}
+
+function grantCompanionTraining(companion,xp){
+  normalizeCompanion(companion);
+  companion.training.xp += Math.max(0,Math.floor(Number(xp) || 0));
+  let ranks = 0;
+  while(companion.training.rank < 20 && companion.training.xp >= companionTrainingNeed(companion.training.rank)){
+    companion.training.xp -= companionTrainingNeed(companion.training.rank);
+    companion.training.rank++;
+    companion.maxHp += 4;
+    companion.hp = companion.maxHp;
+    companion.attack += companion.role === "healer" ? 1 : 2;
+    companion.defense += companion.role === "guard" ? 2 : 1;
+    if(companion.role === "mystic" || companion.role === "healer"){
+      companion.maxMana += 3;
+      companion.mana = companion.maxMana;
+    }
+    ranks++;
+  }
+  return ranks;
+}
+
+function unlockCompanionContractSkill(companion){
+  normalizeCompanion(companion);
+  const pool = COMPANION_CONTRACT_UNLOCKS[companion.role] || COMPANION_CONTRACT_UNLOCKS.fighter;
+  const milestone = Math.floor(((companion.bond?.level || 1) + (companion.training?.rank || 0)) / 3) - 1;
+  if(milestone < 0)return null;
+  const ability = pool[Math.min(pool.length - 1,milestone)];
+  if(!ability || companion.known.includes(ability))return null;
+  companion.known.push(ability);
+  const emptySlot = companion.abilityLoadout.findIndex(value=>!value);
+  if(emptySlot >= 0)companion.abilityLoadout[emptySlot] = ability;
+  return ability;
+}
+
+function grantContractCompanionProgress(contract){
+  const reward = contract.reward || {};
+  const active = state.hero.companions.filter(c=>c.active && c.hp > 0);
+  if(!active.length)return [];
+  return active.map(companion=>{
+    normalizeCompanion(companion);
+    const bondLevels = grantCompanionBond(companion,reward.bond || 0);
+    const trainingRanks = grantCompanionTraining(companion,reward.training || 0);
+    const learned = unlockCompanionContractSkill(companion);
+    companion.morale = clamp((companion.morale || 50) + 1,0,100);
+    return {name:companion.name,bondLevels,trainingRanks,learned};
+  });
+}
+
+function applyContractReward(contract){
+  const p = prologue();
+  const reward = contract.reward || {};
+  state.hero.gold += reward.gold || 0;
+  state.hero.food += reward.food || 0;
+  state.hero.ore += reward.ore || 0;
+  p.status += reward.status || 0;
+  p.safety = clamp(p.safety + (reward.safety || 0),0,10);
+  p.danger = clamp(p.danger + (reward.danger || 0),0,10);
+  p.heat = clamp(p.heat + (reward.heat || 0),0,10);
+  p.debt = Math.max(0,p.debt + (reward.debt || 0));
+  if(contract.id === "gate_lieutenant"){
+    p.contracts.chapterBossDefeated = true;
+    p.gang.defeated = true;
+    p.gang.state = "broken";
+    p.lowerWardGate.visited = true;
+  }
+  const companionResults = grantContractCompanionProgress(contract);
+  if(companionResults.length){
+    const gains = companionResults
+      .filter(row=>row.bondLevels || row.trainingRanks || row.learned)
+      .map(row=>{
+        const parts = [];
+        if(row.bondLevels)parts.push(`bond +${row.bondLevels}`);
+        if(row.trainingRanks)parts.push(`training +${row.trainingRanks}`);
+        if(row.learned)parts.push(`learned ${row.learned.replace(/_/g," ")}`);
+        return `${row.name}: ${parts.join(", ")}`;
+      })
+      .join("; ");
+    if(gains)addLog(gains);
+  }
+}
+
+function completeContract(contractId,{fromBattle = false} = {}){
+  const p = prologue();
+  const contract = contractById(contractId);
+  if(!contract)return false;
+  if(p.contracts.completed.includes(contract.id))return true;
+  applyContractReward(contract);
+  p.contracts.completed.push(contract.id);
+  p.contracts.completed = [...new Set(p.contracts.completed)];
+  if(p.contracts.active === contract.id)p.contracts.active = null;
+  if(contract.id !== "gate_lieutenant" && p.contracts.completed.length >= 3 && p.companion.recruited){
+    p.contracts.chapterBossUnlocked = true;
+  }
+  addLog(contract.log);
+  if(fromBattle)save();
+  return true;
+}
+
+function completeActiveContractByKind(kind){
+  const contract = activeContract();
+  if(!contract || contract.kind !== kind)return false;
+  return completeContract(contract.id);
+}
+
+function contractEnemies(contract){
+  if(contract.id === "gate_lieutenant"){
+    const p = prologue();
+    const pressure = Math.max(2,p.danger + p.status / 3);
+    return [
+      {
+        name:"Dock Rat Lieutenant",
+        role:"chapter boss",
+        enemyVisualClass:"bandit",
+        level:3,
+        hp:122 + Math.floor(pressure * 7),
+        maxHp:122 + Math.floor(pressure * 7),
+        attack:15 + Math.floor(pressure * 1.2),
+        defense:6,
+        speed:5,
+        xp:64,
+        gold:10
+      },
+      {
+        name:"Gate Knife",
+        role:"gang",
+        enemyVisualClass:"bandit",
+        level:2,
+        hp:72,
+        maxHp:72,
+        attack:12,
+        defense:4,
+        speed:6,
+        xp:34,
+        gold:5
+      }
+    ];
+  }
+  if(contract.id === "dock_rat_ledger"){
+    return [makeGangEnemy(), {...makeAlleyEnemy(),name:"Ledger Guard",hp:66,maxHp:66,attack:11,defense:4,gold:6,xp:32}];
+  }
+  return [makeAlleyEnemy()];
+}
+
+function makeMira(){
+  return {
+    id:SLUM_COMPANION_ID,
+    name:"Mira of the Drainsteps",
+    rarity:"uncommon",
+    class:"scout",
+    role:"scout",
+    tactic:"aggressive",
+    level:1,
+    xp:0,
+    nextXp:125,
+    hp:96,
+    maxHp:96,
+    mana:22,
+    maxMana:22,
+    attack:11,
+    defense:5,
+    speed:7,
+    active:true,
+    bond:{level:1,xp:15},
+    training:{rank:0,xp:0},
+    loyalty:58,
+    morale:55,
+    known:["quick_strike"],
+    abilityLoadout:["quick_strike"]
+  };
+}
+
+function makeGangEnemy(){
+  const p = prologue();
+  const pressure = Math.max(0,p.danger - 2);
+  return {
+    name:p.gang.defeated ? "Corner Knife" : "Dock Rat Enforcer",
+    role:"gang",
+    enemyVisualClass:"bandit",
+    level:1,
+    hp:46 + pressure * 4,
+    maxHp:46 + pressure * 4,
+    mana:0,
+    maxMana:0,
+    attack:9 + pressure,
+    defense:2,
+    speed:5,
+    xp:32,
+    gold:8 + Math.min(6,pressure * 2)
+  };
+}
+
+function makeAlleyEnemy(){
+  const p = prologue();
+  const pressure = Math.max(0,p.danger - 1);
+  const names = ["Desperate Thief", "Corner Knife", "Dock Rat Cutpurse"];
+  return {
+    name:names[rnd(0,names.length - 1)],
+    role:"slum",
+    enemyVisualClass:"bandit",
+    level:1 + Math.floor(pressure / 3),
+    hp:40 + pressure * 5,
+    maxHp:40 + pressure * 5,
+    mana:0,
+    maxMana:0,
+    attack:8 + pressure,
+    defense:2 + Math.floor(pressure / 3),
+    speed:5,
+    xp:28 + pressure * 3,
+    gold:7 + Math.min(8,pressure * 2)
+  };
+}
+
+function statPill(label,value,cls = ""){
+  return `<span class="pill ${cls}">${esc(label)} ${esc(value)}</span>`;
+}
+
+function progress(label,value,max,cls = ""){
+  const pct = Math.max(0,Math.min(100,Math.floor(value / Math.max(1,max) * 100)));
+  return `
+    <div class="slum-meter ${cls}">
+      <div class="meter-line"><span>${esc(label)}</span><span>${esc(value)} / ${esc(max)}</span></div>
+      <div class="bar ${cls}"><div style="width:${pct}%"></div></div>
+    </div>
+  `;
+}
+
+function actionDisabled(reason){
+  return reason ? `disabled title="${esc(reason)}"` : "";
+}
+
+function slumNpcCard({name,role,asset,action,label,disabled = false}){
+  return `
+    <button class="slum-npc-card" onclick="${esc(action)}" ${disabled ? "disabled" : ""}>
+      <img src="${esc(asset)}" alt="" loading="lazy" decoding="async" draggable="false">
+      <span>${esc(role)}</span>
+      <b>${esc(name)}</b>
+      <small>${esc(label)}</small>
+    </button>
+  `;
+}
+
+function slumNpcRailHTML(p, complete){
+  const companionLabel = p.companion.recruited ? "In party" : p.companion.met ? "Recruit 6g" : "Find ally";
+  return `
+    <div class="slum-loop-strip">
+      <span class="pill good">Play Loop</span>
+      <p>Earn coin, clear an alley, buy or repair gear, rest, recruit Mira, then force the Lower Ward gate.</p>
+    </div>
+    <div class="slum-npc-rail" aria-label="Cinderhook contacts">
+      ${slumNpcCard({name:"Seda Vell",role:"Merchant",asset:NPC_ACTOR_ASSETS.marketMerchant,action:"FE.openTownService('market')",label:"Supplies"})}
+      ${slumNpcCard({name:"Borin Ashhand",role:"Blacksmith",asset:NPC_ACTOR_ASSETS.blacksmith,action:"FE.openTownService('blacksmith')",label:"Upgrade gear"})}
+      ${slumNpcCard({name:"Nessa Hearth",role:"Healer",asset:NPC_ACTOR_ASSETS.innkeeper,action:"FE.openTownService('inn')",label:"Rest"})}
+      ${slumNpcCard({name:"Vale",role:"Tavern",asset:NPC_ACTOR_ASSETS.tavernKeeper,action:"FE.openTownService('tavern')",label:"Rumors"})}
+      ${slumNpcCard({name:"Mira",role:"Companion",asset:NPC_ACTOR_ASSETS.companionScout,action:"FE.slumOpenActionGroup('shelter')",label:companionLabel})}
+      ${slumNpcCard({name:"Dock Rats",role:"Gang",asset:NPC_ACTOR_ASSETS.gangLookout,action:"FE.slumOpenActionGroup('gang')",label:p.gang.defeated ? "Broken" : "Pressure",disabled:complete || p.gang.defeated})}
+    </div>
+  `;
+}
+
+function contractCardHTML(contract,{active = false} = {}){
+  const reward = contractRewardLine(contract.reward);
+  const action = active ? `FE.slumStartContract('${contract.id}')` : `FE.slumAcceptContract('${contract.id}')`;
+  const label = active ? contract.action : "Accept";
+  return `
+    <div class="slum-contract-card ${active ? "is-active" : ""} ${contract.kind === "boss" ? "is-boss" : ""}">
+      <div class="slum-contract-card-head">
+        <span class="pill ${contract.kind === "boss" ? "red" : "good"}">${esc(contract.tag)}</span>
+        <small>${esc(contract.contact)}</small>
+      </div>
+      <h3>${esc(contract.name)}</h3>
+      <p>${esc(contract.desc)}</p>
+      <small>${esc(reward)}</small>
+      <div class="grid2">
+        <button class="${active ? "primary" : ""}" onclick="${esc(action)}">${esc(label)}</button>
+        ${active ? `<button class="secondary" onclick="FE.slumAbandonContract()">Hold</button>` : `<button class="secondary" onclick="FE.slumContractDetails('${contract.id}')">Details</button>`}
+      </div>
+    </div>
+  `;
+}
+
+function contractBoardHTML(p, complete){
+  const cstate = p.contracts;
+  const active = activeContract();
+  const available = active ? [] : visibleContracts(p).slice(0,3);
+  const done = cstate.completed.length;
+  const bossReady = !!visibleContracts(p).find(contract=>contract.id === "gate_lieutenant");
+  return `
+    <div class="slum-contract-board">
+      <div class="slum-contract-head">
+        <div>
+          <span class="pill ${bossReady ? "red" : "good"}">Chapter 1 Board</span>
+          <h2>Contracts</h2>
+          <p>${complete
+            ? "Cinderhook knows your name. The Lower Ward road is open beyond the gate."
+            : "One focused job at a time. Contracts move coin, reputation, safety, Mira, and the Lower Ward gate together."}</p>
+        </div>
+        <div class="slum-contract-progress">
+          <span class="pill">${done}/${CHAPTER_ONE_CONTRACTS.length} done</span>
+          ${bossReady ? `<span class="pill red">Boss ready</span>` : ""}
+        </div>
+      </div>
+      ${active ? `
+        <div class="slum-contract-active">
+          ${contractCardHTML(active,{active:true})}
+        </div>
+      ` : available.length ? `
+        <div class="slum-contract-grid">
+          ${available.map(contract=>contractCardHTML(contract)).join("")}
+        </div>
+      ` : `
+        <div class="slum-loop-strip">
+          <span class="pill warn">No new contract</span>
+          <p>${p.companion.recruited ? "Finish the gate requirements or check the Lower Ward gate." : "Find and recruit Mira to unlock the Chapter 1 boss route."}</p>
+        </div>
+      `}
+      ${cstate.completed.length ? `
+        <div class="slum-contract-complete-row">
+          ${cstate.completed.slice(-5).map(id=>`<span class="pill good">${esc(contractById(id)?.name || id)}</span>`).join("")}
+        </div>
+      ` : ""}
+    </div>
+  `;
+}
+
+function contractSummaryHTML(p, complete){
+  const active = activeContract();
+  const available = visibleContracts(p);
+  const next = active || available[0];
+  const done = p.contracts.completed.length;
+  if(!next){
+    return `
+      <div class="slum-contract-summary">
+        <div>
+          <span class="pill ${complete ? "good" : "warn"}">Chapter 1</span>
+          <h2>${complete ? "Gate Open" : "No Open Contract"}</h2>
+          <p>${complete
+            ? "Cinderhook is behind you. The Lower Ward is open for trainers, writs, and harder districts."
+            : p.companion.recruited
+              ? "Finish the gate requirements or check the Lower Ward gate."
+              : "Find and recruit Mira to unlock the Chapter 1 boss route."}</p>
+        </div>
+        <div class="slum-summary-actions">
+          <span class="pill">${done}/${CHAPTER_ONE_CONTRACTS.length} done</span>
+          <button class="secondary" onclick="FE.slumOpenContractBoard()">Open Board</button>
+        </div>
+      </div>
+    `;
+  }
+  const action = active ? `FE.slumStartContract('${next.id}')` : `FE.slumAcceptContract('${next.id}')`;
+  const label = active ? next.action : "Accept";
+  return `
+    <div class="slum-contract-summary ${next.kind === "boss" ? "is-boss" : ""}">
+      <div>
+        <span class="pill ${next.kind === "boss" ? "red" : "good"}">${active ? "Active Contract" : "Next Contract"}</span>
+        <h2>${esc(next.name)}</h2>
+        <p>${esc(next.desc)}</p>
+        <small>${esc(contractRewardLine(next.reward))}</small>
+      </div>
+      <div class="slum-summary-actions">
+        <span class="pill">${done}/${CHAPTER_ONE_CONTRACTS.length} done</span>
+        <button class="${active ? "primary" : ""}" onclick="${esc(action)}" ${actionDisabled(complete ? "The prologue gate is already reached." : "")}>${esc(label)}</button>
+        <button class="secondary" onclick="FE.slumOpenContractBoard()">Board</button>
+      </div>
+    </div>
+  `;
+}
+
+function slumSupportButtonHTML(complete){
+  if(!complete)return "";
+  return `
+    <button class="secondary slum-group-button" onclick="FE.show('support')">
+      <span>Support Future Builds</span>
+      <small>Optional founder rewards</small>
+    </button>
+  `;
+}
+
+export function renderSlumProloguePanel(){
+  if(!state?.prologue)return "";
+  const p = prologue();
+  const complete = p.phase === "gateUnlocked" || p.lowerWardGate.unlocked;
+  const gangDemand = p.gang.state === "demand" && !p.gang.defeated;
+  const companionReady = p.companion.recruited;
+  const canRecruit = p.companion.met && !p.companion.recruited;
+  const gateLabel = complete ? "Lower Ward Gate Reached" : "Test the Lower Ward Gate";
+  return `
+    <div class="panel slum-prologue-panel ${complete ? "slum-prologue-complete" : ""}">
+      <div class="slum-hero">
+        <div>
+          <span class="pill ${gangDemand ? "red" : "warn"}">Slum Prologue</span>
+          <h1>${esc(p.title || "Cinderhook Slum")}</h1>
+          <p>${complete
+            ? "The gate has opened. The full climb toward castle society is ready to become the paid game arc."
+            : "Earn coin, build a name, survive gang pressure, and reach the Lower Ward gate."}</p>
+        </div>
+        <div class="slum-goal-card">
+          <span>${esc(p.goal || "Reach the Lower Ward gate")}</span>
+          ${gateReady() || complete ? statPill("Gate", complete ? "opened" : "ready","good") : statPill("Gate","locked","warn")}
+        </div>
+      </div>
+      <div class="slum-status-row">
+        ${statPill("Coin",state.hero.gold,state.hero.gold >= p.coinGoal ? "good" : "")}
+        ${statPill("Food",state.hero.food,state.hero.food > 1 ? "good" : "warn")}
+        ${statPill("Debt",p.debt,p.debt <= 0 ? "good" : "warn")}
+        ${statPill("Gang",p.gang.defeated ? "broken" : gangDemand ? "demanding" : "watching",p.gang.defeated ? "good" : gangDemand ? "red" : "warn")}
+        ${statPill("Companion",companionReady ? "Mira" : p.companion.met ? "waiting" : "unknown",companionReady ? "good" : "")}
+      </div>
+      ${contractSummaryHTML(p, complete)}
+      <div class="slum-action-grid slum-action-groups">
+        <button class="primary slum-group-button" onclick="FE.slumOpenContractBoard()" ${actionDisabled(complete ? "The prologue gate is already reached." : "")}>
+          <span>Contracts</span>
+          <small>${activeContract() ? "Resume active job" : "Chapter jobs and boss"}</small>
+        </button>
+        <button class="slum-group-button" onclick="FE.slumOpenActionGroup('town')">
+          <span>Town & Work</span>
+          <small>Earn, services, alleys</small>
+        </button>
+        <button class="slum-group-button" onclick="FE.slumOpenActionGroup('shelter')">
+          <span>Shelter & Ally</span>
+          <small>Rest, recover, or find Mira</small>
+        </button>
+        <button class="${gateReady() ? "primary" : "secondary"} slum-group-button" onclick="FE.slumSeekGate()">
+          <span>${esc(gateLabel)}</span>
+          <small>${gateReady() || complete ? "Ready" : "Needs coin, rep, safety"}</small>
+        </button>
+        ${slumSupportButtonHTML(complete)}
+      </div>
+      <div class="slum-progress-grid">
+        ${progress("Reputation",p.status,p.statusGoal,p.status >= p.statusGoal ? "good" : "")}
+        ${progress("Safety",p.safety,p.safetyGoal,p.safety >= p.safetyGoal ? "good" : "mana")}
+        ${progress("Danger",p.danger,10,p.danger >= 5 ? "danger" : "warn")}
+      </div>
+      <details class="slum-drawer slum-town-drawer">
+        <summary>Town Contacts & Services</summary>
+        ${slumNpcRailHTML(p, complete)}
+      </details>
+      <details class="slum-drawer slum-log-drawer">
+        <summary>Recent Rumors</summary>
+        <div class="slum-log">
+          ${p.log.slice(-5).map(line=>`<div class="entry">${esc(line)}</div>`).join("")}
+        </div>
+      </details>
+    </div>
+  `;
+}
+
+export function slumOpenActionGroup(groupId){
+  const p = prologue();
+  const complete = p.phase === "gateUnlocked" || p.lowerWardGate.unlocked;
+  if(groupId === "town"){
+    modal("Town & Work", `<p>Pick one useful stop. Keep the main Cinderhook screen clean and come here when you need money, services, or a local fight.</p>`, [
+      {label:"Work Stalls",cls:"primary",fn:()=>slumWork()},
+      {label:"Scavenge Drains",cls:"secondary",fn:()=>slumScavenge()},
+      {label:"Clear Alley",cls:"secondary",fn:()=>slumClearAlley()},
+      {label:p.gang.defeated ? "Gang Broken" : "Gang Pressure",cls:p.gang.state === "demand" ? "danger" : "secondary",fn:()=>setTimeout(()=>slumOpenActionGroup("gang"),0)},
+      {label:"Market",cls:"secondary",fn:()=>window.FE.openTownService("market")},
+      {label:"Blacksmith",cls:"secondary",fn:()=>window.FE.openTownService("blacksmith")},
+      {label:"Inn",cls:"secondary",fn:()=>window.FE.openTownService("inn")},
+      {label:"Tavern",cls:"secondary",fn:()=>window.FE.openTownService("tavern")},
+      {label:"Close",cls:"secondary"}
+    ]);
+    return;
+  }
+  if(groupId === "earn"){
+    if(complete)return toast("The gate is already reached.");
+    modal("Earn Coin", `<p>Choose how you want to make progress today. Stalls are steadier; drains are riskier but can turn up food.</p>`, [
+      {label:"Work Stalls",cls:"primary",fn:()=>slumWork()},
+      {label:"Scavenge Drains",cls:"secondary",fn:()=>slumScavenge()},
+      {label:"Close",cls:"secondary"}
+    ]);
+    return;
+  }
+  if(groupId === "shelter"){
+    const companionReady = p.companion.recruited;
+    const canRecruit = p.companion.met && !p.companion.recruited;
+    modal("Shelter & Ally", `<p>Use the shelter to recover or handle Mira, the first slum companion hook.</p>`, [
+      {label:"Rest at Shelter",cls:"primary",fn:()=>slumRest()},
+      {label:companionReady ? "Mira Recruited" : canRecruit ? "Speak with Mira" : "Find Companion",cls:"secondary",fn:()=>slumMeetCompanion()},
+      {label:"Companion Drill",cls:"secondary",fn:()=>slumCompanionDrill()},
+      {label:"Close",cls:"secondary"}
+    ]);
+    return;
+  }
+  if(groupId === "gang"){
+    if(p.gang.defeated)return toast("The Dock Rats are already broken here.");
+    if(complete)return toast("The gate is already reached.");
+    modal("Gang Pressure", `<p>The Dock Rats can be paid off for temporary safety, or challenged directly when you are ready for a fight.</p>`, [
+      {label:"Pay 12 Gold",cls:"primary",fn:()=>slumPayGang()},
+      {label:"Refuse Enforcer",cls:"danger",fn:()=>slumFightGang()},
+      {label:"Close",cls:"secondary"}
+    ]);
+  }
+}
+
+export function slumOpenContractBoard(){
+  const p = prologue();
+  modal("Chapter 1 Contracts", contractBoardHTML(p, p.phase === "gateUnlocked" || p.lowerWardGate.unlocked), [
+    {label:"Close",cls:"secondary"}
+  ]);
+}
+
+export function slumContractDetails(id){
+  const contract = contractById(id);
+  if(!contract)return toast("Contract not found.");
+  modal(contract.name, `
+    <p>${esc(contract.desc)}</p>
+    <span class="pill">${esc(contract.contact)}</span>
+    <span class="pill">${esc(contract.tag)}</span>
+    <p>Reward: ${esc(contractRewardLine(contract.reward))}</p>
+  `, [
+    {label:"Accept",cls:"primary",fn:()=>slumAcceptContract(id)},
+    {label:"Close",cls:"secondary"}
+  ]);
+}
+
+export function slumAcceptContract(id){
+  const p = prologue();
+  const contract = contractById(id);
+  if(!contract)return toast("Contract not found.");
+  if(p.lowerWardGate.unlocked)return toast("The gate is already reached.");
+  if(p.contracts.active && p.contracts.active !== id)return toast("Finish or hold the active contract first.");
+  if(p.contracts.completed.includes(id))return toast("That contract is already complete.");
+  if(!contractUnlocked(contract,p))return toast("That contract is not ready yet.");
+  p.contracts.active = id;
+  if(contract.id === "gate_lieutenant")p.contracts.chapterBossUnlocked = true;
+  addLog(`${contract.contact} posts a contract: ${contract.name}.`);
+  refresh();
+}
+
+export function slumAbandonContract(){
+  const p = prologue();
+  const contract = activeContract();
+  if(!contract)return toast("No active contract.");
+  p.contracts.active = null;
+  addLog(`${contract.name} is held for later.`);
+  refresh();
+}
+
+export function slumStartContract(id){
+  const p = prologue();
+  const contract = contractById(id || p.contracts.active);
+  if(!contract)return toast("No contract selected.");
+  if(p.lowerWardGate.unlocked)return toast("The gate is already reached.");
+  if(!p.contracts.active)slumAcceptContract(contract.id);
+  if(p.contracts.active !== contract.id)return toast("Finish or hold the active contract first.");
+  if(contract.kind === "work"){
+    actionDay();
+    completeContract(contract.id);
+    addLog(`Contract completed: ${contract.name}.`);
+    refresh();
+    return;
+  }
+  if(contract.kind === "scavenge"){
+    p.danger = clamp(p.danger + 1,0,10);
+    actionDay();
+    completeContract(contract.id);
+    addLog(`Contract completed: ${contract.name}.`);
+    refresh();
+    return;
+  }
+  addLog(`${contract.name} turns into a fight.`);
+  save();
+  startBattle(contractEnemies(contract),contract.desc, {
+    source:"slum-prologue",
+    onVictory:"slumContractWon",
+    onDefeat:"slumContractLost",
+    contractId:contract.id
+  });
+}
+
+export function slumCompanionDrill(){
+  const p = prologue();
+  const active = state.hero.companions.filter(c=>c.active);
+  if(!active.length){
+    modal("Companion Drill", `<p>Find or recruit Mira first. Drills become useful once someone is actually walking beside you.</p>`, [
+      {label:p.companion.met ? "Speak with Mira" : "Find Mira",cls:"primary",fn:()=>slumMeetCompanion()},
+      {label:"Close",cls:"secondary"}
+    ]);
+    return;
+  }
+  const goldCost = 4;
+  const foodCost = 1;
+  if(state.hero.gold < goldCost)return toast("Need 4 gold.");
+  if(state.hero.food < foodCost)return toast("Need 1 food.");
+  state.hero.gold -= goldCost;
+  state.hero.food -= foodCost;
+  active.forEach(companion=>{
+    normalizeCompanion(companion);
+    grantCompanionBond(companion,10);
+    grantCompanionTraining(companion,24);
+    const learned = unlockCompanionContractSkill(companion);
+    if(learned)addLog(`${companion.name} learned ${learned.replace(/_/g," ")} during drill.`);
+  });
+  p.safety = clamp(p.safety + 1,0,10);
+  advanceDays(1);
+  addLog("You spend a day drilling footwork, signals, and emergency escapes with the party.");
+  refresh();
+}
+
+export function slumWork(){
+  const p = prologue();
+  if(p.lowerWardGate.unlocked)return toast("The gate is already reached.");
+  const coin = rnd(9,14);
+  state.hero.gold += coin;
+  p.status += 1;
+  p.safety = clamp(p.safety - (Math.random() < .35 ? 1 : 0),0,10);
+  p.danger = clamp(p.danger + (Math.random() < .3 ? 1 : 0),0,10);
+  actionDay();
+  addLog(`You haul ash barrels and mend stall canvas. +${coin} gold, +1 reputation.`);
+  if(completeActiveContractByKind("work"))addLog("Your active contract is complete.");
+  refresh();
+}
+
+export function slumScavenge(){
+  const p = prologue();
+  if(p.lowerWardGate.unlocked)return toast("The gate is already reached.");
+  const coin = rnd(4,9);
+  const food = Math.random() < .55 ? 1 : 0;
+  state.hero.gold += coin;
+  state.hero.food += food;
+  p.status += Math.random() < .45 ? 1 : 0;
+  p.danger = clamp(p.danger + 1,0,10);
+  p.heat = clamp(p.heat + 1,0,10);
+  actionDay();
+  addLog(`You search the lower drains. +${coin} gold${food ? ", +1 food" : ""}, but danger rises.`);
+  if(completeActiveContractByKind("scavenge"))addLog("Your active contract is complete.");
+  refresh();
+}
+
+export function slumRest(){
+  const p = prologue();
+  const foodCost = state.hero.food > 0 ? 1 : 0;
+  state.hero.food = Math.max(0,state.hero.food - foodCost);
+  state.hero.hp = Math.min(state.hero.maxHp,state.hero.hp + 42);
+  state.hero.mana = Math.min(state.hero.maxMana,state.hero.mana + 20);
+  p.safety = clamp(p.safety + 1,0,10);
+  p.danger = clamp(p.danger - 1,0,10);
+  advanceDays(1);
+  addLog(foodCost ? "You bar the shelter door, share a heel of bread, and recover." : "You rest hungry. Your body recovers, but the room feels colder.");
+  refresh();
+}
+
+export function slumMeetCompanion(){
+  const p = prologue();
+  if(p.companion.recruited)return toast("Mira is already in your party.");
+  if(!p.companion.met){
+    p.companion.met = true;
+    p.status += 1;
+    addLog("Mira of the Drainsteps marks a safe chalk sign near your shelter. She knows which alleys bite.");
+    modal("Mira of the Drainsteps", `<p>Mira offers to guide you through gang alleys for 6 gold. She joins as a scout companion and fights beside you.</p>`, [
+      {label:"Recruit Mira",cls:"primary",fn:()=>slumRecruitCompanion()},
+      {label:"Later",cls:"secondary"}
+    ]);
+    refresh();
+    return;
+  }
+  modal("Mira of the Drainsteps", `<p>Mira waits near the rain barrel, watching the enforcer route.</p><p>Recruit cost: 6 gold.</p>`, [
+    {label:"Recruit Mira",cls:"primary",fn:()=>slumRecruitCompanion()},
+    {label:"Later",cls:"secondary"}
+  ]);
+}
+
+export function slumRecruitCompanion(){
+  const p = prologue();
+  if(p.companion.recruited)return toast("Mira is already in your party.");
+  if(state.hero.gold < 6)return toast("Need 6 gold to recruit Mira.");
+  state.hero.gold -= 6;
+  const existing = state.hero.companions.find(c=>c.id === SLUM_COMPANION_ID);
+  if(!existing)state.hero.companions.push(makeMira());
+  p.companion.recruited = true;
+  p.companion.id = SLUM_COMPANION_ID;
+  p.safety = clamp(p.safety + 2,0,10);
+  p.status += 1;
+  addLog("Mira joins your party. Shortcuts, warnings, and a second blade change the slum math.");
+  refresh();
+}
+
+export function slumPayGang(){
+  const p = prologue();
+  if(p.gang.defeated)return toast("The Dock Rats are already broken here.");
+  if(state.hero.gold < 12)return toast("Need 12 gold.");
+  state.hero.gold -= 12;
+  p.gang.paid++;
+  p.gang.state = "paid";
+  p.gang.nextDemandDay = state.world.day + 4;
+  p.safety = clamp(p.safety + 2,0,10);
+  p.danger = clamp(p.danger - 2,0,10);
+  p.status += 1;
+  addLog("You pay the Dock Rats. The corner quiets, but everyone saw who collected.");
+  refresh();
+}
+
+export function slumFightGang(){
+  const p = prologue();
+  if(p.lowerWardGate.unlocked)return toast("The gate is already reached.");
+  addLog("You refuse the Dock Rat demand. Steel comes out under the laundry lines.");
+  save();
+  startBattle([makeGangEnemy()],"A Dock Rat enforcer blocks the alley and demands your gate money.", {
+    source:"slum-prologue",
+    onVictory:"slumFightWon",
+    onDefeat:"slumFightLost"
+  });
+}
+
+export function slumClearAlley(){
+  const p = prologue();
+  if(p.lowerWardGate.unlocked)return toast("The gate is already reached.");
+  addLog("You choose a bad alley on purpose, looking for the trouble everyone else avoids.");
+  save();
+  startBattle([makeAlleyEnemy()],"You push into a Cinderhook alley where knives move before names.", {
+    source:"slum-prologue",
+    onVictory:"slumAlleyWon",
+    onDefeat:"slumAlleyLost"
+  });
+}
+
+export function completeSlumFight(){
+  const p = prologue();
+  p.gang.defeated = true;
+  p.gang.state = "broken";
+  p.status += 3;
+  p.safety = clamp(p.safety + 2,0,10);
+  p.danger = clamp(p.danger - 3,0,10);
+  p.heat = clamp(p.heat + 1,0,10);
+  addLog("The enforcer falls back bleeding. The Dock Rats stop treating your shelter as easy rent.");
+  const contract = activeContract();
+  if(contract?.id === "dock_rat_ledger")completeContract(contract.id,{fromBattle:true});
+  refresh(true);
+}
+
+export function recordSlumFightDefeat(){
+  const p = prologue();
+  p.gang.state = "demand";
+  p.safety = clamp(p.safety - 1,0,10);
+  p.danger = clamp(p.danger + 1,0,10);
+  addLog("The Dock Rats beat you back to the shelter. They will return for coin.");
+  refresh(true);
+}
+
+export function completeSlumAlleyFight(){
+  const p = prologue();
+  actionDay();
+  p.status += 2;
+  p.safety = clamp(p.safety + (p.companion.recruited ? 2 : 1),0,10);
+  p.danger = clamp(p.danger - 1,0,10);
+  p.heat = clamp(p.heat + 1,0,10);
+  addLog(p.companion.recruited
+    ? "You and Mira clear a knife-corner. Word spreads that your shelter is not easy prey."
+    : "You clear a knife-corner alone. It earns respect, and a few doors stop closing so fast.");
+  const contract = activeContract();
+  if(contract?.id === "knife_corner")completeContract(contract.id,{fromBattle:true});
+  refresh(true);
+}
+
+export function completeSlumContractFight(meta = {}){
+  const contractId = meta.contractId || activeContract()?.id;
+  const contract = contractById(contractId);
+  if(!contract)return refresh(true);
+  actionDay();
+  completeContract(contract.id,{fromBattle:true});
+  addLog(`Contract reward: ${contractRewardLine(contract.reward)}.`);
+  refresh(true);
+  toast(`Contract complete: ${contract.name}`);
+}
+
+export function recordSlumContractDefeat(meta = {}){
+  const p = prologue();
+  const contractId = meta.contractId || activeContract()?.id;
+  const contract = contractById(contractId);
+  actionDay();
+  p.safety = clamp(p.safety - 1,0,10);
+  p.danger = clamp(p.danger + 1,0,10);
+  if(contract){
+    p.contracts.failed.push(contract.id);
+    p.contracts.failed = p.contracts.failed.slice(-12);
+    addLog(`${contract.name} goes badly. Recover and try again when your supplies are steadier.`);
+  }else{
+    addLog("The contract fight goes badly. Cinderhook gets louder around your shelter.");
+  }
+  refresh(true);
+}
+
+export function recordSlumAlleyDefeat(){
+  const p = prologue();
+  actionDay();
+  p.safety = clamp(p.safety - 1,0,10);
+  p.danger = clamp(p.danger + 1,0,10);
+  p.heat = clamp(p.heat + 1,0,10);
+  addLog("The alley turns against you. Cinderhook learns you can bleed.");
+  refresh(true);
+}
+
+export function slumSeekGate(){
+  const p = prologue();
+  p.lowerWardGate.visited = true;
+  if(p.lowerWardGate.unlocked){
+    modal("Lower Ward Gate", `<p>The Lower Ward gate stands open now. Cleaner lamps burn above Cinderhook, and harder names wait beyond the bars.</p>`);
+    return;
+  }
+  if(!gateReady()){
+    modal("Lower Ward Gate", `
+      <p>The gate guards look past you until your name, purse, and corner safety improve.</p>
+      <p>Needed: ${p.coinGoal} gold, ${p.statusGoal} reputation, ${p.safetyGoal} safety, and either paid or broken gang pressure.</p>
+    `);
+    return;
+  }
+  if(state.hero.gold < GATE_BRIBE_COST){
+    toast(`Need ${GATE_BRIBE_COST} gold for the gate fee.`);
+    return;
+  }
+  state.hero.gold -= GATE_BRIBE_COST;
+  p.phase = "gateUnlocked";
+  p.lowerWardGate.unlocked = true;
+  p.status += 2;
+  p.safety = clamp(p.safety + 1,0,10);
+  addLog("Your name reaches the iron wicket. The Lower Ward gate opens for the first time.");
+  modal("Slum Prologue Complete", `<p>The iron wicket opens. Cinderhook is no longer the whole world; it is the first rung below the castle road.</p>`, [
+    {label:"Enter the Lower Ward",cls:"primary",fn:()=>window.FE.enterLowerWard?.() || refresh()},
+    {label:"Support Future Builds",cls:"secondary",fn:()=>window.FE.show("support")}
+  ]);
+  refresh(true);
+}
