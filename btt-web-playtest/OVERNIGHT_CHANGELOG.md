@@ -86,7 +86,7 @@ node scripts/test-combat-debug.mjs
 - Debug Attack Studio (`?debug`) to preview every swing and swap weapons
 - New stylesheet `combat-animations.css` loaded after `styles.css` / `redesign.css` so motion wins over the old 8px nudge
 
-## Pass 7 — Real enemy characters (v114)
-- Replaced the purple geometric cultist placeholder with a painted masked acolyte (idle, attack, hurt, defeated)
-- Every combat spawn now stamps a sprite class so flavor names never fall back to CSS blob portraits
-- World / hard-area / tutorial / elite hunters all resolve to skeleton, wolf, bandit, cultist, or corrupted knight art
+## Pass 8 — Combat sprite framing (v115)
+- Knocked out studio-black plates behind player and enemy combat sprites so they no longer sit on a black icon
+- Combat frames no longer clip heads, weapons, or feet (`overflow: visible`, `object-fit: contain`)
+- Softened the battlefield ground blob so it reads as a shadow, not a black rectangle

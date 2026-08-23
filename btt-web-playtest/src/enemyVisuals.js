@@ -1,6 +1,6 @@
 const ENEMY_ROOT = "assets/portraits/enemies/";
 const V80_ACTOR_ROOT = "assets/actors/generated/v80/";
-const ENEMY_ART_CACHE = "v114";
+const ENEMY_ART_CACHE = "v115";
 
 export const ENEMY_POSE_STATES = ["idle","attack","hurt","defeated"];
 

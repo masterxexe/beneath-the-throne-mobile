@@ -470,3 +470,76 @@
     animation:none !important;
   }
 }
+
+/* Keep full painted bodies on the battlefield: no black plates, no clipped limbs. */
+.combat-battlefield .combat-card,
+.combat-battlefield .unit.combat-card,
+.combat-battlefield .enemy.combat-card,
+.combat-battlefield .portrait-wrap,
+.combat-battlefield .paper-doll-frame,
+.combat-battlefield .paper-doll-frame-combat,
+.combat-battlefield .paper-doll-scene,
+.combat-battlefield .paper-doll-root,
+.combat-battlefield .enemy-pose-frame{
+  overflow:visible !important;
+  contain:none !important;
+  background:transparent !important;
+  background-color:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+}
+.combat-battlefield .combat-card::before,
+.combat-battlefield .unit.combat-card::before,
+.combat-battlefield .enemy.combat-card::before,
+.combat-battlefield .portrait-wrap::before{
+  height:28px !important;
+  bottom:14px !important;
+  left:18% !important;
+  right:18% !important;
+  opacity:.42 !important;
+  background:radial-gradient(ellipse at center,rgba(0,0,0,.42),rgba(0,0,0,.12) 48%,transparent 74%) !important;
+  filter:blur(8px) !important;
+  pointer-events:none !important;
+}
+.combat-battlefield .enemy-pose-art{
+  left:50% !important;
+  bottom:0 !important;
+  width:100% !important;
+  height:100% !important;
+  max-width:none !important;
+  object-fit:contain !important;
+  object-position:center bottom !important;
+  transform:translateX(-50%) !important;
+  filter:drop-shadow(0 10px 8px rgba(0,0,0,.42)) saturate(1.05) contrast(1.04) !important;
+}
+.combat-battlefield .enemy-pose-wolf .enemy-pose-art{
+  width:108% !important;
+  height:108% !important;
+  bottom:0 !important;
+}
+.combat-battlefield .paper-doll-generated,
+.combat-battlefield .paper-doll-layer{
+  object-fit:contain !important;
+  object-position:center bottom !important;
+  width:100% !important;
+  height:100% !important;
+  filter:drop-shadow(0 10px 8px rgba(0,0,0,.4)) saturate(1.04) contrast(1.03) !important;
+}
+.combat-battlefield .paper-doll-generated{
+  --paper-doll-scale:1 !important;
+  transform:none !important;
+}
+.combat-battlefield .enemy-pose-ground,
+.combat-battlefield .paper-doll-ground{
+  opacity:.4 !important;
+  height:10% !important;
+  inset:auto 18% 2% 18% !important;
+  background:radial-gradient(ellipse at center,rgba(0,0,0,.35),transparent 72%) !important;
+  filter:blur(6px) !important;
+}
+.combat-battlefield .enemy-pose-vignette,
+.combat-battlefield .enemy-pose-frame-line,
+.combat-battlefield .paper-doll-scene::before,
+.combat-battlefield .paper-doll-scene::after{
+  display:none !important;
+}

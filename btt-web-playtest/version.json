@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.23-overnight-39",
-  "build": 39,
-  "cache": "v114",
-  "notes": "Real painted enemy characters: cultist acolyte art plus sprite class on every spawn"
+  "version": "2026.08.23-overnight-40",
+  "build": 40,
+  "cache": "v115",
+  "notes": "Transparent combat sprites and unclipped full-body framing for player and enemies"
 }
