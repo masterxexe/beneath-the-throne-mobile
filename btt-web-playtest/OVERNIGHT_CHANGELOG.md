@@ -63,3 +63,18 @@ node scripts/test-combat-debug.mjs
 ```
 
 ## Pass 4 — Mine, Camp, Contracts (v109)
+- **Mine interior scene** with painted `mine-cut-v20.png` art, foreman NPC, ore vein hotspot
+- **Establish Camp** on buildable road stops (costs gold/ore, advances 1 day)
+- **Fortify Camp** upgrade (basic → fortified art, costs gold/ore/food, 2 days)
+- Full **slum contract board i18n** (EN/ES) for all Chapter 1 contracts
+- Debug shortcut: `FE.debugBootRoadStop('broken_road')` for camp testing
+- Asset audit: 99 refs, 0 missing
+
+## Pass 5 — Visual polish (v110)
+- **HUD vital micro-bars** for HP/Mana with critical pulse; core vs extra pill tiers
+- **Screen crossfade** transitions between dock tabs
+- **Cinematic combat header** strip (round pill + turn order)
+- **Interior entry staging** with painted backdrop before scene reveal
+- **Map mood overlays** tied to current location (ember, ash, storm, fog, gold)
+- **Hotspot breathe** animation on world/interior hotspots
+- Class-based **UI theme tint** (imperial, holy, corrupted, nature, royal)
