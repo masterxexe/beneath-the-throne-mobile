@@ -1,6 +1,7 @@
 import { advanceDays, clamp, companionTrainingNeed, grantCompanionBond, normalizeCompanion, rnd, save, state } from "./state.js";
 import { startBattle } from "./combat.js";
 import { modal, toast, updateTop } from "./ui.js";
+import { tx } from "./language.js";
 import { NPC_ACTOR_ASSETS } from "./npcRegistry.js";
 
 const SLUM_COMPANION_ID = "slum_mira";
@@ -563,20 +564,18 @@ export function renderSlumProloguePanel(){
   const gangDemand = p.gang.state === "demand" && !p.gang.defeated;
   const companionReady = p.companion.recruited;
   const canRecruit = p.companion.met && !p.companion.recruited;
-  const gateLabel = complete ? "Lower Ward Gate Reached" : "Test the Lower Ward Gate";
+  const gateLabel = complete ? tx("slumGateReady") : tx("slumGateTest");
   return `
     <div class="panel slum-prologue-panel ${complete ? "slum-prologue-complete" : ""}">
       <div class="slum-hero">
         <div>
-          <span class="pill ${gangDemand ? "red" : "warn"}">Slum Prologue</span>
-          <h1>${esc(p.title || "Cinderhook Slum")}</h1>
-          <p>${complete
-            ? "The gate has opened. The full climb toward castle society is ready to become the paid game arc."
-            : "Earn coin, build a name, survive gang pressure, and reach the Lower Ward gate."}</p>
+          <span class="pill ${gangDemand ? "red" : "warn"}">${tx("slumPrologue")}</span>
+          <h1>${esc(p.title || tx("slumPrologueTitle"))}</h1>
+          <p>${complete ? tx("slumPrologueComplete") : tx("slumPrologueDesc")}</p>
         </div>
         <div class="slum-goal-card">
-          <span>${esc(p.goal || "Reach the Lower Ward gate")}</span>
-          ${gateReady() || complete ? statPill("Gate", complete ? "opened" : "ready","good") : statPill("Gate","locked","warn")}
+          <span>${esc(p.goal || tx("slumGateTest"))}</span>
+          ${gateReady() || complete ? statPill("Gate", complete ? tx("slumGateOpened") : tx("slumGateReadyLabel"),"good") : statPill("Gate",tx("slumGateLocked"),"warn")}
         </div>
       </div>
       <div class="slum-status-row">
@@ -589,15 +588,15 @@ export function renderSlumProloguePanel(){
       ${contractSummaryHTML(p, complete)}
       <div class="slum-action-grid slum-action-groups">
         <button class="primary slum-group-button" onclick="FE.slumOpenContractBoard()" ${actionDisabled(complete ? "The prologue gate is already reached." : "")}>
-          <span>Contracts</span>
+          <span>${tx("slumContracts")}</span>
           <small>${activeContract() ? "Resume active job" : "Chapter jobs and boss"}</small>
         </button>
         <button class="slum-group-button" onclick="FE.slumOpenActionGroup('town')">
-          <span>Town & Work</span>
+          <span>${tx("slumTownWork")}</span>
           <small>Earn, services, alleys</small>
         </button>
         <button class="slum-group-button" onclick="FE.slumOpenActionGroup('shelter')">
-          <span>Shelter & Ally</span>
+          <span>${tx("slumShelterAlly")}</span>
           <small>Rest, recover, or find Mira</small>
         </button>
         <button class="${gateReady() ? "primary" : "secondary"} slum-group-button" onclick="FE.slumSeekGate()">
@@ -612,11 +611,11 @@ export function renderSlumProloguePanel(){
         ${progress("Danger",p.danger,10,p.danger >= 5 ? "danger" : "warn")}
       </div>
       <details class="slum-drawer slum-town-drawer">
-        <summary>Town Contacts & Services</summary>
+        <summary>${tx("slumTownContacts")}</summary>
         ${slumNpcRailHTML(p, complete)}
       </details>
       <details class="slum-drawer slum-log-drawer">
-        <summary>Recent Rumors</summary>
+        <summary>${tx("slumRecentRumors")}</summary>
         <div class="slum-log">
           ${p.log.slice(-5).map(line=>`<div class="entry">${esc(line)}</div>`).join("")}
         </div>

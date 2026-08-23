@@ -85,6 +85,62 @@ export const SERVICE_NPCS = {
 };
 
 export const AMBIENT_WORLD_NPCS = {
+  ashen_slums:[
+    {
+      id:"cinderhook-gang-lookout",
+      service:"gangLookout",
+      name:"Knife-Eye Ren",
+      role:"Gang Lookout",
+      asset:NPC_ACTOR_ASSETS.gangLookout,
+      tone:"ember",
+      x:22,
+      y:84,
+      scale:.74,
+      z:10,
+      line:"Pay the toll or bleed in the gutter. Your choice."
+    },
+    {
+      id:"cinderhook-beggar",
+      service:"slumBeggar",
+      name:"Old Rusk",
+      role:"Slum Beggar",
+      asset:NPC_ACTOR_ASSETS.slumBeggar,
+      tone:"hearth",
+      x:58,
+      y:86,
+      scale:.7,
+      z:11,
+      line:"The keep watches us starve. I watch who climbs."
+    }
+  ],
+  lower_ward:[
+    {
+      id:"lower-ward-clerk",
+      service:"townClerk",
+      name:"Clerk Orlen",
+      role:"Ward Clerk",
+      asset:NPC_ACTOR_ASSETS.townClerk,
+      tone:"stone",
+      x:48,
+      y:78,
+      scale:.76,
+      z:9,
+      line:"Permission costs coin. Coin costs patience."
+    },
+    {
+      id:"lower-ward-guard",
+      service:"gateGuard",
+      name:"Ser Varric",
+      role:"Ward Guard",
+      asset:NPC_ACTOR_ASSETS.castleGuard,
+      tone:"stone",
+      x:18,
+      y:82,
+      scale:.78,
+      z:8,
+      line:"No papers, no passage. The slum ends here."
+    }
+  ],
   ashen_keep:[
     {
       id:"ashen-keep-gate-guard",

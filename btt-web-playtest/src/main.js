@@ -85,11 +85,16 @@ function installDebugBootControls(){
     const panel = document.createElement("div");
     panel.className = "debug-boot-controls panel";
     panel.innerHTML = `
-      <h3>Debug Combat Layout</h3>
+      <h3>Debug Boot</h3>
       <div class="grid3">
         <button onclick="FE.debugBootCombatLayoutTest(1,0)">1v1</button>
-        <button onclick="FE.debugBootCombatLayoutTest(2,1)">1 Companion / 2 Enemies</button>
-        <button onclick="FE.debugBootCombatLayoutTest(3,2)">2 Companions / 3 Enemies</button>
+        <button onclick="FE.debugBootCombatLayoutTest(2,1)">1v2</button>
+        <button onclick="FE.debugBootCombatLayoutTest(3,2)">2v3</button>
+      </div>
+      <div class="grid3" style="margin-top:8px">
+        <button onclick="FE.debugBootSlumScene()">Slums</button>
+        <button onclick="FE.debugBootLowerWard()">Lower Ward</button>
+        <button onclick="FE.debugStartEnemyVisualTest('cultist')">Cultist</button>
       </div>
     `;
     setup.appendChild(panel);

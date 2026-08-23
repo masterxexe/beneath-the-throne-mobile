@@ -14,12 +14,39 @@ Open `http://127.0.0.1:43123` in your browser.
 
 Append `?debug` to the URL for dev cheats exposed on `window.FE`.
 
-Useful debug commands in the browser console:
+**Title screen debug buttons** (when `?debug`):
+- Combat layout tests (1v1, 1v2, 2v3)
+- Jump to Cinderhook Slums or Lower Ward cinematic scenes
+- Cultist enemy visual test
+
+**Browser console:**
 
 ```js
-FE.debugStartEnemyVisualTest('skeleton')  // test enemy pose cycling
-FE.debugTriggerCombatPose('attack')       // test player attack animation
-FE.debugEnemyVisualAssets()               // inspect enemy art registry
+FE.debugStartEnemyVisualTest('skeleton')  // enemy pose cycling
+FE.debugStartEnemyVisualTest('cultist')    // distinct cultist sprites
+FE.debugTriggerCombatPose('attack')        // player attack animation
+FE.debugBootSlumScene()                    // jump to slum world scene
+FE.debugBootLowerWard()                    // jump to lower ward scene
+```
+
+## Art pipeline
+
+Regenerate polish-pass art (cultist, walk cycles, composites, location tints):
+
+```bash
+python3 scripts/polish-game-art.py
+```
+
+Install AI-generated combat art from artifacts:
+
+```bash
+python3 scripts/install-combat-art.py
+```
+
+Verify combat with Puppeteer screenshots:
+
+```bash
+node scripts/test-combat-debug.mjs
 ```
 
 ## Project layout
@@ -28,57 +55,33 @@ FE.debugEnemyVisualAssets()               // inspect enemy art registry
 btt-web-playtest/
 ├── index.html
 ├── styles.css
-├── redesign.css
+├── redesign.css          # Ash Court visual overlay
+├── version.json          # PWA update version
+├── OVERNIGHT_CHANGELOG.md
 ├── manifest.webmanifest
 ├── icons/
 ├── assets/
 │   ├── actors/generated/v80/     # enemy + companion combat sprites
 │   ├── npcs/generated/v80/       # NPC portrait busts
-│   ├── portraits/player/poses/   # player combat pose frames
+│   ├── portraits/player/poses/   # player combat + walk poses (v80)
+│   ├── portraits/player/composites/  # per-loadout gear composites
 │   ├── battlebacks/generated/    # combat scene backgrounds
-│   ├── towns/generated/          # world location art
+│   ├── towns/generated/          # world location art + v71 scenes
 │   └── ...
-├── scripts/
-│   ├── install-combat-art.py     # install AI-generated art from artifacts
-│   └── generate-combat-art.py    # legacy procedural fallback (deprecated)
 └── src/
 ```
 
-## Art assets
+## Overnight improvements (latest)
 
-Combat art uses the **Ash Court** palette — gritty painted dark fantasy with gold/ember accents. Assets are versioned (`v80` is the current production-quality set).
+See `OVERNIGHT_CHANGELOG.md` for the full autonomous pass log.
 
-### Asset categories
+Highlights:
+- Cinderhook Slums + Lower Ward cinematic world scenes
+- Distinct cultist enemy, companion healer/mage sprites
+- v80 walk cycles and full gear composite poses
+- PWA cache sync, WebAudio stub, i18n combat strings
+- Ambient NPCs in slums and lower ward
 
-| Category | Location | Poses |
-|----------|----------|-------|
-| Enemies | `assets/actors/generated/v80/` | idle, attack, hurt + defeated in `portraits/enemies/` |
-| Player combat | `assets/portraits/player/poses/base/` | slash, thrust, block, hurt, cast, defeated |
-| NPCs | `assets/npcs/generated/v80/` | portrait busts |
-| Battlebacks | `assets/battlebacks/generated/` | scene backgrounds (verified valid) |
-| World scenes | `assets/towns/generated/`, `ministops/`, `worldstates/` | location art (verified valid) |
+## Cache version
 
-### Regenerating combat art
-
-1. Generate new images via Cursor `GenerateImage` (or place PNGs in `/opt/cursor/artifacts/assets/`)
-2. Name files following the convention: `{entity}-{pose}-v80.png`
-3. Run the install script:
-
-```bash
-python3 scripts/install-combat-art.py
-```
-
-This normalizes sizes, generates defeated enemy poses, refreshes composite frames, and writes to `assets/`.
-
-4. Update references in `src/enemyVisuals.js`, `src/gearVisuals.js`, `src/npcRegistry.js` if version changes
-5. Bump cache version (`?v=`) in `index.html`
-
-### What still needs manual upload
-
-- **Gear composite idle frames** (`composites/*/idle-v38.png`) — still use older layered gear art; combat poses updated to v80
-- **Walk cycle frames** — traversal poses still derived from idle crop; dedicated walk art would improve overworld
-- **Paper-doll SVG gear layers** — functional placeholders for inventory UI
-
-## Note on assets
-
-The uploaded zip may contain source code only. This repo includes the full `assets/` tree with v80 painted combat art.
+Current: **v108** (`index.html`, `service-worker.js`, `version.json`)

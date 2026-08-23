@@ -39,11 +39,18 @@ Autonomous improvement pass while user sleeps. Commits on `main`.
 - `scripts/test-combat-debug.mjs` — Puppeteer combat verification
 
 ## Still open (future passes)
-- Slum prologue full i18n extraction
+- Slum prologue remaining strings i18n (contract board, action groups)
 - Mine interior cinematic scene
 - Gear paper-doll SVG → painted PNG layers
 - Establish camp road feature
 - Full painted walk composites per armor loadout
+
+## Pass 2 additions
+- Ambient NPCs in Cinderhook Slums and Lower Ward
+- Slum prologue i18n for main panel strings (EN/ES)
+- Debug boot shortcuts: `FE.debugBootSlumScene()`, `FE.debugBootLowerWard()`
+- README overhaul with art pipeline docs
+- Extended Puppeteer test for world scenes
 
 ## Regenerate art
 ```bash

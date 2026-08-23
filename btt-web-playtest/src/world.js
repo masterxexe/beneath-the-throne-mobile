@@ -15,6 +15,7 @@ import { preloadPlayerPoseAsset } from "./portraitRenderer.js";
 import { TRAVERSAL_TUNING, cinematicEase, createMapTraversalPresence, createWorldSceneTraversal, traversalPhaseSchedule, withTraversalPhase } from "./traversalController.js";
 import { renderSlumProloguePanel } from "./slumPrologue.js";
 import { renderLowerWardPanel } from "./lowerWard.js";
+import { startActualGame } from "./tutorials.js";
 
 export const START_LOCATION = "ashen_slums";
 
@@ -1374,6 +1375,27 @@ export function debugBattleTransition(){
     title: tx("travelAmbush"),
     body: tx("travelAmbushBody")
   });
+}
+
+export function debugBootSlumScene(name = "Xexe", classId = "warrior"){
+  if(!state?.hero?.name)startActualGame(name, classId);
+  state.world.locationId = START_LOCATION;
+  state.world.routeHistory.push(START_LOCATION);
+  save(1);
+  showWorldHome();
+  return START_LOCATION;
+}
+
+export function debugBootLowerWard(name = "Xexe", classId = "warrior"){
+  if(!state?.hero?.name)startActualGame(name, classId);
+  state.prologue ||= {};
+  state.prologue.lowerWardGate = {unlocked: true};
+  state.prologue.phase = "gateUnlocked";
+  state.world.locationId = "lower_ward";
+  state.world.routeHistory.push("lower_ward");
+  save(1);
+  showWorldHome();
+  return "lower_ward";
 }
 
 export function debugJourneyState(){
