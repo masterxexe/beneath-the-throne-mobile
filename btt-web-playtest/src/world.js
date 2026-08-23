@@ -711,12 +711,14 @@ function renderRoadStopHome(place){
           <button onclick="FE.show('map')">${tx("openMap")}</button>
           <button class="secondary" onclick="FE.cancelTravel()">${tx("cancelTravel")}</button>
           <button class="secondary" ${place.canTurnBack ? `onclick="FE.turnBackJourney()"` : `disabled title="${esc(tx("turnBackDisabled"))}"`}>${tx("turnBack")}</button>
-          <button class="secondary" disabled title="${esc(place.build.disabledReason)}">${tx("establishCamp")}: ${tx("futureSystem")}</button>
+          <button class="secondary" ${place.build.hasCamp ? "disabled" : place.build.canBuild ? `onclick="FE.establishCamp()"` : `disabled title="${esc(place.build.disabledReason)}"`}>${place.build.hasCamp ? tx("campEstablished") : tx("establishCamp")}</button>
+          ${place.build.hasCamp && !place.build.fortified ? `<button class="secondary" ${place.build.canFortify ? `onclick="FE.fortifyCamp()"` : `disabled title="${esc(place.build.fortifyDisabledReason)}"`}>${tx("fortifyCamp")}</button>` : ""}
+          ${place.build.fortified ? `<span class="pill good">${tx("campFortified")}</span>` : ""}
         </div>
       </div>
       <div class="card">
-        <h3>${tx("establishCamp")}</h3>
-        <p>${esc(place.build.summary)}</p>
+        <h3>${place.build.hasCamp ? (place.build.fortified ? tx("campFortified") : tx("establishCamp")) : tx("establishCamp")}</h3>
+        <p>${esc(place.build.fortifySummary || place.build.summary)}</p>
       </div>
     </div>
     <div class="panel">
@@ -1166,26 +1168,152 @@ function journeyTurnBackState(travel = activeTravel){
   return {enabled:true, reason:"ready"};
 }
 
+function campFortifyCost(node){
+  const base = node?.roadBuildCost || {gold: 30, ore: 2};
+  return {
+    gold: Math.max(40, (base.gold || 30) + 20),
+    ore: Math.max(4, (base.ore || 2) + 2),
+    food: 3
+  };
+}
+
+function campFortifyContext(node, existing){
+  const stage = existing?.stage || "basic";
+  if(stage === "fortified"){
+    return {
+      canFortify: false,
+      fortified: true,
+      disabledReason: tx("campAlreadyFortified"),
+      summary: tx("campFortifiedSummary")
+    };
+  }
+  const cost = campFortifyCost(node);
+  const canAfford = state.hero.gold >= cost.gold
+    && state.hero.ore >= cost.ore
+    && state.hero.food >= cost.food;
+  const atStop = activeTravel?.status === "atRoadStop";
+  let disabledReason = "";
+  if(!atStop)disabledReason = tx("travelingBetweenRoadStops");
+  else if(state.hero.ore < cost.ore)disabledReason = tx("notEnoughOre");
+  else if(state.hero.food < cost.food)disabledReason = tx("notEnoughFood");
+  else if(state.hero.gold < cost.gold)disabledReason = tx("notEnoughGold");
+  const costParts = [`${cost.gold} ${tx("gold")}`, `${cost.ore} ${tx("ore")}`, `${cost.food} ${tx("food")}`];
+  return {
+    canFortify: atStop && canAfford,
+    fortified: false,
+    disabledReason,
+    summary: `${tx("fortifyCamp")}: ${costParts.join(", ")}.`,
+    cost
+  };
+}
+
 function roadStopBuildContext(node){
   if(!node || node.type !== "road"){
     return {
-      summary: tx("futureSystem"),
-      disabledReason: tx("futureSystem")
+      summary: tx("cannotBuildHere"),
+      disabledReason: tx("cannotBuildHere"),
+      canBuild: false,
+      hasCamp: false
     };
   }
-  const reasonKey = node.buildRestrictionReason || "cannotBuildHere";
-  const reason = tx(reasonKey);
+  const existing = state.world.roadStopStates?.[node.id];
+  if(existing?.type === "camp"){
+    const fortify = campFortifyContext(node, existing);
+    return {
+      summary: fortify.fortified ? fortify.summary : tx("campActiveSummary"),
+      disabledReason: tx("campAlreadyEstablished"),
+      canBuild: false,
+      hasCamp: true,
+      fortified: fortify.fortified,
+      canFortify: fortify.canFortify,
+      fortifyDisabledReason: fortify.disabledReason,
+      fortifySummary: fortify.summary,
+      fortifyCost: fortify.cost
+    };
+  }
   if(!node.buildable){
+    const reason = tx(node.buildRestrictionReason || "cannotBuildHere");
     return {
       summary: `${tx("cannotBuildHere")}: ${reason}`,
-      disabledReason: `${tx("cannotBuildHere")}: ${reason}`
+      disabledReason: reason,
+      canBuild: false,
+      hasCamp: false
     };
   }
-  const threatText = node.nearbyThreats?.length ? `${tx("nearbyThreats")}: ${node.nearbyThreats.length}.` : "";
+  const cost = node.roadBuildCost || {gold: 30};
+  const costParts = [];
+  if(cost.gold)costParts.push(`${cost.gold} ${tx("gold")}`);
+  if(cost.ore)costParts.push(`${cost.ore} ${tx("ore")}`);
+  if(cost.food)costParts.push(`${cost.food} ${tx("food")}`);
+  const threatText = node.nearbyThreats?.length ? `${tx("nearbyThreats")}: ${node.nearbyThreats.join(", ")}.` : "";
+  const canAfford = state.hero.gold >= (cost.gold || 0)
+    && state.hero.ore >= (cost.ore || 0)
+    && state.hero.food >= (cost.food || 0);
+  const atStop = activeTravel?.status === "atRoadStop";
+  let disabledReason = "";
+  if(!atStop)disabledReason = tx("travelingBetweenRoadStops");
+  else if(!canAfford)disabledReason = cost.food && state.hero.food < cost.food ? tx("notEnoughFood") : tx("notEnoughGold");
   return {
-    summary: `${tx("establishCamp")}: ${tx("futureSystem")}. ${tx("strategicValue")}: ${node.strategicValue || 1}. ${threatText}`.trim(),
-    disabledReason: tx("futureSystem")
+    summary: `${tx("establishCamp")}${costParts.length ? `: ${costParts.join(", ")}` : ""}. ${tx("strategicValue")}: ${node.strategicValue || 1}. ${threatText}`.trim(),
+    disabledReason,
+    canBuild: atStop && canAfford,
+    hasCamp: false,
+    cost
   };
+}
+
+export function establishCamp(){
+  const place = getCurrentPlaceContext();
+  if(place.type !== "roadStop" || activeTravel?.status !== "atRoadStop"){
+    return toast(tx("cannotBuildHere"));
+  }
+  const node = place.roadNode;
+  if(!node?.buildable)return toast(place.build.disabledReason || tx("cannotBuildHere"));
+  if(state.world.roadStopStates?.[node.id]?.type === "camp"){
+    return toast(tx("campAlreadyEstablished"));
+  }
+  const cost = node.roadBuildCost || {gold: 30};
+  if(state.hero.gold < (cost.gold || 0))return toast(tx("notEnoughGold"));
+  if(state.hero.ore < (cost.ore || 0))return toast(tx("needOre"));
+  if(state.hero.food < (cost.food || 0))return toast(tx("notEnoughFood"));
+  state.hero.gold -= cost.gold || 0;
+  state.hero.ore -= cost.ore || 0;
+  state.hero.food -= cost.food || 0;
+  state.world.roadStopStates ||= {};
+  state.world.roadStopStates[node.id] = {type: "camp", stage: "basic", builtDay: state.world.day || 1};
+  state.world.story.push(`${tx("campEstablished")}: ${nodeName(node)}.`);
+  playAudioHook("town-ambience", {intent: "settlement-loop"});
+  advanceDays(1);
+  save();
+  updateTop();
+  renderWorldHome();
+  toast(tx("campEstablished"));
+}
+
+export function fortifyCamp(){
+  const place = getCurrentPlaceContext();
+  if(place.type !== "roadStop" || activeTravel?.status !== "atRoadStop"){
+    return toast(tx("cannotBuildHere"));
+  }
+  const node = place.roadNode;
+  const existing = state.world.roadStopStates?.[node?.id];
+  if(existing?.type !== "camp")return toast(tx("cannotBuildHere"));
+  if(existing.stage === "fortified")return toast(tx("campAlreadyFortified"));
+  const cost = campFortifyCost(node);
+  if(state.hero.gold < cost.gold)return toast(tx("notEnoughGold"));
+  if(state.hero.ore < cost.ore)return toast(tx("notEnoughOre"));
+  if(state.hero.food < cost.food)return toast(tx("notEnoughFood"));
+  state.hero.gold -= cost.gold;
+  state.hero.ore -= cost.ore;
+  state.hero.food -= cost.food;
+  state.world.roadStopStates[node.id] = {...existing, stage: "fortified", fortifiedDay: state.world.day || 1};
+  state.world.story.push(`${tx("campFortified")}: ${nodeName(node)}.`);
+  playAudioHook("town-ambience", {intent: "settlement-loop"});
+  advanceDays(2);
+  save();
+  updateTop();
+  renderWorldHome();
+  toast(tx("campFortified"));
 }
 
 async function beginTravelBattle(from,to){
@@ -1368,6 +1496,14 @@ export function resumeJourneyAfterBattle(meta = {}){
     continueState: journeyContinueState()
   });
   showWorldHome();
+}
+
+export function debugBootRoadStop(stopId = "broken_road", name = "Xexe", classId = "warrior"){
+  if(!state?.hero?.name)startActualGame(name, classId);
+  state.hero.gold = Math.max(state.hero.gold || 0, 120);
+  state.hero.ore = Math.max(state.hero.ore || 0, 12);
+  state.hero.food = Math.max(state.hero.food || 0, 8);
+  return debugEnterRoadStopScene(stopId);
 }
 
 export function debugBattleTransition(){

@@ -328,6 +328,31 @@ def install_location_art() -> None:
         save(ward.resize((1672, 941), Image.Resampling.LANCZOS), towns / "lower-ward-v18.png")
 
 
+def install_mine_interior() -> None:
+    print("Generating mine interior art...")
+    interiors = ROOT / "assets/interiors/generated"
+    forge = interiors / "blacksmith-forge-v20.png"
+    if not forge.exists():
+        print("  SKIP mine-cut (no forge source)")
+        return
+    mine = tint(load(forge), (48, 62, 72), 0.28)
+    mine = color_grade(mine, 0.72, 0.78, 0.88)
+    w, h = mine.size
+    cave_overlay = Image.new("RGBA", mine.size, (0, 0, 0, 0))
+    cave_draw = ImageDraw.Draw(cave_overlay)
+    cave_draw.rectangle((0, 0, w, int(h * 0.35)), fill=(8, 12, 18, 120))
+    cave_draw.ellipse((int(w * 0.35), int(h * 0.42), int(w * 0.65), int(h * 0.72)), fill=(28, 32, 38, 80))
+    mine = Image.alpha_composite(mine, cave_overlay)
+    ore_glow = Image.new("RGBA", mine.size, (0, 0, 0, 0))
+    ore_draw = ImageDraw.Draw(ore_glow)
+    ore_draw.polygon(
+        [(w * 0.44, h * 0.54), (w * 0.56, h * 0.52), (w * 0.62, h * 0.64), (w * 0.48, h * 0.68)],
+        fill=(*EMBER[:3], 90),
+    )
+    mine = Image.alpha_composite(mine, ore_glow)
+    save(mine, interiors / "mine-cut-v20.png")
+
+
 def install_companion_actors() -> None:
     print("Refreshing companion combat actor variants...")
     npc_dir = ROOT / "assets/npcs/generated/v1"
@@ -353,6 +378,7 @@ def main() -> None:
     install_walk_cycles()
     install_composites()
     install_location_art()
+    install_mine_interior()
     try:
         install_companion_actors()
     except Exception as exc:

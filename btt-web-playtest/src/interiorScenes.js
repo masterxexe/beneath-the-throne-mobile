@@ -3,7 +3,8 @@ export const SERVICE_LABELS = {
   market: "Market",
   inn: "Inn",
   blacksmith: "Blacksmith",
-  townCenter: "Town Center"
+  townCenter: "Town Center",
+  mine: "Mine"
 };
 
 const INTERIOR_ART = {
@@ -11,7 +12,8 @@ const INTERIOR_ART = {
   market: "assets/interiors/generated/market-square-v20.png",
   inn: "assets/interiors/generated/inn-common-room-v20.png",
   blacksmith: "assets/interiors/generated/blacksmith-forge-v20.png",
-  townCenter: "assets/interiors/generated/town-center-v20.png"
+  townCenter: "assets/interiors/generated/town-center-v20.png",
+  mine: "assets/interiors/generated/mine-cut-v20.png"
 };
 
 const SERVICE_CONFIG = {
@@ -119,6 +121,25 @@ const SERVICE_CONFIG = {
       {id: "town-torch-right", type: "torch-glow", x: 78, y: 47, width: 20, height: 22, intensity: .4, depth: 3, duration: 4.8, opacity: .24, className: "ambient-gold"},
       {id: "town-banner-sway", type: "cloth-sway", x: 43, y: 35, width: 24, height: 20, intensity: .28, depth: 3, duration: 8.2, opacity: .28, className: "ambient-cloth"},
       {id: "town-square-dust", type: "dust-motes", x: 58, y: 58, width: 68, height: 42, intensity: .26, depth: 3, duration: 24, opacity: .14, className: "ambient-dust"}
+    ]
+  },
+  mine: {
+    mood: "stone",
+    entry: {
+      normal: "The mine cut opens into black stone. Pick marks glitter with old ore.",
+      dangerous: "Timbers groan overhead. Something moved in the deeper dark.",
+      burned: "Soot coats the mine mouth. The ash heaps still hide usable ore."
+    },
+    anchors: [
+      {id: "mine_foreman", type: "npc", interactionType: "service", npcCategory: "blacksmith", name: "Pit Foreman", x: 28, y: 58, scale: 1, depth: 4, pose: "watching", presenceClass: "presence-stone", hoverLabel: "Speak with the foreman", line: "Five days of honest digging buys enough ore for a real upgrade.", actions: ["serviceMenu"]},
+      {id: "ore_vein", type: "object", interactionType: "service", name: "Ore Vein", x: 52, y: 62, scale: 1.02, depth: 2, pose: "glowing", presenceClass: "presence-ember", hoverLabel: "Mine the ore vein", line: "Dark stone flakes away to reveal dull red metal.", actions: ["serviceMenu"]},
+      {id: "pick_rack", type: "object", interactionType: "object", name: "Tool Rack", x: 72, y: 54, scale: .92, depth: 3, pose: "stocked", presenceClass: "presence-steel", hoverLabel: "Take a mining pick", line: "Worn picks hang beside cracked helmets.", actions: ["rumor"]},
+      {id: "ore_cart", type: "object", interactionType: "cache", name: "Ore Cart", x: 78, y: 68, scale: .94, depth: 3, pose: "loaded", presenceClass: "presence-stone", hoverLabel: "Inspect the ore cart", line: "A half-filled cart waits to be hauled back to the forge road.", actions: ["serviceMenu"]}
+    ],
+    effects: [
+      {id: "mine-lantern-glow", type: "torch-glow", x: 46, y: 38, width: 22, height: 20, intensity: .52, depth: 3, duration: 5.2, opacity: .32, className: "ambient-gold"},
+      {id: "mine-ore-glint", type: "light-pulse", x: 50, y: 58, width: 24, height: 18, intensity: .44, depth: 2, duration: 4.6, opacity: .28, className: "ambient-ember"},
+      {id: "mine-dust", type: "dust-motes", x: 40, y: 48, width: 70, height: 50, intensity: .38, depth: 3, duration: 18, opacity: .18, className: "ambient-dust"}
     ]
   }
 };

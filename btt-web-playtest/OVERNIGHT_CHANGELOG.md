@@ -61,3 +61,11 @@ python3 scripts/polish-game-art.py
 ```bash
 node scripts/test-combat-debug.mjs
 ```
+
+## Pass 4 — Mine, Camp, Contracts (v109)
+- **Mine interior scene** with painted `mine-cut-v20.png` art, foreman NPC, ore vein hotspot
+- **Establish Camp** on buildable road stops (costs gold/ore, advances 1 day)
+- **Fortify Camp** upgrade (basic → fortified art, costs gold/ore/food, 2 days)
+- Full **slum contract board i18n** (EN/ES) for all Chapter 1 contracts
+- Debug shortcut: `FE.debugBootRoadStop('broken_road')` for camp testing
+- Asset audit: 99 refs, 0 missing

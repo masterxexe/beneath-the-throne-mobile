@@ -84,4 +84,4 @@ Highlights:
 
 ## Cache version
 
-Current: **v108** (`index.html`, `service-worker.js`, `version.json`)
+Current: **v109** (`index.html`, `service-worker.js`, `version.json`)

@@ -11,7 +11,7 @@ import { sceneActionButtonHTML, sceneAnchorHTML, sceneEffectHTML } from "./scene
 import { playAudioHook } from "./audioHooks.js";
 
 const TABS = ["market","blacksmith","inn","tavern","mine"];
-const SCENE_SERVICES = ["market","blacksmith","inn","tavern","townCenter"];
+const SCENE_SERVICES = ["market","blacksmith","inn","tavern","townCenter","mine"];
 const GEAR_SLOTS = ["weapon","offhand","helmet","chest","shoulders","legs","boots","ring"];
 const TOWN_SERVICE_GROUPS = [
   {
@@ -326,7 +326,8 @@ function servicePanelTitle(service, anchor){
     blacksmith: `${name}: Forge Work`,
     inn: `${name}: Rest and Shelter`,
     tavern: `${name}: Tavern Business`,
-    townCenter: `${name}: Civic Matters`
+    townCenter: `${name}: Civic Matters`,
+    mine: `${name}: Ore Gathering`
   };
   return titles[service] || `${name}: Services`;
 }
@@ -338,7 +339,8 @@ function servicePanelLead(service, anchor){
     blacksmith: `You work through ${name}, spending only the gold and ore the existing forge rules require.`,
     inn: `You settle matters with ${name}; rest, camp, healing, and time still use the existing inn logic.`,
     tavern: `You keep tavern business grounded in the room. Recruits remain visible NPCs in the scene.`,
-    townCenter: `You inspect ${name} for current civic hooks without starting a new town-management system.`
+    townCenter: `You inspect ${name} for current civic hooks without starting a new town-management system.`,
+    mine: `You work the cut with ${name}. Ore gathering still uses the existing five-day mining rules.`
   };
   return leads[service] || `You focus on ${name}.`;
 }
@@ -644,7 +646,8 @@ function serviceContextHTML(tab, contextAnchor){
     blacksmith: "Forge work and market trade now share one commerce surface while preserving the existing gold and ore costs.",
     inn: "Rest and camp still use the existing gold, food, healing, and day-advance rules.",
     tavern: "Recruit hiring still happens through visible tavern NPCs and the existing party economy.",
-    townCenter: "Civic interactions are lightweight hooks for the current town state and daily events."
+    townCenter: "Civic interactions are lightweight hooks for the current town state and daily events.",
+    mine: "Ore gathering still uses the existing day cost, ore payout, and blacksmith upgrade flow."
   };
   return `
     <div class="scene-service-note">

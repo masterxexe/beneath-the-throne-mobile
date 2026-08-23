@@ -273,7 +273,7 @@ function completeContract(contractId,{fromBattle = false} = {}){
   if(contract.id !== "gate_lieutenant" && p.contracts.completed.length >= 3 && p.companion.recruited){
     p.contracts.chapterBossUnlocked = true;
   }
-  addLog(contract.log);
+  addLog(contractText(contract, "log"));
   if(fromBattle)save();
   return true;
 }
@@ -439,22 +439,28 @@ function slumNpcRailHTML(p, complete){
   `;
 }
 
+function contractText(contract, field){
+  const key = `contract_${contract.id}_${field}`;
+  const translated = tx(key);
+  return translated !== key ? translated : (contract[field] || "");
+}
+
 function contractCardHTML(contract,{active = false} = {}){
   const reward = contractRewardLine(contract.reward);
   const action = active ? `FE.slumStartContract('${contract.id}')` : `FE.slumAcceptContract('${contract.id}')`;
-  const label = active ? contract.action : "Accept";
+  const label = active ? contractText(contract, "action") : tx("contractAccept");
   return `
     <div class="slum-contract-card ${active ? "is-active" : ""} ${contract.kind === "boss" ? "is-boss" : ""}">
       <div class="slum-contract-card-head">
-        <span class="pill ${contract.kind === "boss" ? "red" : "good"}">${esc(contract.tag)}</span>
+        <span class="pill ${contract.kind === "boss" ? "red" : "good"}">${esc(contractText(contract, "tag"))}</span>
         <small>${esc(contract.contact)}</small>
       </div>
-      <h3>${esc(contract.name)}</h3>
-      <p>${esc(contract.desc)}</p>
+      <h3>${esc(contractText(contract, "name"))}</h3>
+      <p>${esc(contractText(contract, "desc"))}</p>
       <small>${esc(reward)}</small>
       <div class="grid2">
         <button class="${active ? "primary" : ""}" onclick="${esc(action)}">${esc(label)}</button>
-        ${active ? `<button class="secondary" onclick="FE.slumAbandonContract()">Hold</button>` : `<button class="secondary" onclick="FE.slumContractDetails('${contract.id}')">Details</button>`}
+        ${active ? `<button class="secondary" onclick="FE.slumAbandonContract()">${tx("contractHold")}</button>` : `<button class="secondary" onclick="FE.slumContractDetails('${contract.id}')">${tx("contractDetails")}</button>`}
       </div>
     </div>
   `;
@@ -470,15 +476,13 @@ function contractBoardHTML(p, complete){
     <div class="slum-contract-board">
       <div class="slum-contract-head">
         <div>
-          <span class="pill ${bossReady ? "red" : "good"}">Chapter 1 Board</span>
-          <h2>Contracts</h2>
-          <p>${complete
-            ? "Cinderhook knows your name. The Lower Ward road is open beyond the gate."
-            : "One focused job at a time. Contracts move coin, reputation, safety, Mira, and the Lower Ward gate together."}</p>
+          <span class="pill ${bossReady ? "red" : "good"}">${tx("slumChapterBoard")}</span>
+          <h2>${tx("slumContracts")}</h2>
+          <p>${complete ? tx("slumContractBoardComplete") : tx("slumContractBoardDesc")}</p>
         </div>
         <div class="slum-contract-progress">
-          <span class="pill">${done}/${CHAPTER_ONE_CONTRACTS.length} done</span>
-          ${bossReady ? `<span class="pill red">Boss ready</span>` : ""}
+          <span class="pill">${done}/${CHAPTER_ONE_CONTRACTS.length} ${tx("contractDone")}</span>
+          ${bossReady ? `<span class="pill red">${tx("slumContractBossReady")}</span>` : ""}
         </div>
       </div>
       ${active ? `
@@ -491,13 +495,13 @@ function contractBoardHTML(p, complete){
         </div>
       ` : `
         <div class="slum-loop-strip">
-          <span class="pill warn">No new contract</span>
-          <p>${p.companion.recruited ? "Finish the gate requirements or check the Lower Ward gate." : "Find and recruit Mira to unlock the Chapter 1 boss route."}</p>
+          <span class="pill warn">${tx("slumContractNoNew")}</span>
+          <p>${p.companion.recruited ? tx("slumContractNoNewGate") : tx("slumContractNoNewMira")}</p>
         </div>
       `}
       ${cstate.completed.length ? `
         <div class="slum-contract-complete-row">
-          ${cstate.completed.slice(-5).map(id=>`<span class="pill good">${esc(contractById(id)?.name || id)}</span>`).join("")}
+          ${cstate.completed.slice(-5).map(id=>`<span class="pill good">${esc(contractText(contractById(id) || {id}, "name") || id)}</span>`).join("")}
         </div>
       ` : ""}
     </div>
@@ -529,18 +533,17 @@ function contractSummaryHTML(p, complete){
     `;
   }
   const action = active ? `FE.slumStartContract('${next.id}')` : `FE.slumAcceptContract('${next.id}')`;
-  const label = active ? next.action : "Accept";
   return `
     <div class="slum-contract-summary ${next.kind === "boss" ? "is-boss" : ""}">
       <div>
         <span class="pill ${next.kind === "boss" ? "red" : "good"}">${active ? "Active Contract" : "Next Contract"}</span>
-        <h2>${esc(next.name)}</h2>
-        <p>${esc(next.desc)}</p>
+        <h2>${esc(contractText(next, "name"))}</h2>
+        <p>${esc(contractText(next, "desc"))}</p>
         <small>${esc(contractRewardLine(next.reward))}</small>
       </div>
       <div class="slum-summary-actions">
-        <span class="pill">${done}/${CHAPTER_ONE_CONTRACTS.length} done</span>
-        <button class="${active ? "primary" : ""}" onclick="${esc(action)}" ${actionDisabled(complete ? "The prologue gate is already reached." : "")}>${esc(label)}</button>
+        <span class="pill">${done}/${CHAPTER_ONE_CONTRACTS.length} ${tx("contractDone")}</span>
+        <button class="${active ? "primary" : ""}" onclick="${esc(action)}" ${actionDisabled(complete ? "The prologue gate is already reached." : "")}>${esc(active ? contractText(next, "action") : tx("contractAccept"))}</button>
         <button class="secondary" onclick="FE.slumOpenContractBoard()">Board</button>
       </div>
     </div>
@@ -682,13 +685,13 @@ export function slumOpenContractBoard(){
 export function slumContractDetails(id){
   const contract = contractById(id);
   if(!contract)return toast("Contract not found.");
-  modal(contract.name, `
-    <p>${esc(contract.desc)}</p>
+  modal(contractText(contract, "name"), `
+    <p>${esc(contractText(contract, "desc"))}</p>
     <span class="pill">${esc(contract.contact)}</span>
-    <span class="pill">${esc(contract.tag)}</span>
+    <span class="pill">${esc(contractText(contract, "tag"))}</span>
     <p>Reward: ${esc(contractRewardLine(contract.reward))}</p>
   `, [
-    {label:"Accept",cls:"primary",fn:()=>slumAcceptContract(id)},
+    {label:tx("contractAccept"),cls:"primary",fn:()=>slumAcceptContract(id)},
     {label:"Close",cls:"secondary"}
   ]);
 }
@@ -703,7 +706,7 @@ export function slumAcceptContract(id){
   if(!contractUnlocked(contract,p))return toast("That contract is not ready yet.");
   p.contracts.active = id;
   if(contract.id === "gate_lieutenant")p.contracts.chapterBossUnlocked = true;
-  addLog(`${contract.contact} posts a contract: ${contract.name}.`);
+  addLog(`${contract.contact} posts a contract: ${contractText(contract, "name")}.`);
   refresh();
 }
 
@@ -712,7 +715,7 @@ export function slumAbandonContract(){
   const contract = activeContract();
   if(!contract)return toast("No active contract.");
   p.contracts.active = null;
-  addLog(`${contract.name} is held for later.`);
+  addLog(`${contractText(contract, "name")} is held for later.`);
   refresh();
 }
 
@@ -726,7 +729,7 @@ export function slumStartContract(id){
   if(contract.kind === "work"){
     actionDay();
     completeContract(contract.id);
-    addLog(`Contract completed: ${contract.name}.`);
+    addLog(`Contract completed: ${contractText(contract, "name")}.`);
     refresh();
     return;
   }
@@ -734,13 +737,13 @@ export function slumStartContract(id){
     p.danger = clamp(p.danger + 1,0,10);
     actionDay();
     completeContract(contract.id);
-    addLog(`Contract completed: ${contract.name}.`);
+    addLog(`Contract completed: ${contractText(contract, "name")}.`);
     refresh();
     return;
   }
-  addLog(`${contract.name} turns into a fight.`);
+  addLog(`${contractText(contract, "name")} turns into a fight.`);
   save();
-  startBattle(contractEnemies(contract),contract.desc, {
+  startBattle(contractEnemies(contract), contractText(contract, "desc"), {
     source:"slum-prologue",
     onVictory:"slumContractWon",
     onDefeat:"slumContractLost",
@@ -940,7 +943,7 @@ export function completeSlumContractFight(meta = {}){
   completeContract(contract.id,{fromBattle:true});
   addLog(`Contract reward: ${contractRewardLine(contract.reward)}.`);
   refresh(true);
-  toast(`Contract complete: ${contract.name}`);
+  toast(`Contract complete: ${contractText(contract, "name")}`);
 }
 
 export function recordSlumContractDefeat(meta = {}){
@@ -953,7 +956,7 @@ export function recordSlumContractDefeat(meta = {}){
   if(contract){
     p.contracts.failed.push(contract.id);
     p.contracts.failed = p.contracts.failed.slice(-12);
-    addLog(`${contract.name} goes badly. Recover and try again when your supplies are steadier.`);
+    addLog(`${contractText(contract, "name")} goes badly. Recover and try again when your supplies are steadier.`);
   }else{
     addLog("The contract fight goes badly. Cinderhook gets louder around your shelter.");
   }

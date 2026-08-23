@@ -94,6 +94,7 @@ function installDebugBootControls(){
       <div class="grid3" style="margin-top:8px">
         <button onclick="FE.debugBootSlumScene()">Slums</button>
         <button onclick="FE.debugBootLowerWard()">Lower Ward</button>
+        <button onclick="FE.debugBootRoadStop('broken_road')">Road Camp</button>
         <button onclick="FE.debugStartEnemyVisualTest('cultist')">Cultist</button>
       </div>
     `;
