@@ -231,7 +231,7 @@ export function startOpeningSkeleton(){
   skeleton = {
     turn:1,
     hero:{hp:100,maxHp:100,mana:18,maxMana:18,potions:2},
-    enemy:{name:tx("roadSkeleton"),role:tx("tutorialEnemy"),hp:52,maxHp:52},
+    enemy:{name:tx("roadSkeleton"),role:tx("tutorialEnemy"),enemyVisualClass:"skeleton",hp:52,maxHp:52},
     defending:false,
     pose:"idle",
     tip:copy.tutorialHint,

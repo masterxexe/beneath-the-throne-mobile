@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.23-overnight-38",
-  "build": 38,
-  "cache": "v113",
-  "notes": "Mortal Kombat-style combat choreography: weapon combos, enemy strikes, move banners"
+  "version": "2026.08.23-overnight-39",
+  "build": 39,
+  "cache": "v114",
+  "notes": "Real painted enemy characters: cultist acolyte art plus sprite class on every spawn"
 }

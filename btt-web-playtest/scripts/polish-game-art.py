@@ -59,27 +59,16 @@ def color_grade(img: Image.Image, r: float, g: float, b: float) -> Image.Image:
 
 
 def make_cultist_from_bandit(src: Image.Image) -> Image.Image:
-    """Distinct cultist: violet robes, masked face, ritual dagger glow."""
-    out = color_grade(src, 0.82, 0.72, 1.18)
-    out = tint(out, VIOLET, 0.22)
-    w, h = out.size
-    draw = ImageDraw.Draw(out)
-    # Hood / mask
-    draw.polygon(
-        [(w * 0.28, h * 0.08), (w * 0.72, h * 0.08), (w * 0.68, h * 0.28), (w * 0.32, h * 0.28)],
-        fill=(*VIOLET[:3], 140),
-    )
-    draw.ellipse((w * 0.38, h * 0.16, w * 0.62, h * 0.24), fill=(20, 12, 28, 220))
-    draw.ellipse((w * 0.42, h * 0.175, w * 0.48, h * 0.215), fill=(*EMBER[:3], 240))
-    draw.ellipse((w * 0.52, h * 0.175, w * 0.58, h * 0.215), fill=(*EMBER[:3], 240))
-    # Ritual robe drape
-    draw.polygon(
-        [(w * 0.18, h * 0.35), (w * 0.82, h * 0.35), (w * 0.9, h * 0.88), (w * 0.1, h * 0.88)],
-        fill=(*VIOLET[:3], 60),
-    )
-    # Arcane glow on hands
-    draw.ellipse((w * 0.55, h * 0.42, w * 0.72, h * 0.58), fill=(*VIOLET[:3], 50))
-    return out.filter(ImageFilter.GaussianBlur(radius=0.3))
+    """Fallback only: hue-shift the bandit. Never paint opaque geometry over the sprite."""
+    r_ch, g_ch, b_ch, a = src.split()
+    r_ch = r_ch.point(lambda x: min(255, int(x * 0.78)))
+    g_ch = g_ch.point(lambda x: min(255, int(x * 0.62)))
+    b_ch = b_ch.point(lambda x: min(255, int(x * 1.28)))
+    graded = Image.merge("RGBA", (r_ch, g_ch, b_ch, a))
+    overlay = Image.new("RGBA", graded.size, (*VIOLET, 0))
+    mask = a.point(lambda v: int(v * 0.18))
+    overlay.putalpha(mask)
+    return Image.alpha_composite(graded, overlay)
 
 
 def make_cultist_attack(src: Image.Image) -> Image.Image:
@@ -101,7 +90,11 @@ def make_cultist_hurt(src: Image.Image) -> Image.Image:
 
 
 def install_cultist_sprites() -> None:
-    print("Creating distinct cultist enemy sprites...")
+    painted = ACTOR_V80 / "cultist-acolyte-idle-v80.png"
+    if painted.exists() and painted.stat().st_size > 200_000:
+        print("Keeping painted cultist acolyte sprites.")
+        return
+    print("Painted cultist missing; hue-shifting bandit as fallback...")
     mapping = {
         "cultist-acolyte-idle-v80.png": ("cultist-bandit-idle-v80.png", "idle"),
         "cultist-acolyte-attack-v80.png": ("cultist-bandit-attack-v80.png", "attack"),

@@ -85,3 +85,8 @@ node scripts/test-combat-debug.mjs
 - Mortal Kombat-style timing: anticipation, lunge, slash arcs, afterimages, camera shake, move-name banners
 - Debug Attack Studio (`?debug`) to preview every swing and swap weapons
 - New stylesheet `combat-animations.css` loaded after `styles.css` / `redesign.css` so motion wins over the old 8px nudge
+
+## Pass 7 — Real enemy characters (v114)
+- Replaced the purple geometric cultist placeholder with a painted masked acolyte (idle, attack, hurt, defeated)
+- Every combat spawn now stamps a sprite class so flavor names never fall back to CSS blob portraits
+- World / hard-area / tutorial / elite hunters all resolve to skeleton, wolf, bandit, cultist, or corrupted knight art

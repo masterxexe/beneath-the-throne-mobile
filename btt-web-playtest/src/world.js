@@ -1,6 +1,7 @@
 import { REGIONS, advanceDays, companionTrainingNeed, ensureLowerWardState, grantCompanionBond, normalizeCompanion, rnd, save, setScreen, state } from "./state.js";
 import { getLanguage, regionText, tx } from "./language.js";
 import { makeElite, makeEnemy, startBattle } from "./combat.js";
+import { stampEnemyVisualClass } from "./enemyVisuals.js";
 import { byId, esc, toast, updateTop } from "./ui.js";
 import { renderLocationStageHTML, renderOverworldHTML, renderRoadStopSceneStageHTML } from "./overworld.js";
 import { routeAngle, routePoint } from "./routePaths.js";
@@ -1700,9 +1701,12 @@ function applyLowerWardCompanionFieldReward(reward,repeat){
 function makeLocationEnemy(loc, elite=false){
   const enemy = elite ? makeElite() : makeEnemy(false);
   const pool = elite && loc.eliteEnemies?.length ? loc.eliteEnemies : loc.enemies;
-  if(pool?.length)enemy.name = pool[rnd(0,pool.length-1)];
+  if(pool?.length){
+    enemy.name = pool[rnd(0,pool.length-1)];
+    stampEnemyVisualClass(enemy, {force:true});
+  }
   if(elite)enemy.role = "elite";
-  return enemy;
+  return stampEnemyVisualClass(enemy);
 }
 
 function makeHardAreaEnemy(area,index = 0){
@@ -1718,7 +1722,7 @@ function makeHardAreaEnemy(area,index = 0){
   const hp = Math.floor((86 + level * 18 + danger * 13) * (area.hpScale || 1) * bossScale);
   const attack = Math.floor((14 + level * 4 + danger * 2) * (area.attackScale || 1) * (isBoss ? 1.12 : 1));
   const defense = Math.floor((5 + level * 1.8 + danger) * (area.defenseScale || 1) * (isBoss ? 1.08 : 1));
-  return {
+  return stampEnemyVisualClass({
     name,
     role:isBoss ? "boss" : "hard enemy",
     level,
@@ -1729,7 +1733,7 @@ function makeHardAreaEnemy(area,index = 0){
     speed:5 + rnd(0,5) + Math.floor(danger / 2) + (isBoss ? 1 : 0),
     xp:Math.floor((42 + level * 16 + danger * 12) * (area.rewardScale || 1) * bossScale),
     gold:Math.floor((14 + level * 5 + danger * 3) * (area.rewardScale || 1) * bossScale)
-  };
+  });
 }
 
 export function renderWorldMap(){

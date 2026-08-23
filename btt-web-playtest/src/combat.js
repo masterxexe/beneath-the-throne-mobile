@@ -7,7 +7,7 @@ import { resolvePlayerCombatPresentation } from "./characterRenderController.js"
 import { allEnemyStyleIds, allPlayerStyleIds, attackStyleClass, attackWeaponClass, fxOverlayHTML, nextCompanionAttackStyle, nextEnemyAttackStyle, nextHeroAttackStyle, presentationForStyle, styleDisplayName } from "./combatAnimations.js";
 import { applyGearVisuals } from "./gearVisuals.js";
 import { playAudioHook } from "./audioHooks.js";
-import { debugEnemyVisualRegistry, enemyVisualHTML, resolveEnemyPoseAsset } from "./enemyVisuals.js";
+import { debugEnemyVisualRegistry, enemyVisualHTML, resolveEnemyPoseAsset, stampEnemyVisualClass } from "./enemyVisuals.js";
 import { actorDirectorAttributes, createBattlefieldComposition, directorStageAttributes } from "./combatSceneDirector.js";
 
 export let battle = null;
@@ -71,11 +71,11 @@ export function makeEnemy(elite=false){
   const eliteMax = Math.min(r.max + 2, heroLevel + 5);
   const lv = elite ? rnd(eliteMin, Math.max(eliteMin, eliteMax)) : rnd(normalMin, Math.max(normalMin, normalMax));
   const roles = elite ? ["Elite Raider","Cursed Knight","Ash Warden"] : ["Bandit","Wolf","Skeleton","Cultist"];
-  return {
+  return stampEnemyVisualClass({
     name:roles[rnd(0,roles.length-1)], role:elite?"elite":"enemy", level:lv,
     hp:70+lv*13, maxHp:70+lv*13, attack:12+lv*3, defense:5+lv, speed:5+rnd(0,6),
     xp:35+lv*12, gold:12+lv*4
-  };
+  });
 }
 
 export function makeElite(){
@@ -97,7 +97,7 @@ export function startBattle(enemies,text,options = {}){
   combatRenderFrame = null;
   combatPlayerVisualState = "combatIdle";
   battle = {
-    enemies:enemies.map((e,i)=>({...e,id:"e"+i,hp:e.hp||e.maxHp,maxHp:e.maxHp||e.hp})),
+    enemies:enemies.map((e,i)=>stampEnemyVisualClass({...e,id:"e"+i,hp:e.hp||e.maxHp,maxHp:e.maxHp||e.hp})),
     queue:[], index:0, round:1, defending:false, resolving:false, heroOffenseUsed:false,
     lastStandUsed:false, guardianPrayerUsed:false, steadyAim:false, heroActionLocked:false, companionGuard:null, effects:[], numberEvents:[], nextNumberEventId:1, recentNumberEventKeys:{},
     numberPhaseId:0, visibleNumberRegistry:{}, defeatedEnemyIds:{},

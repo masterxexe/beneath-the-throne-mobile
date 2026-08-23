@@ -1,5 +1,6 @@
 const ENEMY_ROOT = "assets/portraits/enemies/";
 const V80_ACTOR_ROOT = "assets/actors/generated/v80/";
+const ENEMY_ART_CACHE = "v114";
 
 export const ENEMY_POSE_STATES = ["idle","attack","hurt","defeated"];
 
@@ -57,41 +58,54 @@ export const ENEMY_VISUAL_ASSETS = {
   }
 };
 
-export function resolveEnemyVisualClass(enemy){
-  const text = `${enemy?.enemyVisualClass || ""} ${enemy?.name || ""} ${enemy?.role || ""}`.toLowerCase();
-  if(text.includes("skeleton"))return "skeleton";
-  if(text.includes("corrupted knight") || text.includes("cursed knight") || text.includes("warden"))return "corrupted_knight";
-  if(text.includes("cultist"))return "cultist";
-  if(text.includes("wolf") || text.includes("beast"))return "wolf";
-  if(text.includes("hunter") && !text.includes("ranger"))return "bandit";
-  if(text.includes("bailiff") || text.includes("writ captain") || text.includes("bell tower"))return "bandit";
+const VALID_CLASSES = Object.keys(ENEMY_VISUAL_ASSETS);
+
+function normalizeVisualClass(value){
+  return String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+export function inferEnemyVisualClass(enemy){
+  const name = String(enemy?.name || "").toLowerCase();
+  const role = String(enemy?.role || "").toLowerCase();
+  const text = `${name} ${role}`;
+
+  if(/cult|acolyte|ritual|priest|hexer|knave/.test(text))return "cultist";
+  if(/wolf|hound|beast|stalker|fang|lobo/.test(text))return "wolf";
+  if(/skeleton|bone|undead|wight|ghoul|grave|banner guard|esqueleto/.test(text))return "skeleton";
+  if(/knight|warden|corrupted|cursed|hunter|warlord|king|defender|soldier|caballero/.test(text))return "corrupted_knight";
   if(
-    text.includes("bandit") ||
-    text.includes("raider") ||
-    text.includes("gang") ||
-    text.includes("enforcer") ||
-    text.includes("thief") ||
-    text.includes("cutpurse") ||
-    text.includes("robber") ||
-    text.includes("outlaw") ||
-    text.includes("brigand") ||
-    text.includes("desperate") ||
-    text.includes("dock rat") ||
-    text.includes("corner knife") ||
-    text.includes("knife")
+    /bandit|thug|raider|knife|rat|bailiff|dock|cutpurse|thief|guard|collector|duelist|bravo|cutthroat|runner|mask|enforcer|desperate|brigand|outlaw|robber|gang|captain|ledger|writ|gallows|lantern|court|bribe|debt|alley/.test(text)
   )return "bandit";
-  return null;
+  if(role.includes("elite") || role.includes("boss") || role.includes("hunter"))return "corrupted_knight";
+  if(role.includes("beast"))return "wolf";
+  if(role.includes("undead"))return "skeleton";
+  return "bandit";
+}
+
+export function stampEnemyVisualClass(enemy, options = {}){
+  if(!enemy || typeof enemy !== "object")return enemy;
+  const force = !!options.force;
+  const existing = normalizeVisualClass(enemy.enemyVisualClass);
+  if(!force && VALID_CLASSES.includes(existing))return enemy;
+  enemy.enemyVisualClass = inferEnemyVisualClass(enemy);
+  return enemy;
+}
+
+export function resolveEnemyVisualClass(enemy){
+  const stamped = normalizeVisualClass(enemy?.enemyVisualClass);
+  if(VALID_CLASSES.includes(stamped))return stamped;
+  return inferEnemyVisualClass(enemy);
 }
 
 export function resolveEnemyPoseAsset(enemy, requestedPose = "idle"){
   const visualClass = resolveEnemyVisualClass(enemy);
-  const registry = visualClass ? ENEMY_VISUAL_ASSETS[visualClass] : null;
-  if(!registry)return null;
+  const registry = ENEMY_VISUAL_ASSETS[visualClass] || ENEMY_VISUAL_ASSETS.bandit;
   const pose = ENEMY_POSE_STATES.includes(requestedPose) ? requestedPose : "idle";
   const exact = registry.poses[pose] || null;
   const idle = registry.poses.idle || null;
-  const path = exact || idle;
-  if(!path)return null;
+  const file = exact || idle;
+  if(!file)return null;
+  const path = `${file}?v=${ENEMY_ART_CACHE}`;
   return {
     visualClass,
     label:registry.label,

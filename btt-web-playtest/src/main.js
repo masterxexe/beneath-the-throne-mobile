@@ -56,6 +56,10 @@ if(debugMode){
     tutorials.startActualGame("Xexe","warrior");
     setTimeout(()=>window.FE.debugStartCombatLayoutTest?.(enemyCount, companionCount),80);
   };
+  window.FE.debugBootEnemyVisualTest = (enemyVisualClass = "cultist") => {
+    tutorials.startActualGame("Xexe","warrior");
+    setTimeout(()=>window.FE.debugStartEnemyVisualTest?.(enemyVisualClass),80);
+  };
 }
 
 document.addEventListener("click", event => {
@@ -95,7 +99,7 @@ function installDebugBootControls(){
         <button onclick="FE.debugBootSlumScene()">Slums</button>
         <button onclick="FE.debugBootLowerWard()">Lower Ward</button>
         <button onclick="FE.debugBootRoadStop('broken_road')">Road Camp</button>
-        <button onclick="FE.debugStartEnemyVisualTest('cultist')">Cultist</button>
+        <button onclick="FE.debugBootEnemyVisualTest('cultist')">Cultist</button>
       </div>
     `;
     setup.appendChild(panel);
