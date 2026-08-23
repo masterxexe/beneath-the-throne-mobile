@@ -121,13 +121,82 @@ body.btt-redesign .topbar::after {
 }
 
 body.btt-redesign #topStats {
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 78px;
+  gap: 8px;
+}
+
+body.btt-redesign .top-status-hero {
+  display: grid;
   grid-template-columns: 58px minmax(0, 1fr);
-  min-height: 68px;
   gap: 10px;
+  align-items: center;
+}
+
+body.btt-redesign .top-status-meta {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+body.btt-redesign .top-vital-readout {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+body.btt-redesign .top-vital-line {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+body.btt-redesign .top-vital-label,
+body.btt-redesign .top-vital-value {
+  font-family: var(--btt-font-body);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--btt-ash);
+}
+
+body.btt-redesign .top-vital-value {
+  min-width: 52px;
+  text-align: right;
+  color: var(--btt-muted);
+}
+
+body.btt-redesign .top-vital-line .bar {
+  height: 8px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+body.btt-redesign .top-vital-line .bar.hp > div {
+  background: linear-gradient(90deg, #6d1f1a, #e06a5a 55%, #ffb0a4);
+}
+
+body.btt-redesign .top-vital-line.is-warn .bar.hp > div {
+  background: linear-gradient(90deg, #8a4a12, #e0a05a);
+}
+
+body.btt-redesign .top-vital-line.is-critical .bar.hp > div {
+  animation: btt-vital-pulse 1.1s ease-in-out infinite;
+}
+
+body.btt-redesign .top-vital-line .bar.mana > div {
+  background: linear-gradient(90deg, #1f3f72, #5f9fe8 60%, #b8dcff);
+}
+
+@keyframes btt-vital-pulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.25); }
 }
 
 body.btt-redesign .top-stats-pills,
-body.btt-redesign #topStats .pill-row {
+body.btt-redesign #topStats .pill-row,
+body.btt-redesign .top-status-pills {
   display: flex;
   flex-wrap: nowrap;
   gap: 6px;
@@ -136,6 +205,11 @@ body.btt-redesign #topStats .pill-row {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   padding-bottom: 2px;
+  mask-image: linear-gradient(90deg, #000 88%, transparent);
+}
+
+body.btt-redesign .top-pills-extra {
+  opacity: 0.92;
 }
 
 body.btt-redesign .top-stats-pills::-webkit-scrollbar,
@@ -473,6 +547,346 @@ body.btt-redesign .combat-motion-enemy-hurt .enemy-pose-art {
 body.btt-redesign .damage-pop {
   font-family: var(--btt-font-display);
   letter-spacing: 0.04em;
+}
+
+/* Screen transitions */
+body.btt-redesign .screen {
+  display: none;
+}
+
+body.btt-redesign .screen.active {
+  display: block;
+  animation: btt-screen-enter 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+body.btt-redesign .screen.screen-leave {
+  display: block;
+  animation: btt-screen-leave 0.16s ease both;
+  pointer-events: none;
+}
+
+@keyframes btt-screen-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: none;
+  }
+}
+
+@keyframes btt-screen-leave {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Cinematic combat header */
+body.btt-redesign .combat-header-cinematic {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px 8px;
+  border: 0;
+  border-bottom: 1px solid rgba(212, 168, 75, 0.22);
+  border-radius: 0;
+  background: linear-gradient(180deg, rgba(6, 8, 12, 0.82), rgba(6, 8, 12, 0.45));
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+}
+
+body.btt-redesign .combat-header-cinematic h2 {
+  margin: 2px 0 0;
+  font-size: 1.05rem;
+  color: var(--btt-gold-bright);
+}
+
+body.btt-redesign .combat-header-cinematic p {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+body.btt-redesign .combat-round-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 168, 75, 0.35);
+  background: rgba(212, 168, 75, 0.1);
+  color: var(--btt-gold-bright);
+  font-family: var(--btt-font-body);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+body.btt-redesign .turn-order-cinematic {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+body.btt-redesign .turn-order-cinematic .pill.good {
+  box-shadow: 0 0 16px rgba(212, 168, 75, 0.22);
+}
+
+body.btt-redesign .battle-log {
+  border-top: 1px solid rgba(212, 168, 75, 0.14);
+  padding-top: 10px;
+}
+
+body.btt-redesign .battle-log h3 {
+  font-family: var(--btt-font-display);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--btt-gold);
+}
+
+body.btt-redesign .battle-log .log {
+  border-radius: var(--btt-radius-sm);
+  border: 1px solid rgba(138, 150, 168, 0.2);
+  background: rgba(4, 6, 10, 0.72);
+  font-family: var(--btt-font-body);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+/* Interior entry staging */
+body.btt-redesign .service-entry-cinematic {
+  position: relative;
+  min-height: min(72vh, 560px);
+  border-radius: calc(var(--btt-radius) + 2px);
+  overflow: hidden;
+  border: 1px solid var(--btt-line-strong);
+  background:
+    linear-gradient(180deg, rgba(5, 6, 10, 0.2), rgba(5, 6, 10, 0.88)),
+    var(--interior-art) center/cover no-repeat,
+    #07080c;
+  box-shadow: var(--btt-shadow);
+}
+
+body.btt-redesign .service-entry-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 18%, rgba(212, 168, 75, 0.12), transparent 48%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.72));
+  pointer-events: none;
+}
+
+body.btt-redesign .service-entry-glow {
+  position: absolute;
+  inset: auto 12% 18%;
+  height: 34%;
+  background: radial-gradient(ellipse at center, rgba(196, 92, 58, 0.18), transparent 70%);
+  pointer-events: none;
+  animation: btt-entry-glow 4.8s ease-in-out infinite;
+}
+
+@keyframes btt-entry-glow {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.04); }
+}
+
+body.btt-redesign .service-entry-panel {
+  position: relative;
+  z-index: 1;
+  margin: auto 14px 14px;
+  max-width: 100%;
+  animation: btt-screen-enter 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+body.btt-redesign .service-entry-lead {
+  font-family: var(--btt-font-story);
+  font-size: 1.08rem;
+  color: #e8dcc8;
+}
+
+body.btt-redesign .populated-scene-shell.is-entering .populated-scene {
+  animation: btt-interior-reveal 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+body.btt-redesign .populated-scene-shell.is-entering .populated-scene-head {
+  animation: btt-screen-enter 0.38s ease both;
+}
+
+@keyframes btt-interior-reveal {
+  from {
+    opacity: 0;
+    transform: scale(1.03);
+    filter: blur(3px) brightness(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: none;
+  }
+}
+
+body.btt-redesign .populated-scene {
+  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.42);
+}
+
+body.btt-redesign .populated-scene-vignette {
+  opacity: 0.9;
+}
+
+/* World hotspot discoverability */
+body.btt-redesign .world-hotspot::before,
+body.btt-redesign .scene-hotspot::before {
+  animation: btt-hotspot-breathe 3.6s ease-in-out infinite;
+}
+
+@keyframes btt-hotspot-breathe {
+  0%, 100% {
+    opacity: 0.48;
+    box-shadow: 0 0 18px rgba(212, 168, 75, 0.12);
+  }
+  50% {
+    opacity: 0.82;
+    box-shadow: 0 0 28px rgba(212, 168, 75, 0.28);
+  }
+}
+
+body.btt-redesign .world-hotspot:hover:not(:disabled)::before,
+body.btt-redesign .scene-hotspot:hover:not(:disabled)::before {
+  animation: none;
+  opacity: 1;
+}
+
+/* Cinematic world scene grading */
+body.btt-redesign .cinematic-world-stage {
+  box-shadow:
+    var(--btt-shadow),
+    inset 0 -80px 120px rgba(0, 0, 0, 0.45),
+    inset 0 0 80px rgba(0, 0, 0, 0.2);
+}
+
+body.btt-redesign .world-scene-cinderhook-slums-v71 .cinematic-world-stage,
+body.btt-redesign .cinematic-world-stage.world-scene-cinderhook-slums-v71 {
+  filter: saturate(1.05) contrast(1.04) brightness(0.94);
+}
+
+body.btt-redesign .world-scene-lower-ward-v71 .cinematic-world-stage,
+body.btt-redesign .cinematic-world-stage.world-scene-lower-ward-v71 {
+  filter: saturate(0.98) contrast(1.06) brightness(0.96);
+}
+
+body.btt-redesign .location-panel,
+body.btt-redesign .road-stop-home-panel {
+  overflow: hidden;
+}
+
+body.btt-redesign .road-stop-stage,
+body.btt-redesign .location-stage {
+  position: relative;
+}
+
+body.btt-redesign .road-stop-stage::after,
+body.btt-redesign .location-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 45%, rgba(0, 0, 0, 0.55));
+}
+
+/* Map mood overlays */
+body.btt-redesign .overworld-shell.map-mood-ember .map-ash {
+  opacity: 0.55;
+}
+
+body.btt-redesign .overworld-shell.map-mood-gold .map-mist {
+  opacity: 0.42;
+  filter: sepia(0.35) hue-rotate(-8deg);
+}
+
+body.btt-redesign .overworld-shell.map-mood-ash .map-ash {
+  opacity: 0.72;
+}
+
+body.btt-redesign .overworld-shell.map-mood-storm .map-rain {
+  opacity: 0.55;
+}
+
+body.btt-redesign .overworld-shell.map-mood-fog .map-mist {
+  opacity: 0.62;
+}
+
+body.btt-redesign .overworld-map {
+  position: relative;
+}
+
+body.btt-redesign .overworld-map::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.42);
+}
+
+/* Slum contract cards */
+body.btt-redesign .slum-contract-card {
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+body.btt-redesign .slum-contract-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(212, 168, 75, 0.45);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.38);
+}
+
+body.btt-redesign .slum-contract-card.is-active {
+  border-color: rgba(110, 207, 138, 0.45);
+  box-shadow: 0 0 24px rgba(110, 207, 138, 0.12);
+}
+
+body.btt-redesign .slum-contract-card.is-boss {
+  border-color: rgba(224, 106, 90, 0.45);
+}
+
+/* Compact cinematic HUD */
+body.cinematic-world-home-active.btt-redesign .top-status-hero,
+body.cinematic-world-home-active.btt-redesign .top-vital-readout {
+  display: none;
+}
+
+body.cinematic-world-home-active.btt-redesign #topStats {
+  min-height: 42px;
+}
+
+body.cinematic-world-home-active.btt-redesign .top-status-meta {
+  grid-template-columns: 1fr;
+}
+
+body.cinematic-world-home-active.btt-redesign .top-pills-core,
+body.cinematic-world-home-active.btt-redesign .top-pills-extra {
+  display: contents;
+}
+
+body.cinematic-world-home-active.btt-redesign .top-status-pills {
+  flex-wrap: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.btt-redesign .screen.active,
+  body.btt-redesign .service-entry-panel,
+  body.btt-redesign .populated-scene-shell.is-entering .populated-scene,
+  body.btt-redesign .world-hotspot::before,
+  body.btt-redesign .scene-hotspot::before,
+  body.btt-redesign .top-vital-line.is-critical .bar.hp > div,
+  body.btt-redesign .service-entry-glow {
+    animation: none !important;
+  }
 }
 
 @media (min-width: 520px) {

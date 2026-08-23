@@ -1,5 +1,5 @@
 import { getLanguage, tx } from "./language.js";
-import { renderMapActivityHTML } from "./mapActivity.js";
+import { renderMapActivityHTML, mapMoodForContext } from "./mapActivity.js";
 import { renderPlayerPaperDoll } from "./portraitRenderer.js";
 import { resolveCharacterRenderState } from "./characterRenderController.js";
 import { routeAngle, routePathD, routePoint, routePoints } from "./routePaths.js";
@@ -136,13 +136,14 @@ export function renderOverworldHTML({locations,currentId,previousId,traveling}){
     direction:traveling?.direction || 1
   });
   const markerStyle = `--marker-x:${markerPoint.x}%;--marker-y:${markerPoint.y}%;--marker-angle:${markerAngle}deg;${markerPresence.style}`;
+  const mapMood = mapMoodForContext(current, traveling);
   return `
-    <div class="overworld-shell ${traveling ? "is-traveling" : ""}">
+    <div class="overworld-shell ${traveling ? "is-traveling" : ""} map-mood-${mapMood}">
       <div class="overworld-map ${ROUTE_DEBUG ? "route-debug-on" : ""}" role="img" aria-label="${tx("overworldMap")}">
         <svg class="overworld-roads" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           ${roads}
         </svg>
-        ${renderMapActivityHTML({locations})}
+        ${renderMapActivityHTML({locations, currentId, traveling})}
         ${Object.values(ROAD_NODES).map(node=>roadStopHTML(node,traveling)).join("")}
         ${locationList.map(loc=>nodeHTML(loc,current,traveling)).join("")}
         <div class="overworld-marker ${traveling ? "marker-traveling" : ""} ${markerPresence.className}" style="${markerStyle}" ${markerPresence.attrs} aria-label="${tx("playerMarker")}">

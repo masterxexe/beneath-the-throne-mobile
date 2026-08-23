@@ -116,11 +116,32 @@ export function ensureMapActivity(locations){
   return activity;
 }
 
-export function renderMapActivityHTML({locations}){
+export function mapMoodForContext(current, traveling){
+  if(traveling){
+    if(traveling.status === "atRoadStop")return traveling.danger >= 3 ? "storm" : "ash";
+    const destination = worldLocations?.[traveling.destinationLocationId];
+    if(destination)return mapMoodForContext(destination, null);
+  }
+  const location = current;
+  if(!location){
+    return "mist";
+  }
+  if(location.id?.includes("slum") || location.scene?.includes("slum"))return "ember";
+  if(location.id?.includes("ward") || location.scene?.includes("ward"))return "gold";
+  if(location.id?.includes("keep") || location.id?.includes("castle"))return "ash";
+  const scene = location.scene || "";
+  if(scene.includes("forest") || scene.includes("ruins"))return "fog";
+  if(scene.includes("ashen") || location.id?.includes("ruin"))return "ash";
+  if(location.danger >= 3)return "storm";
+  return "mist";
+}
+
+export function renderMapActivityHTML({locations, currentId, traveling}){
   const current = ensureMapActivity(locations);
   if(!current)return "";
+  const mood = mapMoodForContext(locations?.[currentId], traveling);
   return `
-    <div class="map-activity-layer" aria-label="${tx("mapActivity")}">
+    <div class="map-activity-layer map-mood-${mood}" aria-label="${tx("mapActivity")}">
       <div class="map-static-atmosphere">${ambientHTML(locations)}</div>
       <div class="map-events">${current.events.map(event=>eventHTML(event,locations)).join("")}</div>
       <div class="map-entities">${current.entities.map(entity=>entityHTML(entity,locations)).join("")}</div>

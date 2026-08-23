@@ -198,12 +198,13 @@ export function renderCombat(){
   byId("combat").innerHTML = `
     <div class="combat-shell combat-scene-${scene.id} combat-tier-${tier} ${effectClass("battlefield")}"${sceneStyle}>
       ${backdropHTML(scene)}
-      <div class="combat-header panel">
-        <div>
-          <h2>${tx("round")} ${battle.round} - ${a?esc(a.name):tx("combat")}</h2>
+      <div class="combat-header combat-header-cinematic">
+        <div class="combat-header-main">
+          <span class="combat-round-pill">${tx("round")} ${battle.round}</span>
+          <h2>${a?esc(a.name):tx("combat")}</h2>
           <p>${playerTurn?tx("combatTurnPlayer"):tx("combatTurnResolving")}</p>
         </div>
-        <div class="turn-order" aria-label="${tx("turnOrder")}">
+        <div class="turn-order turn-order-cinematic" aria-label="${tx("turnOrder")}">
           ${battle.queue.map(x=>`<span class="pill ${x===a?'good':''}">${esc(x.name)} ${x.speed}</span>`).join("")}
         </div>
       </div>

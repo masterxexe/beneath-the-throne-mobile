@@ -20,9 +20,29 @@ export function show(id){
   document.body.classList.toggle("cinematic-combat-active", id === "combat");
   document.body.classList.toggle("combat-dock-locked", id === "combat");
   if(id !== "home")document.body.classList.remove("cinematic-world-home-active");
+  const previous = currentScreen;
   setScreen(id);
-  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-  byId(id)?.classList.add("active");
+  const screens = document.querySelectorAll(".screen");
+  const next = byId(id);
+  const animate = previous && previous !== id && next;
+  screens.forEach(screen=>{
+    screen.classList.remove("active","screen-enter");
+    if(animate && screen.id === previous)screen.classList.add("screen-leave");
+  });
+  if(animate){
+    requestAnimationFrame(()=>{
+      screens.forEach(screen=>screen.classList.remove("screen-leave"));
+      next.classList.add("active","screen-enter");
+      document.querySelectorAll(".topline button[data-screen]").forEach(btn=>{
+        btn.classList.toggle("active", btn.dataset.screen === id);
+      });
+      render();
+      window.scrollTo(0,0);
+    });
+    return;
+  }
+  screens.forEach(screen=>screen.classList.remove("screen-leave"));
+  next?.classList.add("active");
   document.querySelectorAll(".topline button[data-screen]").forEach(btn=>{
     btn.classList.toggle("active", btn.dataset.screen === id);
   });
@@ -56,32 +76,55 @@ export function render(){
   if(currentScreen==="combat")renderCombat();
 }
 
+function hudVitalClass(value, max){
+  const ratio = max > 0 ? value / max : 0;
+  if(ratio <= 0.25)return "is-critical";
+  if(ratio <= 0.5)return "is-warn";
+  return "";
+}
+
 export function updateTop(){
   const h = state.hero;
   const p = state.prologue;
   applyUiTheme(h);
   updateNavLabels();
   byId("topStats").innerHTML = `
-    <div class="top-status-portrait">${renderPlayerHudPortrait(h)}</div>
-    <div class="top-status-pills">
-      <span class="pill good hud-token hud-token-hero">${esc(h.name)} ${tx("level")} ${h.level}</span>
-      <span class="pill hud-token hud-token-class">${title(h.class)}</span>
-      <span class="pill hud-token hud-token-vital">${tx("hp")} ${h.hp}/${h.maxHp}</span>
-      <span class="pill hud-token hud-token-mana">${tx("mana")} ${h.mana}/${h.maxMana}</span>
-      <span class="pill hud-token hud-token-gold">${tx("gold")} ${h.gold}</span>
-      <span class="pill hud-token hud-token-supply">${tx("food")} ${h.food}</span>
-      <span class="pill hud-token hud-token-craft">${tx("ore")} ${h.ore}</span>
-      <span class="pill hud-token hud-token-potion">${tx("healthPotions")} ${h.potions}</span>
-      <span class="pill hud-token hud-token-potion">${tx("manaPotions")} ${h.manaPotions}</span>
-      <span class="pill hud-token hud-token-day">${tx("day")} ${state.world.day}</span>
-      ${p?.phase === "active" ? `
-        <span class="pill warn hud-token">Rep ${p.status}/${p.statusGoal}</span>
-        <span class="pill hud-token">Safety ${p.safety}</span>
-        <span class="pill red hud-token">Danger ${p.danger}</span>
-      ` : p?.lowerWardGate?.unlocked ? `
-        <span class="pill good hud-token">Lower Ward Gate</span>
-        <span class="pill hud-token">Ward Influence ${state.world?.lowerWard?.influence || 0}</span>
-      ` : ""}
+    <div class="top-status-hero">
+      <div class="top-status-portrait">${renderPlayerHudPortrait(h)}</div>
+      <div class="top-vital-readout" aria-label="${tx("hp")} ${h.hp}/${h.maxHp}, ${tx("mana")} ${h.mana}/${h.maxMana}">
+        <div class="top-vital-line ${hudVitalClass(h.hp, h.maxHp)}">
+          <span class="top-vital-label">${tx("hp")}</span>
+          ${bar(h.hp, h.maxHp, "hp vital-hp")}
+          <span class="top-vital-value">${h.hp}/${h.maxHp}</span>
+        </div>
+        <div class="top-vital-line ${hudVitalClass(h.mana, h.maxMana)}">
+          <span class="top-vital-label">${tx("mana")}</span>
+          ${bar(h.mana, h.maxMana, "mana vital-mana")}
+          <span class="top-vital-value">${h.mana}/${h.maxMana}</span>
+        </div>
+      </div>
+    </div>
+    <div class="top-status-meta">
+      <div class="top-status-pills top-pills-core">
+        <span class="pill good hud-token hud-token-hero">${esc(h.name)} ${tx("level")} ${h.level}</span>
+        <span class="pill hud-token hud-token-class">${title(h.class)}</span>
+        <span class="pill hud-token hud-token-gold">${tx("gold")} ${h.gold}</span>
+        <span class="pill hud-token hud-token-day">${tx("day")} ${state.world.day}</span>
+      </div>
+      <div class="top-status-pills top-pills-extra">
+        <span class="pill hud-token hud-token-supply">${tx("food")} ${h.food}</span>
+        <span class="pill hud-token hud-token-craft">${tx("ore")} ${h.ore}</span>
+        <span class="pill hud-token hud-token-potion">${tx("healthPotions")} ${h.potions}</span>
+        <span class="pill hud-token hud-token-potion">${tx("manaPotions")} ${h.manaPotions}</span>
+        ${p?.phase === "active" ? `
+          <span class="pill warn hud-token">Rep ${p.status}/${p.statusGoal}</span>
+          <span class="pill hud-token">Safety ${p.safety}</span>
+          <span class="pill red hud-token">Danger ${p.danger}</span>
+        ` : p?.lowerWardGate?.unlocked ? `
+          <span class="pill good hud-token">Lower Ward Gate</span>
+          <span class="pill hud-token">Ward Influence ${state.world?.lowerWard?.influence || 0}</span>
+        ` : ""}
+      </div>
     </div>
   `;
 }
@@ -89,8 +132,21 @@ export function updateTop(){
 function applyUiTheme(hero){
   const body = document.body;
   const themes = ["ui-theme-ruined","ui-theme-imperial","ui-theme-holy","ui-theme-corrupted","ui-theme-nature","ui-theme-royal"];
+  const classId = hero?.advancedClass || hero?.class || "survivor";
+  const themeByClass = {
+    warrior: "ui-theme-imperial",
+    fighter: "ui-theme-imperial",
+    guard: "ui-theme-imperial",
+    mage: "ui-theme-corrupted",
+    mystic: "ui-theme-corrupted",
+    healer: "ui-theme-holy",
+    hunter: "ui-theme-nature",
+    ranger: "ui-theme-nature",
+    rogue: "ui-theme-royal",
+    scout: "ui-theme-nature"
+  };
   body.classList.remove(...themes);
-  body.classList.add("ui-theme-ruined");
+  body.classList.add(themeByClass[classId] || "ui-theme-ruined");
   body.dataset.heroClass = hero?.advancedClass || hero?.class || "survivor";
   body.dataset.heroLevel = String(hero?.level || 1);
   body.dataset.uiTier = hero?.level >= 20 ? "advanced" : hero?.level >= 10 ? "growing" : "initial";

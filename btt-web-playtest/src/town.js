@@ -156,7 +156,17 @@ export function openTownServiceGroup(groupId){
 export function continueServiceEntry(){
   if(!activeScene?.service)return;
   activeScene.phase = "scene";
+  activeScene.entering = true;
   renderTown();
+  requestAnimationFrame(()=>{
+    const shell = document.querySelector(".populated-scene-shell");
+    if(!shell)return;
+    shell.classList.add("is-entering");
+    shell.addEventListener("animationend", ()=>{
+      shell.classList.remove("is-entering");
+      if(activeScene)activeScene.entering = false;
+    }, {once:true});
+  });
 }
 
 export function leaveServiceScene(){
@@ -183,20 +193,25 @@ function renderServiceScene(){
   lastResolvedScene = scene;
   if(activeScene.phase === "entry"){
     byId("town").innerHTML = `
-      <div class="panel service-entry-panel">
-        <h1>${esc(scene.label)}</h1>
-        <p>${esc(scene.entry)}</p>
-        <p class="muted">${esc(event.text)}</p>
-        <div class="grid2">
-          <button class="primary" onclick="FE.continueServiceEntry()">Enter</button>
-          <button class="secondary" onclick="FE.leaveServiceScene()">${tx("backToLocation")}</button>
+      <div class="service-entry-cinematic service-entry-${esc(activeScene.service)}" style="--interior-art:url('${esc(scene.art)}')">
+        <div class="service-entry-vignette" aria-hidden="true"></div>
+        <div class="service-entry-glow" aria-hidden="true"></div>
+        <div class="panel service-entry-panel">
+          <span class="pill">${esc(locationName())}</span>
+          <h1>${esc(scene.label)}</h1>
+          <p class="service-entry-lead">${esc(scene.entry)}</p>
+          <p class="muted">${esc(event.text)}</p>
+          <div class="grid2">
+            <button class="primary" onclick="FE.continueServiceEntry()">Enter</button>
+            <button class="secondary" onclick="FE.leaveServiceScene()">${tx("backToLocation")}</button>
+          </div>
         </div>
       </div>
     `;
     return;
   }
   byId("town").innerHTML = `
-    <div class="panel populated-scene-shell location-upgrade-${esc(scene.upgradeState)} ${esc(scene.stateClass)}">
+    <div class="populated-scene-shell location-upgrade-${esc(scene.upgradeState)} ${esc(scene.stateClass)} ${activeScene.entering ? "is-entering" : ""}">
       <div class="populated-scene-head">
         <div>
           <span class="pill">${esc(locationName())}</span>
