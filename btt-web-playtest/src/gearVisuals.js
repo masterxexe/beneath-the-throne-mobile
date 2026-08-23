@@ -335,12 +335,11 @@ export const GEAR_VISUALS = {
   },
   "traveler boots": {
     slot:"boots", quality:"common", visualVariant:"travelerBoots",
-    portraitLayer:P+"boots/traveler-boots.svg", icon:I+"boots/traveler-boots-v35-temp.png",
-    temporaryIcon:true,
+    portraitLayer:P+"boots/traveler-boots.svg", icon:I+"boots/traveler-boots-v16.png",
     characterOverlayIdle:O+"idle/boots/traveler-boots.png",
     characterOverlayCombat:O+"combat/boots/traveler-boots.png",
     bodyOverlayQuality:"debugOnly",
-    qualityStatus:"temporary"
+    qualityStatus:"approved"
   },
   "iron sabatons": {
     slot:"boots", quality:"fine", visualVariant:"ironSabatons",
@@ -348,12 +347,11 @@ export const GEAR_VISUALS = {
   },
   "leather bracers": {
     slot:"gloves", quality:"common", visualVariant:"leatherBracers",
-    portraitLayer:P+"gloves/leather-bracers.svg", icon:I+"gloves/leather-bracers-v35-temp.png",
-    temporaryIcon:true,
+    portraitLayer:P+"gloves/leather-bracers.svg", icon:I+"gloves/leather-bracers-v16.png",
     characterOverlayIdle:O+"idle/gloves/leather-bracers.png",
     characterOverlayCombat:O+"combat/gloves/leather-bracers.png",
     bodyOverlayQuality:"debugOnly",
-    qualityStatus:"temporary"
+    qualityStatus:"approved"
   },
   "worn belt": {
     slot:"belt", quality:"common", visualVariant:"wornBelt",

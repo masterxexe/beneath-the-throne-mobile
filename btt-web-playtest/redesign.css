@@ -450,6 +450,31 @@ body.btt-redesign .combat-dock-locked .game-dock button {
   pointer-events: none;
 }
 
+/* Combat feedback polish */
+body.btt-redesign .combat-battlefield .hit-flash .enemy-pose-art,
+body.btt-redesign .combat-battlefield .hit-flash .paper-doll-avatar {
+  filter: brightness(1.35) saturate(1.1) drop-shadow(0 0 12px rgba(224, 106, 90, 0.5));
+}
+
+body.btt-redesign .combat-motion-attack .enemy-pose-art {
+  transform: translateX(6%) scale(1.04);
+  transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+body.btt-redesign .combat-motion-enemy-attack .enemy-pose-art {
+  transform: translateX(-5%) scale(1.05);
+}
+
+body.btt-redesign .combat-motion-hurt .paper-doll-avatar,
+body.btt-redesign .combat-motion-enemy-hurt .enemy-pose-art {
+  filter: brightness(0.85) hue-rotate(-8deg);
+}
+
+body.btt-redesign .damage-pop {
+  font-family: var(--btt-font-display);
+  letter-spacing: 0.04em;
+}
+
 @media (min-width: 520px) {
   body.btt-redesign #app {
     padding-top: 8px;
