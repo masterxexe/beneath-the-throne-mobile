@@ -331,10 +331,10 @@ function companionSceneArtHTML(unit, portrait){
 
 function companionSceneArtPath(kind = "fighter"){
   const key = String(kind || "fighter").toLowerCase();
-  if(/scout|ranger|hunter|rogue/.test(key))return "assets/actors/generated/v56/companion-scout-idle-v56.png";
-  if(/knight|guard|soldier|fighter|warrior/.test(key))return "assets/actors/generated/v56/companion-armored-idle-v56.png";
-  if(/healer|cleric|mage|caster|mystic/.test(key))return "assets/actors/generated/v56/companion-armored-idle-v56.png";
-  return "assets/actors/generated/v56/companion-armored-idle-v56.png";
+  if(/scout|ranger|hunter|rogue/.test(key))return "assets/actors/generated/v80/companion-scout-idle-v80.png";
+  if(/knight|guard|soldier|fighter|warrior/.test(key))return "assets/actors/generated/v80/companion-armored-idle-v80.png";
+  if(/healer|cleric|mage|caster|mystic/.test(key))return "assets/actors/generated/v80/companion-armored-idle-v80.png";
+  return "assets/actors/generated/v80/companion-armored-idle-v80.png";
 }
 
 function enemyHTML(enemy,index,playerTurn,slotIndex = 0,presentation = null,directorActor = null){

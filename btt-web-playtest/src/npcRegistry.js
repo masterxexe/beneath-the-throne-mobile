@@ -14,21 +14,21 @@ export const NPC_LINES = {
   ]
 };
 
-const NPC_ROOT = "assets/npcs/generated/v1/";
+const NPC_ROOT = "assets/npcs/generated/v80/";
 
 export const NPC_ACTOR_ASSETS = {
-  blacksmith:NPC_ROOT+"blacksmith-v1.png",
-  marketMerchant:NPC_ROOT+"market_merchant-v1.png",
-  innkeeper:NPC_ROOT+"innkeeper-v1.png",
-  tavernKeeper:NPC_ROOT+"tavern_keeper-v1.png",
-  townClerk:NPC_ROOT+"town_clerk-v1.png",
-  slumBeggar:NPC_ROOT+"slum_beggar-v1.png",
-  gangLookout:NPC_ROOT+"gang_lookout-v1.png",
-  healerHerbalist:NPC_ROOT+"healer_herbalist-v1.png",
-  caravanTrader:NPC_ROOT+"caravan_trader-v1.png",
-  castleGuard:NPC_ROOT+"castle_guard-v1.png",
-  companionScout:NPC_ROOT+"companion_scout-v1.png",
-  companionMage:NPC_ROOT+"companion_mage-v1.png"
+  blacksmith:NPC_ROOT+"blacksmith-v80.png",
+  marketMerchant:NPC_ROOT+"market_merchant-v80.png",
+  innkeeper:NPC_ROOT+"innkeeper-v80.png",
+  tavernKeeper:NPC_ROOT+"tavern_keeper-v80.png",
+  townClerk:NPC_ROOT+"town_clerk-v80.png",
+  slumBeggar:NPC_ROOT+"slum_beggar-v80.png",
+  gangLookout:NPC_ROOT+"gang_lookout-v80.png",
+  healerHerbalist:NPC_ROOT+"healer_herbalist-v80.png",
+  caravanTrader:NPC_ROOT+"caravan_trader-v80.png",
+  castleGuard:NPC_ROOT+"castle_guard-v80.png",
+  companionScout:NPC_ROOT+"companion_scout-v80.png",
+  companionMage:NPC_ROOT+"companion_mage-v80.png"
 };
 
 export const SERVICE_NPCS = {

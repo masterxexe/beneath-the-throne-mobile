@@ -146,17 +146,17 @@ export const PLAYER_POSE_ASSETS = {
   arriving:{base:POSE+"player-arriving-v64.png"},
   "entering-location":{base:POSE+"player-entering-location-v64.png"},
   "exiting-location":{base:POSE+"player-idle-v28.png"},
-  combatIdle:{base:POSE+"player-combat-idle-v28.png"},
-  attack:{base:POSE+"player-melee-slash-v28.png"},
-  meleeAttack:{base:POSE+"player-melee-slash-v28.png"},
-  meleeSlash:{base:POSE+"player-melee-slash-v28.png"},
-  thrustAttack:{base:POSE+"player-thrust-attack-v28.png"},
-  rangedAttack:{base:POSE+"player-ranged-attack-v28.png"},
-  unarmedAttack:{base:POSE+"player-unarmed-attack-v28.png"},
-  castAttack:{base:POSE+"player-cast-attack-v28.png"},
-  block:{base:POSE+"player-block-v28.png"},
-  hurt:{base:POSE+"player-hurt-v28.png"},
-  defeated:{base:POSE+"player-defeated-v28.png"}
+  combatIdle:{base:POSE+"player-combat-idle-v80.png"},
+  attack:{base:POSE+"player-melee-slash-v80.png"},
+  meleeAttack:{base:POSE+"player-melee-slash-v80.png"},
+  meleeSlash:{base:POSE+"player-melee-slash-v80.png"},
+  thrustAttack:{base:POSE+"player-thrust-attack-v80.png"},
+  rangedAttack:{base:POSE+"player-ranged-attack-v80.png"},
+  unarmedAttack:{base:POSE+"player-unarmed-attack-v80.png"},
+  castAttack:{base:POSE+"player-cast-attack-v80.png"},
+  block:{base:POSE+"player-block-v80.png"},
+  hurt:{base:POSE+"player-hurt-v80.png"},
+  defeated:{base:POSE+"player-defeated-v80.png"}
 };
 
 export const PLAYER_COMPOSITE_ASSETS = {
@@ -171,65 +171,65 @@ export const PLAYER_COMPOSITE_ASSETS = {
     mage_robe_staff:P+"composites/mage_robe_staff/idle-v39.png"
   },
   combatIdle:{
-    scout_hood:P+"composites/scout_hood/combat-idle-v38.png",
-    ash_axe:P+"composites/ash_axe/combat-idle-v38.png",
-    leather_armor:P+"composites/leather_armor/combat-idle-v38.png",
-    leather_armor_scout_hood:P+"composites/leather_armor_scout_hood/combat-idle-v38.png",
-    starter_leather_hood_axe:P+"composites/starter_leather_hood_axe/combat-idle-v38.png",
-    hunter_ranger:P+"composites/hunter_ranger/combat-idle-v39.png",
-    chainmail_sword:P+"composites/chainmail_sword/combat-idle-v39.png",
-    mage_robe_staff:P+"composites/mage_robe_staff/combat-idle-v39.png"
+    scout_hood:P+"composites/scout_hood/combat-idle-v80.png",
+    ash_axe:P+"composites/ash_axe/combat-idle-v80.png",
+    leather_armor:P+"composites/leather_armor/combat-idle-v80.png",
+    leather_armor_scout_hood:P+"composites/leather_armor_scout_hood/combat-idle-v80.png",
+    starter_leather_hood_axe:P+"composites/starter_leather_hood_axe/combat-idle-v80.png",
+    hunter_ranger:P+"composites/hunter_ranger/combat-idle-v80.png",
+    chainmail_sword:P+"composites/chainmail_sword/combat-idle-v80.png",
+    mage_robe_staff:P+"composites/mage_robe_staff/combat-idle-v80.png"
   },
   attack:{
-    scout_hood:P+"composites/scout_hood/melee-slash-v38.png",
-    ash_axe:P+"composites/ash_axe/melee-slash-v38.png",
-    leather_armor:P+"composites/leather_armor/melee-slash-v38.png",
-    leather_armor_scout_hood:P+"composites/leather_armor_scout_hood/melee-slash-v38.png",
-    starter_leather_hood_axe:P+"composites/starter_leather_hood_axe/melee-slash-v38.png",
-    hunter_ranger:P+"composites/hunter_ranger/ranged-attack-v39.png",
-    chainmail_sword:P+"composites/chainmail_sword/melee-slash-v39.png",
-    mage_robe_staff:P+"composites/mage_robe_staff/cast-attack-v39.png"
+    scout_hood:P+"composites/scout_hood/melee-slash-v80.png",
+    ash_axe:P+"composites/ash_axe/melee-slash-v80.png",
+    leather_armor:P+"composites/leather_armor/melee-slash-v80.png",
+    leather_armor_scout_hood:P+"composites/leather_armor_scout_hood/melee-slash-v80.png",
+    starter_leather_hood_axe:P+"composites/starter_leather_hood_axe/melee-slash-v80.png",
+    hunter_ranger:P+"composites/hunter_ranger/ranged-attack-v80.png",
+    chainmail_sword:P+"composites/chainmail_sword/melee-slash-v80.png",
+    mage_robe_staff:P+"composites/mage_robe_staff/cast-attack-v80.png"
   },
   meleeAttack:{
-    scout_hood:P+"composites/scout_hood/melee-slash-v38.png",
-    ash_axe:P+"composites/ash_axe/melee-slash-v38.png",
-    leather_armor:P+"composites/leather_armor/melee-slash-v38.png",
-    leather_armor_scout_hood:P+"composites/leather_armor_scout_hood/melee-slash-v38.png",
-    starter_leather_hood_axe:P+"composites/starter_leather_hood_axe/melee-slash-v38.png",
-    hunter_ranger:P+"composites/hunter_ranger/ranged-attack-v39.png",
-    chainmail_sword:P+"composites/chainmail_sword/melee-slash-v39.png",
-    mage_robe_staff:P+"composites/mage_robe_staff/cast-attack-v39.png"
+    scout_hood:P+"composites/scout_hood/melee-slash-v80.png",
+    ash_axe:P+"composites/ash_axe/melee-slash-v80.png",
+    leather_armor:P+"composites/leather_armor/melee-slash-v80.png",
+    leather_armor_scout_hood:P+"composites/leather_armor_scout_hood/melee-slash-v80.png",
+    starter_leather_hood_axe:P+"composites/starter_leather_hood_axe/melee-slash-v80.png",
+    hunter_ranger:P+"composites/hunter_ranger/ranged-attack-v80.png",
+    chainmail_sword:P+"composites/chainmail_sword/melee-slash-v80.png",
+    mage_robe_staff:P+"composites/mage_robe_staff/cast-attack-v80.png"
   },
   meleeSlash:{
-    scout_hood:P+"composites/scout_hood/melee-slash-v38.png",
-    ash_axe:P+"composites/ash_axe/melee-slash-v38.png",
-    leather_armor:P+"composites/leather_armor/melee-slash-v38.png",
-    leather_armor_scout_hood:P+"composites/leather_armor_scout_hood/melee-slash-v38.png",
-    starter_leather_hood_axe:P+"composites/starter_leather_hood_axe/melee-slash-v38.png",
-    chainmail_sword:P+"composites/chainmail_sword/melee-slash-v39.png"
+    scout_hood:P+"composites/scout_hood/melee-slash-v80.png",
+    ash_axe:P+"composites/ash_axe/melee-slash-v80.png",
+    leather_armor:P+"composites/leather_armor/melee-slash-v80.png",
+    leather_armor_scout_hood:P+"composites/leather_armor_scout_hood/melee-slash-v80.png",
+    starter_leather_hood_axe:P+"composites/starter_leather_hood_axe/melee-slash-v80.png",
+    chainmail_sword:P+"composites/chainmail_sword/melee-slash-v80.png"
   },
   rangedAttack:{
-    hunter_ranger:P+"composites/hunter_ranger/ranged-attack-v39.png"
+    hunter_ranger:P+"composites/hunter_ranger/ranged-attack-v80.png"
   },
   castAttack:{
-    mage_robe_staff:P+"composites/mage_robe_staff/cast-attack-v39.png"
+    mage_robe_staff:P+"composites/mage_robe_staff/cast-attack-v80.png"
   },
   block:{
-    starter_leather_hood_axe:P+"composites/starter_leather_hood_axe/block-v39.png",
-    hunter_ranger:P+"composites/hunter_ranger/block-v39.png",
-    chainmail_sword:P+"composites/chainmail_sword/block-v39.png",
-    mage_robe_staff:P+"composites/mage_robe_staff/block-v39.png"
+    starter_leather_hood_axe:P+"composites/starter_leather_hood_axe/block-v80.png",
+    hunter_ranger:P+"composites/hunter_ranger/block-v80.png",
+    chainmail_sword:P+"composites/chainmail_sword/block-v80.png",
+    mage_robe_staff:P+"composites/mage_robe_staff/block-v80.png"
   },
   hurt:{
-    starter_leather_hood_axe:P+"composites/starter_leather_hood_axe/hurt-v39.png",
-    hunter_ranger:P+"composites/hunter_ranger/hurt-v39.png",
-    chainmail_sword:P+"composites/chainmail_sword/hurt-v39.png",
-    mage_robe_staff:P+"composites/mage_robe_staff/hurt-v39.png"
+    starter_leather_hood_axe:P+"composites/starter_leather_hood_axe/hurt-v80.png",
+    hunter_ranger:P+"composites/hunter_ranger/hurt-v80.png",
+    chainmail_sword:P+"composites/chainmail_sword/hurt-v80.png",
+    mage_robe_staff:P+"composites/mage_robe_staff/hurt-v80.png"
   },
   defeated:{
-    starter_leather_hood_axe:P+"composites/starter_leather_hood_axe/defeated-v39.png",
-    hunter_ranger:P+"composites/hunter_ranger/defeated-v39.png",
-    mage_robe_staff:P+"composites/mage_robe_staff/defeated-v39.png"
+    starter_leather_hood_axe:P+"composites/starter_leather_hood_axe/defeated-v80.png",
+    hunter_ranger:P+"composites/hunter_ranger/defeated-v80.png",
+    mage_robe_staff:P+"composites/mage_robe_staff/defeated-v80.png"
   }
 };
 

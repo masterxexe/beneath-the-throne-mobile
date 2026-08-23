@@ -1,6 +1,5 @@
 const ENEMY_ROOT = "assets/portraits/enemies/";
-const V56_ACTOR_ROOT = "assets/actors/generated/v56/";
-const V76_ACTOR_ROOT = "assets/actors/generated/v56/";
+const V80_ACTOR_ROOT = "assets/actors/generated/v80/";
 
 export const ENEMY_POSE_STATES = ["idle","attack","hurt","defeated"];
 
@@ -9,40 +8,40 @@ export const ENEMY_VISUAL_ASSETS = {
     label:"Skeleton",
     tone:"bone",
     poses:{
-      idle:V56_ACTOR_ROOT+"skeleton-warrior-idle-v56.png",
-      attack:V56_ACTOR_ROOT+"skeleton-warrior-idle-v56.png",
-      hurt:V56_ACTOR_ROOT+"skeleton-warrior-idle-v56.png",
-      defeated:ENEMY_ROOT+"skeleton/defeated-v1.png"
+      idle:V80_ACTOR_ROOT+"skeleton-warrior-idle-v80.png",
+      attack:V80_ACTOR_ROOT+"skeleton-warrior-attack-v80.png",
+      hurt:V80_ACTOR_ROOT+"skeleton-warrior-hurt-v80.png",
+      defeated:ENEMY_ROOT+"skeleton/defeated-v80.png"
     }
   },
   wolf:{
     label:"Wolf",
     tone:"beast",
     poses:{
-      idle:V56_ACTOR_ROOT+"wolf-stalker-idle-v56.png",
-      attack:V56_ACTOR_ROOT+"wolf-stalker-idle-v56.png",
-      hurt:V56_ACTOR_ROOT+"wolf-stalker-idle-v56.png",
-      defeated:ENEMY_ROOT+"wolf/defeated-v1.png"
+      idle:V80_ACTOR_ROOT+"wolf-stalker-idle-v80.png",
+      attack:V80_ACTOR_ROOT+"wolf-stalker-attack-v80.png",
+      hurt:V80_ACTOR_ROOT+"wolf-stalker-hurt-v80.png",
+      defeated:ENEMY_ROOT+"wolf/defeated-v80.png"
     }
   },
   bandit:{
     label:"Bandit",
     tone:"rust",
     poses:{
-      idle:V76_ACTOR_ROOT+"cultist-bandit-idle-crop-v76.png",
-      attack:V76_ACTOR_ROOT+"cultist-bandit-idle-crop-v76.png",
-      hurt:V76_ACTOR_ROOT+"cultist-bandit-idle-crop-v76.png",
-      defeated:ENEMY_ROOT+"bandit/defeated-v1.png"
+      idle:V80_ACTOR_ROOT+"cultist-bandit-idle-v80.png",
+      attack:V80_ACTOR_ROOT+"cultist-bandit-attack-v80.png",
+      hurt:V80_ACTOR_ROOT+"cultist-bandit-hurt-v80.png",
+      defeated:ENEMY_ROOT+"bandit/defeated-v80.png"
     }
   },
   cultist:{
     label:"Cultist",
     tone:"violet",
     poses:{
-      idle:V76_ACTOR_ROOT+"cultist-bandit-idle-crop-v76.png",
-      attack:V76_ACTOR_ROOT+"cultist-bandit-idle-crop-v76.png",
-      hurt:V76_ACTOR_ROOT+"cultist-bandit-idle-crop-v76.png",
-      defeated:ENEMY_ROOT+"cultist/defeated-v1.png"
+      idle:V80_ACTOR_ROOT+"cultist-bandit-idle-v80.png",
+      attack:V80_ACTOR_ROOT+"cultist-bandit-attack-v80.png",
+      hurt:V80_ACTOR_ROOT+"cultist-bandit-hurt-v80.png",
+      defeated:ENEMY_ROOT+"cultist/defeated-v80.png"
     }
   },
   corrupted_knight:{
@@ -50,10 +49,10 @@ export const ENEMY_VISUAL_ASSETS = {
     tone:"cold",
     tier:"elite",
     poses:{
-      idle:V56_ACTOR_ROOT+"elite-corrupted-knight-idle-v56.png",
-      attack:V56_ACTOR_ROOT+"elite-corrupted-knight-idle-v56.png",
-      hurt:V56_ACTOR_ROOT+"elite-corrupted-knight-idle-v56.png",
-      defeated:ENEMY_ROOT+"corrupted_knight/defeated-v1.png"
+      idle:V80_ACTOR_ROOT+"elite-corrupted-knight-idle-v80.png",
+      attack:V80_ACTOR_ROOT+"elite-corrupted-knight-attack-v80.png",
+      hurt:V80_ACTOR_ROOT+"elite-corrupted-knight-hurt-v80.png",
+      defeated:ENEMY_ROOT+"corrupted_knight/defeated-v80.png"
     }
   }
 };
