@@ -1,4 +1,4 @@
-const APP_VERSION = "2026.08.23-overnight-35";
+const APP_VERSION = "2026.08.23-overnight-36";
 const CORE_CACHE = `beneath-throne-core-${APP_VERSION}`;
 const RUNTIME_CACHE = `beneath-throne-runtime-${APP_VERSION}`;
 const CACHE_PREFIX = "beneath-throne-";
@@ -6,13 +6,13 @@ const OFFLINE_SHELL = new URL("./index.html", self.location.href).href;
 
 const APP_SHELL = [
   "./index.html",
-  "./styles.css?v=110",
-  "./redesign.css?v=5",
+  "./styles.css?v=111",
+  "./redesign.css?v=6",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/apple-touch-icon.png",
-  "./src/main.js?v=110",
+  "./src/main.js?v=111",
   "./src/pwa.js",
   "./assets/ui/generated/title-bg-v19d.png",
   "./version.json"

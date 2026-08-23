@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.23-overnight-35",
-  "build": 35,
-  "cache": "v110",
-  "notes": "Visual polish: HUD vitals, screen transitions, cinematic combat, interior staging"
+  "version": "2026.08.23-overnight-36",
+  "build": 36,
+  "cache": "v111",
+  "notes": "Premium map redesign: v20 cartography, ornate frame, route glow, route cards"
 }

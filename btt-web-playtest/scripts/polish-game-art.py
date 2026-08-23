@@ -353,6 +353,37 @@ def install_mine_interior() -> None:
     save(mine, interiors / "mine-cut-v20.png")
 
 
+def install_overworld_map() -> None:
+    print("Generating premium overworld map art...")
+    src = ROOT / "assets/overworld-map-v12.png"
+    if not src.exists():
+        print("  SKIP overworld-map-v20 (no v12 source)")
+        return
+    art = load(src)
+    art = color_grade(art, 1.04, 0.96, 0.9)
+    art = tint(art, (48, 38, 28), 0.06)
+    art = ImageEnhance.Contrast(art).enhance(1.08)
+    art = ImageEnhance.Sharpness(art).enhance(1.12)
+    w, h = art.size
+    vignette = Image.new("RGBA", art.size, (0, 0, 0, 0))
+    vdraw = ImageDraw.Draw(vignette)
+    vdraw.ellipse((-w * 0.08, -h * 0.12, w * 1.08, h * 1.14), fill=(8, 6, 4, 0))
+    vdraw.rectangle((0, 0, w, h), fill=(0, 0, 0, 0))
+    for i in range(8):
+        alpha = int(18 + i * 10)
+        inset_x = int(w * (0.02 + i * 0.012))
+        inset_y = int(h * (0.02 + i * 0.01))
+        vdraw.rectangle((inset_x, inset_y, w - inset_x, h - inset_y), outline=(12, 8, 4, alpha))
+    glow = Image.new("RGBA", art.size, (0, 0, 0, 0))
+    gdraw = ImageDraw.Draw(glow)
+    gdraw.ellipse((int(w * 0.18), int(h * 0.62), int(w * 0.42), int(h * 0.92)), fill=(*EMBER[:3], 28))
+    gdraw.ellipse((int(w * 0.52), int(h * 0.18), int(w * 0.78), int(h * 0.42)), fill=(*GOLD[:3], 22))
+    gdraw.ellipse((int(w * 0.62), int(h * 0.48), int(w * 0.9), int(h * 0.78)), fill=(72, 96, 82, 18))
+    art = Image.alpha_composite(art.convert("RGBA"), glow)
+    art = Image.alpha_composite(art, vignette)
+    save(art, ROOT / "assets/overworld-map-v20.png")
+
+
 def install_companion_actors() -> None:
     print("Refreshing companion combat actor variants...")
     npc_dir = ROOT / "assets/npcs/generated/v1"
@@ -379,6 +410,7 @@ def main() -> None:
     install_composites()
     install_location_art()
     install_mine_interior()
+    install_overworld_map()
     try:
         install_companion_actors()
     except Exception as exc:

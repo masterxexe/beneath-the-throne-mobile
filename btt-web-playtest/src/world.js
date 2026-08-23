@@ -1765,20 +1765,34 @@ export function renderWorldMap(){
   const place = getCurrentPlaceContext();
   const connected = current.routes.map(id=>locationById(id)).filter(Boolean);
   byId("map").innerHTML = `
-    <div class="panel overworld-panel">
-      <h1>${tx("worldMap")}</h1>
-      <p>${tx("worldMapBody")}</p>
-      <span class="pill good">${place.type === "roadStop" ? tx("currentRoadStop") : tx("currentLocation")}: ${esc(place.name)}</span>
-      ${activeTravel ? `<span class="pill warn">${tx("travelInProgress")}: ${esc(locationText(activeTravel.destinationLocationId,"name"))}</span>` : ""}
-      ${activeTravel?.currentStopName ? `<span class="pill">${tx("travelRoadStop")}: ${esc(activeTravel.currentStopName)}</span>` : ""}
+    <div class="map-screen">
+      <div class="map-screen-hero panel">
+        <div class="map-screen-hero-copy">
+          <span class="pill good">${place.type === "roadStop" ? tx("currentRoadStop") : tx("currentLocation")}: ${esc(place.name)}</span>
+          ${activeTravel ? `<span class="pill warn">${tx("travelInProgress")}: ${esc(locationText(activeTravel.destinationLocationId,"name"))}</span>` : ""}
+          <h1>${tx("worldMap")}</h1>
+          <p>${tx("worldMapBody")}</p>
+        </div>
+        <div class="card map-screen-location-card">
+          <span class="map-screen-location-kicker">${tx("currentLocation")}</span>
+          <h2>${esc(locationText(current,"name"))}</h2>
+          <p>${esc(locationText(current,"lore") || locationText(current,"desc"))}</p>
+          <div class="map-screen-location-meta">
+            <span class="pill ${current.danger >= 3 ? "warn" : "good"}">${tx("danger")} ${current.danger}</span>
+            <span class="pill">${tx("services")}: ${locationServices(current.id).length || 0}</span>
+          </div>
+        </div>
+      </div>
       ${renderOverworldHTML({locations:WORLD_LOCATIONS,currentId:current.id,previousId:state.world.previousLocationId,traveling:activeTravel})}
-    </div>
-    ${roadStopPanelHTML(activeTravel)}
-    <div class="panel route-overview-panel">
-      <h2>${tx("connectedRoutes")}</h2>
-      <p>${tx("travelFromMapHelp")}</p>
-      <div class="map-route-list">
-        ${connected.map(loc=>mapRouteHTML(loc)).join("") || `<p>${tx("routeLocked")}</p>`}
+      ${roadStopPanelHTML(activeTravel)}
+      <div class="panel route-overview-panel">
+        <div class="route-overview-head">
+          <h2>${tx("connectedRoutes")}</h2>
+          <p>${tx("travelFromMapHelp")}</p>
+        </div>
+        <div class="map-route-list">
+          ${connected.map(loc=>mapRouteHTML(loc)).join("") || `<p>${tx("routeLocked")}</p>`}
+        </div>
       </div>
     </div>
   `;
@@ -1822,12 +1836,20 @@ function roadStopPanelHTML(journey){
 function mapRouteHTML(loc){
   const lockReason = routeLockReason(loc);
   const disabled = activeTravel || lockReason ? `disabled ${lockReason ? `title="${esc(lockReason)}"` : ""}` : "";
+  const tier = loc.danger >= 4 ? "extreme" : loc.danger >= 3 ? "high" : loc.danger >= 2 ? "mid" : loc.danger >= 1 ? "low" : "safe";
   return `
-    <div class="card map-route-card">
-      <h2>${esc(locationText(loc,"name"))}</h2>
+    <div class="card map-route-card danger-tier-${tier}">
+      <div class="map-route-card-head">
+        <h2>${esc(locationText(loc,"name"))}</h2>
+        <span class="pill ${loc.danger >= 3 ? "warn" : "good"}">${tx("danger")} ${loc.danger}</span>
+      </div>
+      <div class="map-route-danger-meter" aria-hidden="true">
+        ${Array.from({length:5}, (_,index)=>`<span class="${index < loc.danger ? "is-on" : ""}"></span>`).join("")}
+      </div>
       <p>${esc(locationText(loc,"desc"))}</p>
-      <span class="pill ${loc.danger ? "warn" : "good"}">${tx("danger")} ${loc.danger}</span>
-      <span class="pill">${tx("services")}: ${locationServices(loc.id).length || 0}</span>
+      <div class="map-route-card-meta">
+        <span class="pill">${tx("services")}: ${locationServices(loc.id).length || 0}</span>
+      </div>
       <button class="primary" ${disabled} onclick="FE.travelToLocation('${loc.id}')">${lockReason ? tx("locked") : tx("travelTo")} ${esc(locationText(loc,"name"))}</button>
     </div>
   `;
