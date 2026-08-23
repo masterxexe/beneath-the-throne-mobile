@@ -1670,7 +1670,7 @@ function mapRouteHTML(loc){
       <p>${esc(locationText(loc,"desc"))}</p>
       <span class="pill ${loc.danger ? "warn" : "good"}">${tx("danger")} ${loc.danger}</span>
       <span class="pill">${tx("services")}: ${locationServices(loc.id).length || 0}</span>
-      <button class="primary" ${disabled} onclick="FE.travelToLocation('${loc.id}')">${lockReason ? "Locked" : tx("travelTo")} ${esc(locationText(loc,"name"))}</button>
+      <button class="primary" ${disabled} onclick="FE.travelToLocation('${loc.id}')">${lockReason ? tx("locked") : tx("travelTo")} ${esc(locationText(loc,"name"))}</button>
     </div>
   `;
 }

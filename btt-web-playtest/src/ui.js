@@ -18,6 +18,7 @@ export function show(id){
     return;
   }
   document.body.classList.toggle("cinematic-combat-active", id === "combat");
+  document.body.classList.toggle("combat-dock-locked", id === "combat");
   if(id !== "home")document.body.classList.remove("cinematic-world-home-active");
   setScreen(id);
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));

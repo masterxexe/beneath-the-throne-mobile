@@ -250,7 +250,7 @@ export function renderLocationStageHTML({location,services,worldState,hero,trave
         <p>${esc(text(location.desc))}</p>
       </div>
       <div class="location-actions">
-        <button onclick="FE.openTownCenter()">Town Center</button>
+        <button onclick="FE.openTownCenter()">${tx("townCenter")}</button>
         <button class="primary" onclick="FE.huntNearby()">${tx("huntNearby")}</button>
         <button onclick="FE.scoutNearby()">${tx("scoutNearby")}</button>
       </div>

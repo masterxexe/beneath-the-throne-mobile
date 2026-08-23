@@ -77,8 +77,8 @@
       background:linear-gradient(180deg,#30302c,#111);
     }
   </style>
-  <link rel="stylesheet" href="./styles.css?v=107" />
-  <link rel="stylesheet" href="./redesign.css?v=2" />
+  <link rel="stylesheet" href="./styles.css?v=108" />
+  <link rel="stylesheet" href="./redesign.css?v=3" />
   <script>
     document.addEventListener("error", function(event) {
       const img = event.target;
@@ -87,7 +87,7 @@
       if (!src.includes("/assets/") && !src.includes("/icons/")) return;
       img.dataset.fallbackApplied = "1";
       if (src.includes("portraits/player") || src.includes("composites")) {
-        img.src = "./assets/portraits/player/poses/base/player-idle-crop-v76.png";
+        img.src = "./assets/portraits/player/poses/base/player-idle-v80.png";
       } else if (src.includes("enemies") || src.includes("actors") || src.includes("npcs")) {
         img.src = "./assets/portraits/story/tutorial-skeleton-painted.png";
       } else if (src.includes("items/icons")) {
@@ -184,22 +184,6 @@
       </nav>
     </div>
   </div>
-  <script>
-    document.addEventListener("error", function(event) {
-      const img = event.target;
-      if (!img || img.tagName !== "IMG" || img.dataset.fallbackApplied) return;
-      const src = img.getAttribute("src") || "";
-      if (!src.includes("/assets/") && !src.includes("/icons/")) return;
-      img.dataset.fallbackApplied = "1";
-      if (src.includes("portraits/player") || src.includes("composites")) {
-        img.src = "./assets/portraits/player/poses/base/player-idle-crop-v76.png";
-      } else if (src.includes("enemies") || src.includes("actors") || src.includes("npcs")) {
-        img.src = "./assets/portraits/story/tutorial-skeleton-painted.png";
-      } else if (src.includes("items/icons")) {
-        img.src = "./assets/items/icons/weapons/rusted-sword-v16.png";
-      }
-    }, true);
-  </script>
-  <script type="module" src="./src/main.js?v=107"></script>
+  <script type="module" src="./src/main.js?v=108"></script>
 </body>
 </html>

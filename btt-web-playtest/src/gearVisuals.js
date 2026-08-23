@@ -215,20 +215,31 @@ export const PLAYER_COMPOSITE_ASSETS = {
     mage_robe_staff:P+"composites/mage_robe_staff/cast-attack-v80.png"
   },
   block:{
+    scout_hood:P+"composites/scout_hood/block-v80.png",
+    ash_axe:P+"composites/ash_axe/block-v80.png",
+    leather_armor:P+"composites/leather_armor/block-v80.png",
+    leather_armor_scout_hood:P+"composites/leather_armor_scout_hood/block-v80.png",
     starter_leather_hood_axe:P+"composites/starter_leather_hood_axe/block-v80.png",
     hunter_ranger:P+"composites/hunter_ranger/block-v80.png",
     chainmail_sword:P+"composites/chainmail_sword/block-v80.png",
     mage_robe_staff:P+"composites/mage_robe_staff/block-v80.png"
   },
   hurt:{
+    scout_hood:P+"composites/scout_hood/hurt-v80.png",
+    ash_axe:P+"composites/ash_axe/hurt-v80.png",
+    leather_armor:P+"composites/leather_armor/hurt-v80.png",
+    leather_armor_scout_hood:P+"composites/leather_armor_scout_hood/hurt-v80.png",
     starter_leather_hood_axe:P+"composites/starter_leather_hood_axe/hurt-v80.png",
     hunter_ranger:P+"composites/hunter_ranger/hurt-v80.png",
     chainmail_sword:P+"composites/chainmail_sword/hurt-v80.png",
     mage_robe_staff:P+"composites/mage_robe_staff/hurt-v80.png"
   },
   defeated:{
-    starter_leather_hood_axe:P+"composites/starter_leather_hood_axe/defeated-v80.png",
-    hunter_ranger:P+"composites/hunter_ranger/defeated-v80.png",
+    scout_hood:P+"composites/scout_hood/defeated-v80.png",
+    ash_axe:P+"composites/ash_axe/defeated-v80.png",
+    leather_armor:P+"composites/leather_armor/defeated-v80.png",
+    leather_armor_scout_hood:P+"composites/leather_armor_scout_hood/defeated-v80.png",
+    chainmail_sword:P+"composites/chainmail_sword/defeated-v80.png",
     mage_robe_staff:P+"composites/mage_robe_staff/defeated-v80.png"
   }
 };

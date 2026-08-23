@@ -5,7 +5,7 @@ export const DEFAULT_ROAD_STOP_ART = "assets/ministops/generated/default-road-st
 
 export const LOCATION_ART = {
   ashen_slums: {
-    initial: "assets/towns/generated/ashen-keep-v18.png",
+    initial: "assets/towns/generated/cinderhook-slums-v18.png",
     ruined: "assets/worldstates/generated/settlement-ruined-v18.png",
     burned: "assets/worldstates/generated/settlement-burned-v18.png",
     rebuilt: "assets/worldstates/generated/settlement-rebuilt-v18.png"
@@ -50,6 +50,12 @@ export const LOCATION_ART = {
     castle: "assets/worldstates/generated/castle-massive-v18.png",
     ruined: "assets/worldstates/generated/settlement-ruined-v18.png",
     rebuilt: "assets/worldstates/generated/settlement-rebuilt-v18.png"
+  },
+  lower_ward: {
+    initial: "assets/towns/generated/lower-ward-v18.png",
+    fortified: "assets/worldstates/generated/village-fortified-v18.png",
+    developed: "assets/worldstates/generated/town-developed-v18.png",
+    burned: "assets/worldstates/generated/settlement-burned-v18.png"
   }
 };
 

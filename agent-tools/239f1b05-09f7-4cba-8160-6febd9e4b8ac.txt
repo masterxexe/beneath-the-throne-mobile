@@ -1,0 +1,324 @@
+# Joel Thomas
+
+QA Manager
+
+London, England, United Kingdom (GB)
+
+500 connections • 2,199 followers
+
+## About
+
+Agile QA Leader in the gaming Industry since 2009, Its been an amazing journey thus far. Here are some of my highlights Engine, Compatibility, Performance, Graphics and Automation planning. - PS4, XboxOne, PC & Mobile - Compliance and Functional testing - Stampede - Company Of Heroes 3 - Total War: Warhammer III - Age of Empires IV - Gears 5 [Xbox, PC & Steam] - Gears Tactics [Xbox, PC & Steam] - Tekken 7 [Xbox] - Tekken Mobile - Naruto Shippuden: Ultimate Ninja Storm 4 [PS4 & Steam] - Sword Art online Series - Digimon Cyber Sleuth
+
+Total Experience: 10 years and 5 months
+
+## Experience
+
+### [Sumo Digital Ltd](https://www.linkedin.com/company/sumo-digital)
+
+#### QA Manager (Current)
+
+Jun 2026 - Present (2 months)
+
+Department: Project Management • Level: Manager
+
+#### Senior QA Lead
+
+Jun 2024 - May 2026 (1 year and 11 months)
+
+Managing all QA Project requirements with internal & external QA team.
+
+Department: Engineering and Technical • Level: Senior
+
+Sumo Digital Ltd is a Computer Games company. Sumo Digital is an award-winning international family of game development studios. They provide full game development, co development, and specialist game service support. They have a wide range of studios and services, including careers, news, and insights. Sumo Digital Ltd has 300-400 employees (-10% YoY) and has annual revenue in the $100M-$150M range, founded in 2003. Headquartered in Sheffield, South Yorkshire, United Kingdom, with presence in Czechia. Its workforce is distributed across 14 countries (including United Kingdom, India, Czechia, Poland, and Netherlands).
+
+### [Creative Assembly](https://www.linkedin.com/company/the-creative-assembly)
+
+#### Compatibility Lead
+
+Apr 2022 - Dec 2023 (1 year and 8 months) in Horsham, England, United Kingdom
+
+- Working on Cross projects with PC and Console teams.
+- PC compatibility and performance testing methodology
+- Managing direct reports on the Compat QA team.
+- Supporting team members in their professional and personal growth through 1:1s.
+- QA test planning and execution of test sweeps for upcoming milestones.
+- Mentoring and motivating team members.
+- Using Unreal Engine at an enthusiast level.
+- Contribute reports for Development teams and Production Management and produce documentation of testing practices and QA processes.
+- Using TestRail to implement and track Test plan progress and overall build state.
+- Bug Database management through JIRA and other internal tools.
+- CA Internal Ambassador for various training and development programs and groups.
+
+Department: Engineering and Technical • Level: Manager
+
+#### QA Lead
+
+Dec 2021 - Apr 2022 (4 months) in Permanent Full-time
+
+Compatibility
+- Graphics
+- Performance Leading a team of 6. Running Daily stand-ups. TestRail management.
+
+Department: Engineering and Technical • Level: Specialist
+
+Creative Assembly is a Computer Games company. Creative Assembly is a European games developer, creator of the multi-million selling total war franchise and the critically acclaimed alien: isolation. They craft deep and detailed games that last, entertaining millions of players across the globe for decades. Creative Assembly has 400-500 employees (+10% YoY) and has annual revenue in the $10M-$20M range, founded in 1987. Headquartered in horsham, west sussex, United Kingdom, with presence in Bulgaria. Its workforce is distributed across 15 countries (including United Kingdom, Bulgaria, United States, Australia, and Spain).
+
+### QA Engine Lead - [Relic Entertainment](https://www.linkedin.com/company/relic-entertainment)
+
+May 2020 - Dec 2021 (1 year and 7 months) in Vancouver, British Columbia, Canada
+
+- Age of Empires IV
+- Performance QA Lead.
+- Running daily stand ups for the Core QA and Performance team.
+- Managing day to day work of the testers, planning for future milestones.
+- Working with Production in scheduling and tracking feature content.
+- Attending Production & stakeholder meetings to prioritize work items.
+
+Relic Entertainment is a Computer Games company. Relic Entertainment has 70-80 employees (less than 1% YoY growth) and has annual revenue in the $10M-$20M range, founded in 1997. Headquartered in Vancouver, British Columbia, Canada, with presence in United States. Its workforce is distributed across 5 countries (including Canada, Italy, Philippines, United Kingdom, and New Zealand).
+
+### Multiplayer QA Lead - [The Coalition Studio](https://www.linkedin.com/company/the-coalition-studio)
+
+Jan 2019 - May 2020 (1 year and 4 months) in Vancouver, British Columbia, Canada
+
+- Shipped Gears 5 (Xbox/PC)
+- Collaborating closely with the QA leadership team.
+- Lead on the MP team. (teams of 15)
+- Managing a team of 5 -12 members for multiplayer.
+- Attending High Level Studio playtest sessions with Studio head and lead designers for feedback
+- Working in tandem with Producers to meet project deliverables and assist with Production tasks
+- Keeping up to date on current design Xbox/PC
+- Keeping Development Support/QA, up to date on design
+- Test case creation and maintenance 
+- Feature testing and Feedback
+- Assist in training of new testers during onboarding
+- Audit issues entered by testers in MP areas
+- Help assist with organizing testers during test passes.
+
+Department: Engineering and Technical • Level: Manager
+
+The Coalition Studio is a Entertainment Providers company. The Coalition Studio is a flagship first-party studio within xbox game studios and the home to one of gaming’s most critically and commercially acclaimed series. They strive to create deep, emotional experiences that are best when shared through their universe’s stories. With over 50 million unique users, gears of war has one of gaming’s most passionate fanbases.[/summary. The Coalition Studio has 200-300 employees (+3-4% YoY). Headquartered in Vancouver, British Columbia, Canada, with presence in United States. Its workforce is distributed across 6 countries (including Canada, United States, United Kingdom, France, and Ireland).
+
+### Senior Development Support - [BANDAI NAMCO Mobile](https://www.linkedin.com/company/bandai-namco-mobile)
+
+Jun 2018 - Nov 2018 (5 months) in Vancouver, Canada Area
+
+- TEKKEN (Mobile) iOS/Android.
+- Reported directly to the Studio Development Director.
+- Utilized various tools such as P4, Playfab along with custom in-house tools to aid in testing.
+- Working closely with Designers, Programmers and Artists to meet high quality standards.
+- Analyze and document issues found during testing.
+- Maintain a strong line of communication with the entire team.
+- Create and utilize testing plans for new features.
+- Create Test Plans, Test Cases and Reports.
+- Weighed in on Hiring Decisions for the QA team.
+- Investigate and respond to concerns raised by external groups.
+- Perform first party compliance testing.
+- Work with a myriad of devices such as iPhones, Android devices and tablets.
+- Liaison between internal and external testing teams.
+
+Department: Engineering and Technical • Level: Senior
+
+Bandai Namco Mobile is a Computer Games company. Bandai Namco Mobile is a company dedicated to creating fun and exciting games for players of all ages. They are dedicated to creating games that everyone can enjoy. They have a team of talented individuals who are passionate about making games that everyone can enjoy. They offer a fun and collaborative work environment in an international city. Bandai Namco Mobile has 40-50 employees (+4-5% YoY), founded in 2019. Headquartered in Barcelona, Spain. Its workforce is distributed across 6 countries (including Spain, Japan, France, Philippines, and Jordan).
+
+### Senior Compliance Lead Dev tester - [Pole To Win International](https://www.linkedin.com/company/ptwintl)
+
+Apr 2015 - Apr 2017 (2 years) in Bangalore
+
+Compliance/Functionality Test Engineer
+- Successfully submitted 15+ titles for Cert submission and passed( 3+ AAA games).
+- QA Lead for 2 Steam projects.
+- Experience on platforms such as PS3
+- PS4
+- PSP
+- Xbox360
+- XboxOne
+- PC(Steam)
+- Managing team sizes ranging from 4 to 25 testers
+- Proficient with the latest Sony Compliance guidelines in consoles.
+- Knowledge of bug life-cycles and various bug tracking databases such as BONSAI and JIRA.
+- Sony Compliance training from Sony.
+- Integral core team member for RTS/RPG/MMORPG/ 3rd person open world based projects.
+- Interview potential candidates and weighed in on Hiring Decisions.
+- Mentored Trainee Test Engineers.
+- Briefly worked on iOS/Android mobile game projects.
+- Proficient at bug writing/reporting.
+
+PTW is a Computer Games company. PTW has 600-700 employees (-20% YoY). Headquartered in Marina del Rey, California, United States, operates in 11 countries (including United Kingdom, South Korea, Brazil, Japan, and Romania). Its workforce is distributed across 30 countries (including India, United Kingdom, Canada, United States, and Malaysia).
+
+### QA Test Engineer - [e4e](https://www.linkedin.com/company/e4e-interactive)
+
+Oct 2009 - Oct 2010 (1 year) in Bangalore
+
+Functionality Test Engineer
+- Testing experience on various gaming platforms such as PS3
+- PSP
+- Xbox 360 and PC.
+- Successfully shipped 2 titles.
+- Online games and applications.
+- Specialized in testing games based on RTS/RPG/MMORPG design.
+- Skilled at progressional testing on any difficulty setting.
+- Achievements & Trophy unlocking.
+- Experience with blackbox Testing.
+
+Department: Engineering and Technical • Level: Specialist
+
+e4e is a Computer Games company. The company provides information and resources related to E4E site development and migration. E4e has 30-40 employees (+1-2% YoY) and has annual revenue in the $100M-$150M range, founded in 1994. Headquartered in Santa Clara, California, United States. Its workforce is distributed across India, United Kingdom, and France.
+
+## Education
+
+### Post Graduate Diploma, Computer Games and Programming Skills at [Vancouver Film School](https://www.linkedin.com/school/vancouver-film-school)
+
+2017 - 2018 (1 year) in Vancouver, British Columbia, Canada
+
+Project Manager - Final 3D Game Project : 'Death Run (PM) - Managed a team of 5, Worked with Art & Sound collaborators to meet Project deliverables. - Management tools used: Pivotal & Soft skills - 2D Game Project: 'Villainy' (PM) - Managed team of 4, in charge of scheduling and Task allocation.
+
+Vancouver Film School is a higher education institution. Vancouver Film School (VFS) is Canada’s premier post-secondary entertainment arts institution, offering an immersive curriculum in film, animation, design, & beyond. Vancouver Film School has 400-500 employees and has annual revenue in the $10M-$20M range, founded in 1987. Headquartered in Vancouver, British Columbia, Canada, with presence in United States. Its workforce is distributed across 18 countries (including Canada, Mexico, Brazil, United States, and China). Research output of 1-10 works, primarily in Social Sciences, Arts and Humanities, and Engineering.
+
+### Bachelor of Engineering - BE, Mechanical Engineering at [Sri Ramakrishna Institute of Technology](https://www.linkedin.com/school/sri-ramakrishna-institute-of-technology)
+
+2011 - 2014 (3 years) in Coimbatore, Tamil Nadu, India
+
+3.2/5
+
+Sri Ramakrishna Institute of Technology is a higher education institution. Sri Ramakrishna Institute of Technology is an autonomous institution that provides quality and value-based education in various disciplines. They aim to develop into a world-class technological institute with centers of excellence in various disciplines. Their mission is to produce quality engineers, scientists, and managers equipped with unbounded technical skills, domain knowledge, and excellent moral values. They also organize two-day national conferences on engineering evolution. Sri Ramakrishna Institute of Technology has 100-150 employees (+10% YoY), founded in 2002. Headquartered in Coimbatore, Tamil Nadu, India, with presence in United States.
+
+### Diploma , Mechanical Engineering at [Polytechnic Careers](https://www.linkedin.com/school/polytechnic-careers-1)
+
+2007 - 2010 (3 years)
+
+3/5
+
+Polytechnic Careers is a higher education institution. Polytechnic Careers has 1-10 employees.
+
+### The Indian School, Bahrain
+
+1995 - 2005 (10 years)
+
+## Licenses & Certifications
+
+### Certified ScrumMaster® (CSM®) by [Scrum Alliance](https://linkedin.com/company/scrum-alliance)
+
+Issued: Jul 2022 • Expires: Jul 2024
+
+[View Certificate](https://bcert.me/srdneaqtv?trk=public_profile_certification-title)
+
+## Skills
+
+aaa • adobe photoshop • agile • agile leadership • agile project management • agile qa • analysis • android • android devices • art • assist • assist training • attention to detail • audit • automation • blackbox • brand ambassador • bug tracking • case (computer-aided software engineering) • case creation • cert • chartered accountant • cinematics • collaborating • communication • compatibility testing • compliance • compliance guidelines • compliance qa • compliance training • console games • core • csm • customer service • customization • cybersecurity • daily stand ups • database • database management • databases • design • dev • development • development programs • development support • direct reports • documentation • documentation testing • engine testing • engineer • execution • feature testing • feedback • film direction • functional testing • game balance • game design • game design documents • game development • game testing • gaming industry • graphics • hiring • hiring decisions • implementation • interviewing • intravenous • ios/android development • jira • large-scale scrum (less) • leadership • leading • leading team • liaison • management • managing • managing direct reports • manual testing • mentoring • methodology • microsoft azure • microsoft office • microsoft power bi • mobile development • mobile game development • motivating • motivating teams • multitasking • myriad • onboarding • organization skills • organizing • performance testing • planning • planning execution • platform compliance • playfab • playstation • playtesting • powerpoint • prioritize work • problem solving • produce • production • production management • production scheduling • programming • progress • project deliverables management • project management • project planning • project requirements • psp • qa • qa engineer • qa lead • qa leader • qa leadership • qa management • qa testing • quality assurance • quality management • ranging • regression testing • reports • reports development • requirements management • scheduling • scrum • senior qa • sleuth • software quality assurance • specialized testing • stakeholder management • stand ups • steam • storm • studio development • studio head • submission • support • tactics • tandem • team leadership • team management • teams • test case • test case creation • test cases • test engineer • test management • test plan • test planning • tester • testers • testing • testing methodology • testing plans • testing practices • testing process • testrail • track • tracking • training • training development • unreal engine • ups systems • video game design • video game production • video games
+
+## Projects
+
+### Total War: Warhammer 3
+
+Dec 2021 - Present
+
+### Age of Empires IV
+
+Apr 2020 - Dec 2021
+
+### Gears 5
+
+Jan 2019 - Mar 2020
+
+### Holey Moley
+
+Apr 2019 - Sep 2019
+
+Casual Whack a Mole game. Made with Friends.
+
+### Tekken Mobile
+
+Jun 2018 - Nov 2018
+
+- Tekken Mobile - iOS/ Android
+
+### Death Run
+
+Dec 2017 - Mar 2018
+
+-A 3D zombie killing vehicular combat with emphasis on HighScore. -Managed a team of 5, Worked with Art &amp; Sound collaborators to meet Project deliverables. -Management tools used: Pivotal &amp; Soft skills
+
+### One Piece Burning Blood
+
+Mar 2015 - Mar 2016
+
+### Company of Heroes 3
+
+## Honors & Awards
+
+### Best Game Design Document
+
+Issued by: Vancouver Film School
+
+Apr 2018
+
+My team and I won the award for the Best Game Design Document for our 2D project "Villainy"
+
+### Excellence in Cinematics
+
+Issued by: Vancouver Film School
+
+Apr 2018
+
+In pursuit of a Drug Kingpin an undercover DEA agent puts his informant in harms way. In her final moments she asks the agent to protect her Daughter and keep her away from this drug infested world. Will Jon Doe go to the ends of the world to keep this promise..? This was a cinematic short that Yaolong Lui and I made for our cinematic assignment at VFS. This was meant to demonstrate our narrative and story telling skills. We won the Best Cinematic Short Award for this piece and is proud to see our fruits of labor be recognized. We are students and we are also aware that there are copyright content in the video. This is made for non commercial use, we just wanted to share this with friends and families. https://www.youtube.com/watch?v=CKYh-9PCDt0&amp; Show less
+
+## Recommendations
+
+[Jamie Calamaro](https://www.linkedin.com/in/jamie-calamaro-461b26138)
+
+“Joel is an exceptionally supportive and profoundly quality-driven individual that I have had the absolute pleasure of working with as he came aboard to support the QA team at Midoki.
+
+He has demonstrated the ability to adapt to the requirements and ways of working for a brand new project on mobile, that being Ghost HQ. Since joining, he was able to hit the ground running with little support, assisting us with several releases on iOS and Android.
+
+A stand out feature for me, is Joel's ability to contribute to multiple projects simultaneously. As he was assisting us with Ghost HQ, he also had other project commitments to tend to, demonstrating his inate ability to be flexible and manage his time effectively.
+
+Overall, Joel has all the hallmarks of Lead QA that any studio would be looking for. As I part from Midoki, I give my absolute confidence in recommending Joel for any QA leadership role in the future.”
+
+[Rohit Pathak](https://www.linkedin.com/in/rohit-pathak-programmer)
+
+“Joel and I worked on the project Death Run in that he was our project manager. Was managing and assigning the tasks and daily testing the game in order to see if we were on track and giving us feedback on our work. With good management skills showed by him we were able to complete our work before the milestone deadlines. Other than this he was looking after each other that if we are not getting burnt out by work and helping us figure out how to do things differently.”
+
+## Social
+
+### Linkedin
+
+- [2026-07-13 · Joel Thomas (CSM®) reposted this] [With 500+ projects to date, Sumo has been creating award-winning...](https://www.linkedin.com/posts/sumo-digital_take-a-look-at-some-of-our-latest-projects-activity-7482403104253046784-zv9-): With 500+ projects to date, Sumo has been creating award-winning games for all budgets and genres across every gaming platform for over 20 years. Our portfolio demonstrates what happens when you co...
+
+- [2026-07-12 · Joel Thomas (CSM®) reposted this] [I’m thrilled to share that we’re hiring again for our incredible QA...](https://www.linkedin.com/posts/mike-denny-227049187_lighthouse-games-activity-7482042994276151296-9eon): I’m thrilled to share that we’re hiring again for our incredible QA team at Lighthouse Games. If you’re wanting a new challenge, in a growing studio on an exciting new IP then this could be the rig...
+
+- [2026-06-10 · Joel Thomas (CSM®) reposted this] [The wait is over. 🎉 Introducing Neural Dawn, a project to deliver a...](https://www.linkedin.com/posts/arm_arm-delivers-a-step-change-in-mobile-gaming-activity-7470463011086909442-F7o8): The wait is over. 🎉 Introducing Neural Dawn, a project to deliver a production quality game, built in collaboration with Sumo Digital Ltd that showcases the capabilities of Arm Neural Technology in...
+
+- [2026-06-08 · Joel Thomas (CSM®) shared this] [shout-out to my former colleagues and friends over at The...](https://www.linkedin.com/posts/joel-thomas-csm®-255106ab_shout-out-to-my-former-colleagues-and-friends-activity-7469847631662579712-9SwJ): shout-out to my former colleagues and friends over at The Coalition. Super stoked to see E-Day in all its gory 😉. Wish you all the success! Announced today at the XBOX Games Showcase, Gears of War:...
+
+- [2026-06-04 · Joel Thomas (CSM®) reposted this] [Spyder is back and bigger than ever! 🕷️ We're delighted to announce...](https://www.linkedin.com/posts/sumo-digital_porting-gameporting-gamedev-activity-7468286613136211968-W0xP): Spyder is back and bigger than ever! 🕷️ We're delighted to announce that we've partnered with PQube to bring our platform-puzzler Spyder: Agent 8 to PC and consoles! Originating as a passion projec...
+
+- [2026-05-15 · Joel Thomas (CSM®) reposted this] [We're hiring!](https://www.linkedin.com/posts/natalie-mikkelson-2265ba177_were-hiring-activity-7461018060624269313-UHqj): We're hiring!
+
+- [2026-04-29 · Joel Thomas (CSM®) reposted this] [We're incredibly proud to announce that we're officially an Unreal...](https://www.linkedin.com/posts/sumo-digital_were-incredibly-proud-to-announce-that-were-activity-7455249311174524928-7FRv): We're incredibly proud to announce that we're officially an Unreal Engine Gold Service Partner 🥇🥳 Building upon our achievement of becoming a Silver Service Partner less than a year ago, our commit...
+
+- [2026-04-02 · Joel Thomas (CSM®) reposted this] [Hi Linkedin family! I’m seeking a new role and would appreciate...](https://www.linkedin.com/posts/kuruvillavarghese_opentowork-activity-7445491304953872385-4BiJ): Hi Linkedin family! I’m seeking a new role and would appreciate your support. If you hear of any opportunities or just want to catch up, please send me a message or comment below. I’d love to recon...
+
+- [2026-06-15 · Joel Thomas (CSM®)  commented on a post] [Happy bday Alex! Kojima did the same on MGS5. It was such a cool...](https://www.linkedin.com/posts/alexanderrehm_another-year-older-this-time-with-a-lovely-activity-7472286844265840641-HHPn): Happy bday Alex! Kojima did the same on MGS5. It was such a cool and immersive experience. Couldn't have asked for a better bday gift.
+
+- [2026-06-08 · Joel Thomas (CSM®)  commented on a post] [Congrats mate! 👏](https://www.linkedin.com/posts/simonkent98_newjob-activity-7469675971009413120-A3xk): Congrats mate! 👏
+
+- [2026-06-06 · Joel Thomas (CSM®)  commented on a post] [Looks amazing!](https://www.linkedin.com/posts/abhishek-raghu-35b63244_here-is-our-big-gameplay-reveal-super-activity-7469051394176561152-uvFk): Looks amazing!
+
+- [2026-08-03 · Joel Thomas (CSM®) reacted on this] [Slightly more info on Lab42's plans for Gamescom - please do reach...](https://www.linkedin.com/posts/terry-goodwin-60522930_slightly-more-info-on-lab42s-plans-for-gamescom-activity-7490041163748384768-AWPr): Slightly more info on Lab42's plans for Gamescom - please do reach out to me, or drop by the Sumo booth in Hall 2.1 Aisle D-017-C-018! I always look forward to Gamescom, and I'm looking forward to...
+
+- [2026-08-04 · Joel Thomas (CSM®) liked this] [🚀 ***HIRING*** 🚀 We’re hiring for a QA Manager at Pixel Toys to...](https://www.linkedin.com/posts/david-king-0b385bab_qamanager-qa-pixeltoys-activity-7490387219334029312-hBwE): 🚀 ***HIRING*** 🚀 We’re hiring for a QA Manager at Pixel Toys to lead our studio-wide QA vision, scale our testing automation, and mentor an amazing team! 🎮📱 You'll have: 👥 People-first leadership:...
+
+- [2026-08-01 · Joel Thomas (CSM®) reacted on this] [I have concluded my tenure at an establishment that contributed to...](https://www.linkedin.com/posts/anish-mani-477b9983_i-have-concluded-my-tenure-at-an-establishment-activity-7489212760623525889-dvCJ): I have concluded my tenure at an establishment that contributed to my professional development and gave me the privilege of collaborating with an exceptional group of colleagues and supervisors, wh...
+
+- [2026-07-28 · Joel Thomas (CSM®) reacted on this] [My green banner is gone! 🎉](https://www.linkedin.com/posts/michalina-piescinska-1110bb100_my-green-banner-is-gone-activity-7487856790051835904-e2aW): My green banner is gone! 🎉
+
+- [2026-07-23 · Joel Thomas (CSM®) reacted on this] [Does anyone else spill their entire morning coffee nice and early...](https://www.linkedin.com/posts/lou-arnold-sumo_does-anyone-else-spill-their-entire-morning-activity-7485956819824250881-xISr): Does anyone else spill their entire morning coffee nice and early at 7.30 in the mornings? Rubber desk mats dry out, right? 😮‍💨
+
+- [2026-07-22 · Joel Thomas (CSM®) reacted on this] [🎮 Another Milestone Achieved: Assassin’s Creed Black Flag...](https://www.linkedin.com/posts/shubham-malav-a689b5158_assassinscreed-blackflagresynched-ubisoft-activity-7485707118696783872-61S4): 🎮 Another Milestone Achieved: Assassin’s Creed Black Flag Resynched! Proud to celebrate the successful launch of Assassin’s Creed Black Flag Resynched and the positive reception it has received fro...
+
+- [2026-07-20 · Joel Thomas (CSM®) reacted on this] [Crazy to think I’ve been at Sumo Digital Ltd for 15 years now...](https://www.linkedin.com/posts/david-dino-sumo_crazy-to-think-ive-been-at-sumo-digital-activity-7485045727287513090-VyIG): Crazy to think I’ve been at Sumo Digital Ltd for 15 years now! Always appreciate y’all taking a chance on me as an LBP community content creator turned level designer all that time ago and somehow...
+
+- [2026-07-17 · Joel Thomas (CSM®) reacted on this] [If you're an external dev studio that rarely sees a single project...](https://www.linkedin.com/posts/lab42-limited_if-youre-an-external-dev-studio-that-rarely-activity-7483911862296768512-YyR2): If you're an external dev studio that rarely sees a single project from concept to completion, how do you make sure your team's end-to-end experience doesn't dull? 🤔 Terry Goodwin , our studio's co...
+
+- [2026-07-17 · Joel Thomas (CSM®) reacted on this] [Another milestone hit for the Sherlock Hound project: the diorama...](https://www.linkedin.com/posts/3dart-3dprinting-gameindustry-activity-7483815274886934528-di3z): Another milestone hit for the Sherlock Hound project: the diorama is set up and the painting is done! Translating this iconic 2D animation style into a fully realized 3D asset was such a fun and re...

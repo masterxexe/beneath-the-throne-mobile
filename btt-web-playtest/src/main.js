@@ -15,6 +15,7 @@ import * as slumPrologue from "./slumPrologue.js";
 import * as lowerWard from "./lowerWard.js";
 import * as pwa from "./pwa.js";
 import * as supporterStore from "./supporterStore.js";
+import { initAudioEngine } from "./audioEngine.js";
 
 setLanguage(getLanguage());
 
@@ -74,6 +75,7 @@ if(debugMode)installDebugBootControls();
 window.__BTT_BOOTED = true;
 window.dispatchEvent(new Event("btt:booted"));
 pwa.initPwa();
+initAudioEngine();
 mapActivity.startMapActivityLoop(world.WORLD_LOCATIONS);
 
 function installDebugBootControls(){

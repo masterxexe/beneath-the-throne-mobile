@@ -31,7 +31,7 @@ export function playEncounterTransition({title, body} = {}){
           playAudioHook("battle-music-start");
           resolve();
         },650);
-      },4300);
+      },2400);
     });
   });
 }

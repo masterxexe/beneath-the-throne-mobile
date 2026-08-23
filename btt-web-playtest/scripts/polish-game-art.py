@@ -299,19 +299,64 @@ def install_composites() -> None:
             ("defeated-v80.png", "player-defeated-v80.png"),
         ]:
             src = POSE_DIR / src_name
-            if src.exists() and loadout in ("starter_leather_hood_axe", "hunter_ranger", "chainmail_sword", "mage_robe_staff"):
-                art = fit_player(load(src))
-                if loadout == "mage_robe_staff":
-                    art = tint(art, VIOLET, 0.12)
-                elif loadout == "hunter_ranger":
-                    art = tint(art, (60, 90, 50), 0.08)
-                save(art, COMPOSITE_DIR / loadout / pose_file)
+            if not src.exists():
+                continue
+            art = fit_player(load(src))
+            if "hood" in extras:
+                art = tint(art, (40, 35, 30), 0.08)
+            if loadout == "mage_robe_staff":
+                art = tint(art, VIOLET, 0.12)
+            elif loadout == "hunter_ranger":
+                art = tint(art, (60, 90, 50), 0.08)
+            save(art, COMPOSITE_DIR / loadout / pose_file)
+
+
+def install_location_art() -> None:
+    print("Generating location art for Cinderhook Slums and Lower Ward...")
+    towns = ROOT / "assets/towns/generated"
+    market = towns / "market-town-world-v71.png"
+    keep = towns / "ashen-keep-world-v71.png"
+    if market.exists():
+        slum = tint(load(market), EMBER, 0.14)
+        slum = color_grade(slum, 1.05, 0.88, 0.82)
+        save(slum, towns / "cinderhook-slums-world-v71.png")
+        save(slum.resize((1672, 941), Image.Resampling.LANCZOS), towns / "cinderhook-slums-v18.png")
+    if keep.exists():
+        ward = tint(load(keep), GOLD, 0.08)
+        ward = color_grade(ward, 0.95, 0.98, 1.05)
+        save(ward, towns / "lower-ward-world-v71.png")
+        save(ward.resize((1672, 941), Image.Resampling.LANCZOS), towns / "lower-ward-v18.png")
+
+
+def install_companion_actors() -> None:
+    print("Refreshing companion combat actor variants...")
+    npc_dir = ROOT / "assets/npcs/generated/v1"
+    artifact_dir = Path("/opt/cursor/artifacts/assets")
+    pairs = [
+        ("healer_herbalist-v1.png", "companion-healer-idle-v80.png"),
+        ("companion_mage-v1.png", "companion-mage-idle-v80.png"),
+    ]
+    for npc_name, actor_name in pairs:
+        src = npc_dir / npc_name
+        if not src.exists():
+            alt = artifact_dir / npc_name.replace("_", "-").replace("v1", "v80")
+            src = alt if alt.exists() else src
+        if not src.exists():
+            print(f"  SKIP {npc_name}")
+            continue
+        img = load(src).resize(ENEMY_SIZE, Image.Resampling.LANCZOS)
+        save(img, ACTOR_V80 / actor_name)
 
 
 def main() -> None:
     install_cultist_sprites()
     install_walk_cycles()
     install_composites()
+    install_location_art()
+    try:
+        install_companion_actors()
+    except Exception as exc:
+        print(f"  companion actors skipped: {exc}")
     print("Done.")
 
 

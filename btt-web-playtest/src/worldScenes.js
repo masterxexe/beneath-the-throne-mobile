@@ -4,7 +4,9 @@ export const WORLD_SCENE_ASSETS = {
   oldRoadV71: "assets/towns/generated/old-road-world-v71.png",
   forestEdgeV71: "assets/towns/generated/forest-edge-world-v71.png",
   ruinedWatchtowerV71: "assets/towns/generated/ruined-watchtower-world-v71.png",
-  marketTownV71: "assets/towns/generated/market-town-world-v71.png"
+  marketTownV71: "assets/towns/generated/market-town-world-v71.png",
+  cinderhookSlumsV71: "assets/towns/generated/cinderhook-slums-world-v71.png",
+  lowerWardV71: "assets/towns/generated/lower-ward-world-v71.png"
 };
 
 export const ROAD_STOP_SCENE_ASSETS = {
@@ -192,6 +194,111 @@ const ASHEN_KEEP_SCENE = {
 };
 
 const WORLD_SCENE_LIST = [
+  {
+    id: "ashen_slums_world_v71",
+    locationId: "ashen_slums",
+    sceneClass: "world-scene-cinderhook-slums-v71",
+    art: WORLD_SCENE_ASSETS.cinderhookSlumsV71,
+    mood: "slum-ash",
+    player: {x: 38, y: 82, scale: .94},
+    actions: [
+      action({
+        id: "market",
+        service: "market",
+        label: {en: "Slum Market", es: "Mercado del barrio"},
+        hint: {en: "Scrap trade and gang debts", es: "Comercio de chatarra y deudas de banda"},
+        x: 30, y: 58, width: 24, height: 32, glow: "ember",
+        target: {x: 34, y: 78, scale: .94}
+      }),
+      action({
+        id: "blacksmith",
+        service: "blacksmith",
+        label: {en: "Patch Forge", es: "Forja remendada"},
+        hint: {en: "Repairs on a shoestring", es: "Reparaciones con poco"},
+        x: 16, y: 64, width: 22, height: 34, glow: "ember",
+        target: {x: 22, y: 79, scale: .95}
+      }),
+      action({
+        id: "tavern",
+        service: "tavern",
+        label: {en: "Gutter Taproom", es: "Taberna del desague"},
+        hint: {en: "Rumors, recruits, trouble", es: "Rumores, reclutas, problemas"},
+        x: 68, y: 52, width: 24, height: 30, glow: "lantern",
+        target: {x: 64, y: 72, scale: .9}
+      }),
+      action({
+        id: "inn",
+        service: "inn",
+        label: {en: "Shelter Loft", es: "Refugio del desvan"},
+        hint: {en: "A roof over Cinderhook", es: "Un techo sobre Cinderhook"},
+        x: 82, y: 62, width: 22, height: 36, glow: "hearth",
+        target: {x: 76, y: 78, scale: .92}
+      }),
+      action({
+        id: "lowerWardGate",
+        kind: "openMap",
+        label: {en: "Lower Ward Gate", es: "Puerta del Barrio Inferior"},
+        hint: {en: "Climb toward permission and trainers", es: "Subir hacia permiso y entrenadores"},
+        x: 52, y: 38, width: 20, height: 26, glow: "gold",
+        target: {x: 50, y: 70, scale: .88}
+      }),
+      COMMON_MAJOR_ACTIONS.hunt
+    ],
+    effects: [
+      effect("slum-smoke", "smoke", 42, 28, 38, 24, "ash", .38),
+      effect("slum-ember", "sparks", 18, 66, 16, 12, "ember", .32),
+      effect("slum-lantern", "torch", 70, 54, 18, 16, "lantern", .24)
+    ]
+  },
+  {
+    id: "lower_ward_world_v71",
+    locationId: "lower_ward",
+    sceneClass: "world-scene-lower-ward-v71",
+    art: WORLD_SCENE_ASSETS.lowerWardV71,
+    mood: "ward-lanterns",
+    player: {x: 44, y: 80, scale: .96},
+    actions: [
+      action({
+        id: "market",
+        service: "market",
+        label: {en: "Ward Market", es: "Mercado del barrio"},
+        hint: {en: "Licensed trade above the slum", es: "Comercio con licencia sobre el barrio"},
+        x: 32, y: 56, width: 24, height: 30, glow: "stone",
+        target: {x: 36, y: 76, scale: .94}
+      }),
+      action({
+        id: "blacksmith",
+        service: "blacksmith",
+        label: {en: "Ward Forge", es: "Forja del barrio"},
+        hint: {en: "Better steel, higher prices", es: "Mejor acero, precios mas altos"},
+        x: 18, y: 60, width: 22, height: 34, glow: "ember",
+        target: {x: 24, y: 78, scale: .95}
+      }),
+      action({
+        id: "tavern",
+        service: "tavern",
+        label: {en: "Ward Tavern", es: "Taberna del barrio"},
+        hint: {en: "Contracts and companions", es: "Contratos y companeros"},
+        x: 70, y: 48, width: 24, height: 28, glow: "lantern",
+        target: {x: 66, y: 70, scale: .9}
+      }),
+      action({
+        id: "inn",
+        service: "inn",
+        label: {en: "Ward Inn", es: "Posada del barrio"},
+        hint: {en: "Rest with fewer fleas", es: "Descansar con menos pulgas"},
+        x: 84, y: 60, width: 22, height: 34, glow: "hearth",
+        target: {x: 78, y: 76, scale: .92}
+      }),
+      COMMON_MAJOR_ACTIONS.mapGate,
+      COMMON_MAJOR_ACTIONS.hunt
+    ],
+    effects: [
+      effect("ward-lantern-a", "torch", 34, 42, 16, 14, "lantern", .28),
+      effect("ward-lantern-b", "torch", 72, 50, 16, 14, "lantern", .26),
+      effect("ward-mist", "smoke", 50, 30, 40, 20, "ash", .18)
+    ]
+  },
   ASHEN_KEEP_SCENE,
   {
     id: "ashen_fields_world_v71",

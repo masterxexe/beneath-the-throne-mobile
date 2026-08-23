@@ -60,9 +60,11 @@ export const ENEMY_VISUAL_ASSETS = {
 export function resolveEnemyVisualClass(enemy){
   const text = `${enemy?.enemyVisualClass || ""} ${enemy?.name || ""} ${enemy?.role || ""}`.toLowerCase();
   if(text.includes("skeleton"))return "skeleton";
-  if(text.includes("corrupted knight") || text.includes("cursed knight"))return "corrupted_knight";
+  if(text.includes("corrupted knight") || text.includes("cursed knight") || text.includes("warden"))return "corrupted_knight";
   if(text.includes("cultist"))return "cultist";
   if(text.includes("wolf") || text.includes("beast"))return "wolf";
+  if(text.includes("hunter") && !text.includes("ranger"))return "bandit";
+  if(text.includes("bailiff") || text.includes("writ captain") || text.includes("bell tower"))return "bandit";
   if(
     text.includes("bandit") ||
     text.includes("raider") ||

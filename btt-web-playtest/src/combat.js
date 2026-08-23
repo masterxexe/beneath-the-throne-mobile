@@ -201,7 +201,7 @@ export function renderCombat(){
       <div class="combat-header panel">
         <div>
           <h2>${tx("round")} ${battle.round} - ${a?esc(a.name):tx("combat")}</h2>
-          <p>${playerTurn?"Your turn.":"Resolving turns..."}</p>
+          <p>${playerTurn?tx("combatTurnPlayer"):tx("combatTurnResolving")}</p>
         </div>
         <div class="turn-order" aria-label="${tx("turnOrder")}">
           ${battle.queue.map(x=>`<span class="pill ${x===a?'good':''}">${esc(x.name)} ${x.speed}</span>`).join("")}
@@ -332,8 +332,9 @@ function companionSceneArtHTML(unit, portrait){
 function companionSceneArtPath(kind = "fighter"){
   const key = String(kind || "fighter").toLowerCase();
   if(/scout|ranger|hunter|rogue/.test(key))return "assets/actors/generated/v80/companion-scout-idle-v80.png";
+  if(/healer|cleric/.test(key))return "assets/actors/generated/v80/companion-healer-idle-v80.png";
+  if(/mage|caster|mystic/.test(key))return "assets/actors/generated/v80/companion-mage-idle-v80.png";
   if(/knight|guard|soldier|fighter|warrior/.test(key))return "assets/actors/generated/v80/companion-armored-idle-v80.png";
-  if(/healer|cleric|mage|caster|mystic/.test(key))return "assets/actors/generated/v80/companion-armored-idle-v80.png";
   return "assets/actors/generated/v80/companion-armored-idle-v80.png";
 }
 
@@ -357,7 +358,7 @@ function enemyHTML(enemy,index,playerTurn,slotIndex = 0,presentation = null,dire
         <span class="pill red">${esc(enemy.role)}</span>
         <div class="meter-line"><span>${tx("hp")}</span><span>${enemy.hp}/${enemy.maxHp}</span></div>
         ${bar(enemy.hp,enemy.maxHp)}
-        <button ${playerTurn && targetable?`onclick="FE.setTarget(${index})"`:"disabled"}>Target</button>
+        <button ${playerTurn && targetable?`onclick="FE.setTarget(${index})"`:"disabled"}>${tx("combatTarget")}</button>
       </div>
     </div>
   `;
