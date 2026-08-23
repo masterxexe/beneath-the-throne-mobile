@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description" content="Beneath the Throne - a dark fantasy browser RPG with world-first settlement scenes and tactical combat." />
-  <meta name="theme-color" content="#090706" />
+  <meta name="theme-color" content="#07080c" />
   <meta name="application-name" content="Beneath the Throne" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Beneath the Throne" />
@@ -14,19 +14,19 @@
   <link rel="icon" href="./icons/icon-192.png" />
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
   <link rel="manifest" href="./manifest.webmanifest" />
-  <link rel="preload" as="image" href="./assets/tutorial/generated/v80/title-bg-mobile-v80.webp" />
+  <link rel="preload" as="image" href="./assets/ui/generated/title-bg-v19d.png" />
   <style>
     .boot-fallback{
       min-height:100svh;
       display:grid;
       place-items:center;
       padding:22px;
-      color:#f1dec0;
+      color:#f3e8d4;
       background:
-        linear-gradient(180deg,rgba(0,0,0,.28),rgba(0,0,0,.86)),
-        url("./assets/tutorial/generated/v80/title-bg-mobile-v80.webp") center/cover no-repeat,
-        #020303;
-      font-family:Georgia,"Times New Roman",serif;
+        linear-gradient(180deg,rgba(5,6,10,.18),rgba(5,6,10,.9)),
+        url("./assets/ui/generated/title-bg-v19d.png") center/cover no-repeat,
+        #07080c;
+      font-family:"Cinzel",Georgia,"Times New Roman",serif;
       text-align:center;
     }
     .boot-fallback-card{
@@ -77,7 +77,8 @@
       background:linear-gradient(180deg,#30302c,#111);
     }
   </style>
-  <link rel="stylesheet" href="./styles.css?v=102" />
+  <link rel="stylesheet" href="./styles.css?v=103" />
+  <link rel="stylesheet" href="./redesign.css?v=1" />
   <script>
     (function(){
       function fallback(){
@@ -123,14 +124,14 @@
     })();
   </script>
 </head>
-<body>
+<body class="btt-redesign">
   <div id="app">
     <div id="setup">
       <div class="boot-fallback" role="status" aria-live="polite">
         <div class="boot-fallback-card">
-          <span class="boot-fallback-kicker">Phone Playtest</span>
+          <span class="boot-fallback-kicker">Ash Court · Playtest</span>
           <h1>Beneath the Throne</h1>
-          <p class="boot-fallback-status">Loading playtest build...</p>
+          <p class="boot-fallback-status">The kingdom stirs below the ash...</p>
           <div class="boot-fallback-actions">
             <button onclick="BTT_RETRY_BOOT()">Retry</button>
             <button class="secondary" onclick="BTT_CLEAR_BOOT_CACHE()">Clear App Cache</button>
@@ -139,19 +140,14 @@
       </div>
     </div>
     <div id="game" style="display:none">
-      <div class="topbar">
+      <header class="topbar">
         <div id="topStats"></div>
-        <div class="topline">
-          <button data-screen="home">Home</button>
-          <button data-screen="gear">Gear</button>
-          <button data-screen="party">Party</button>
-          <button data-screen="progression">Progression</button>
-          <button data-screen="map">Map</button>
-          <button data-screen="kingdoms">Kingdoms</button>
-          <button data-action="save-slots">Save</button>
-          <button data-action="app-update">Update</button>
+        <div class="topline-actions">
+          <button class="secondary" data-action="save-slots">Save</button>
+          <button class="secondary" data-action="app-update">Update</button>
         </div>
-      </div>
+      </header>
+      <main class="game-main">
       <section id="home" class="screen"></section>
       <section id="town" class="screen"></section>
       <section id="gear" class="screen"></section>
@@ -161,8 +157,17 @@
       <section id="kingdoms" class="screen"></section>
       <section id="support" class="screen"></section>
       <section id="combat" class="screen"></section>
+      </main>
+      <nav class="topline game-dock" aria-label="Main navigation">
+        <button data-screen="home" data-icon="⌂">Home</button>
+        <button data-screen="gear" data-icon="⚔">Gear</button>
+        <button data-screen="party" data-icon="◈">Party</button>
+        <button data-screen="progression" data-icon="✦">Growth</button>
+        <button data-screen="map" data-icon="◎">Map</button>
+        <button data-screen="kingdoms" data-icon="♜">Realms</button>
+      </nav>
     </div>
   </div>
-  <script type="module" src="./src/main.js?v=102"></script>
+  <script type="module" src="./src/main.js?v=103"></script>
 </body>
 </html>

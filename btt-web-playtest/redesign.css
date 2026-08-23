@@ -1,0 +1,423 @@
+/* Beneath the Throne — Ash Court redesign overlay */
+
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap");
+
+:root {
+  --btt-ink: #07080c;
+  --btt-void: #0d1018;
+  --btt-panel: rgba(14, 18, 28, 0.82);
+  --btt-panel-strong: rgba(10, 12, 20, 0.94);
+  --btt-gold: #d4a84b;
+  --btt-gold-bright: #f0cc6a;
+  --btt-ember: #c45c3a;
+  --btt-ash: #8a96a8;
+  --btt-mist: #5f7f8f;
+  --btt-text: #f3e8d4;
+  --btt-muted: #b7aa94;
+  --btt-line: rgba(212, 168, 75, 0.28);
+  --btt-line-strong: rgba(212, 168, 75, 0.5);
+  --btt-good: #6ecf8a;
+  --btt-danger: #e06a5a;
+  --btt-radius: 14px;
+  --btt-radius-sm: 10px;
+  --btt-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  --btt-font-display: "Cinzel", Georgia, serif;
+  --btt-font-body: "DM Sans", system-ui, sans-serif;
+  --btt-font-story: "Instrument Serif", Georgia, serif;
+}
+
+html,
+body.btt-redesign {
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(196, 92, 58, 0.14), transparent 55%),
+    radial-gradient(ellipse 90% 60% at 100% 100%, rgba(95, 127, 143, 0.12), transparent 50%),
+    linear-gradient(180deg, #05060a 0%, #0a0d14 38%, #06070b 100%);
+  color: var(--btt-text);
+  font-family: var(--btt-font-body);
+}
+
+body.btt-redesign::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  z-index: 0;
+}
+
+body.btt-redesign #app {
+  max-width: 480px;
+  padding: 0 0 calc(88px + env(safe-area-inset-bottom));
+}
+
+body.btt-redesign h1,
+body.btt-redesign h2,
+body.btt-redesign h3,
+body.btt-redesign .hero-title,
+body.btt-redesign .tutorial-title,
+body.btt-redesign .start-title {
+  font-family: var(--btt-font-display);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--btt-gold-bright);
+  text-shadow: 0 2px 18px rgba(212, 168, 75, 0.18);
+}
+
+body.btt-redesign p,
+body.btt-redesign .story-box,
+body.btt-redesign .hero-sub {
+  font-family: var(--btt-font-story);
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--btt-muted);
+}
+
+/* Boot screen */
+body.btt-redesign .boot-fallback {
+  background:
+    linear-gradient(180deg, rgba(5, 6, 10, 0.2), rgba(5, 6, 10, 0.92)),
+    url("./assets/ui/generated/title-bg-v19d.png") center/cover no-repeat,
+    #05060a;
+}
+
+body.btt-redesign .boot-fallback-card {
+  border: 1px solid var(--btt-line-strong);
+  border-radius: var(--btt-radius);
+  background: linear-gradient(180deg, rgba(18, 22, 34, 0.92), rgba(8, 10, 16, 0.96));
+  box-shadow: var(--btt-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+}
+
+body.btt-redesign .boot-fallback-kicker {
+  font-family: var(--btt-font-body);
+  color: var(--btt-ember);
+  letter-spacing: 0.16em;
+}
+
+body.btt-redesign .boot-fallback h1 {
+  font-family: var(--btt-font-display);
+  font-size: 2.2rem;
+}
+
+/* Top status bar */
+body.btt-redesign .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  margin: 0;
+  padding: 10px 12px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--btt-line);
+  border-radius: 0;
+  background: linear-gradient(180deg, rgba(8, 10, 16, 0.96), rgba(8, 10, 16, 0.82));
+  backdrop-filter: blur(16px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+body.btt-redesign .topbar::before,
+body.btt-redesign .topbar::after {
+  display: none !important;
+}
+
+body.btt-redesign #topStats {
+  grid-template-columns: 58px minmax(0, 1fr);
+  min-height: 68px;
+  gap: 10px;
+}
+
+body.btt-redesign .top-status-portrait {
+  width: 58px;
+  min-width: 58px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--btt-line);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+body.btt-redesign .pill,
+body.btt-redesign .hud-token,
+body.btt-redesign .stat-pill {
+  border-radius: 999px;
+  border: 1px solid rgba(138, 150, 168, 0.35);
+  background: rgba(12, 16, 24, 0.88);
+  color: #e8dcc8;
+  font-family: var(--btt-font-body);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 4px 9px;
+}
+
+body.btt-redesign .pill.good,
+body.btt-redesign .hud-token-hero {
+  border-color: rgba(110, 207, 138, 0.45);
+  color: #b8f0c8;
+}
+
+body.btt-redesign .pill.warn {
+  border-color: rgba(212, 168, 75, 0.5);
+  color: #f0d898;
+}
+
+body.btt-redesign .pill.red {
+  border-color: rgba(224, 106, 90, 0.5);
+  color: #ffb8ae;
+}
+
+body.btt-redesign .topline-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+body.btt-redesign .topline-actions button {
+  flex: 1;
+  min-height: 34px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Bottom dock navigation */
+body.btt-redesign .game-dock {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  z-index: 80;
+  width: min(480px, 100%);
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+  margin: 0;
+  overflow: visible;
+  border-top: 1px solid var(--btt-line);
+  background: linear-gradient(180deg, rgba(10, 12, 18, 0.72), rgba(6, 8, 12, 0.96));
+  backdrop-filter: blur(18px);
+  box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.45);
+}
+
+body.btt-redesign .game-dock::before,
+body.btt-redesign .game-dock button::before,
+body.btt-redesign .game-dock button::after {
+  display: none !important;
+}
+
+body.btt-redesign .game-dock button {
+  display: grid;
+  gap: 3px;
+  place-items: center;
+  min-width: 0;
+  min-height: 52px;
+  padding: 6px 4px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--btt-ash);
+  font-family: var(--btt-font-body);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  white-space: normal;
+}
+
+body.btt-redesign .game-dock button::before {
+  display: block !important;
+  content: attr(data-icon);
+  font-size: 1.15rem;
+  line-height: 1;
+  filter: grayscale(0.2);
+}
+
+body.btt-redesign .game-dock button.active {
+  color: var(--btt-gold-bright);
+  border-color: var(--btt-line);
+  background: linear-gradient(180deg, rgba(212, 168, 75, 0.16), rgba(212, 168, 75, 0.04));
+  box-shadow: 0 0 24px rgba(212, 168, 75, 0.12);
+}
+
+/* Cards & panels */
+body.btt-redesign .card,
+body.btt-redesign .panel,
+body.btt-redesign .world-card,
+body.btt-redesign .choice-card,
+body.btt-redesign .hero-shell,
+body.btt-redesign .tutorial-frame,
+body.btt-redesign .lower-ward-hero,
+body.btt-redesign .modal {
+  border: 1px solid var(--btt-line);
+  border-radius: var(--btt-radius);
+  background:
+    linear-gradient(180deg, rgba(20, 24, 36, 0.9), rgba(8, 10, 16, 0.95));
+  box-shadow: var(--btt-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(8px);
+}
+
+body.btt-redesign .card::before,
+body.btt-redesign .panel::before {
+  opacity: 0.35 !important;
+}
+
+body.btt-redesign .story-box {
+  border-left: 3px solid var(--btt-ember);
+  padding-left: 16px;
+  background: linear-gradient(90deg, rgba(196, 92, 58, 0.08), transparent);
+}
+
+/* Buttons */
+body.btt-redesign button {
+  border-radius: var(--btt-radius-sm);
+  border: 1px solid rgba(138, 150, 168, 0.35);
+  background: linear-gradient(180deg, rgba(24, 30, 42, 0.95), rgba(12, 16, 24, 0.98));
+  color: var(--btt-text);
+  font-family: var(--btt-font-body);
+  font-weight: 700;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+body.btt-redesign button:active {
+  transform: scale(0.98);
+}
+
+body.btt-redesign .primary,
+body.btt-redesign button.primary {
+  border-color: rgba(212, 168, 75, 0.65);
+  background: linear-gradient(180deg, #c9983f, #8a5f1e);
+  color: #1a1208;
+  box-shadow: 0 10px 24px rgba(212, 168, 75, 0.22);
+}
+
+body.btt-redesign .good {
+  border-color: rgba(110, 207, 138, 0.55);
+  background: linear-gradient(180deg, #3d8f58, #245a36);
+}
+
+body.btt-redesign .danger {
+  border-color: rgba(224, 106, 90, 0.55);
+  background: linear-gradient(180deg, #a83f34, #6d241d);
+}
+
+body.btt-redesign .secondary {
+  background: rgba(16, 20, 30, 0.9);
+  color: var(--btt-muted);
+}
+
+/* Meters */
+body.btt-redesign .bar {
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.45);
+}
+
+body.btt-redesign .bar > div {
+  border-radius: 999px;
+  background: linear-gradient(90deg, #8f2f28, #e06a5a);
+}
+
+body.btt-redesign .bar.mana > div {
+  background: linear-gradient(90deg, #2f5f9c, #7eb8ff);
+}
+
+body.btt-redesign .bar.xp > div {
+  background: linear-gradient(90deg, #9a7428, #f0cc6a);
+}
+
+/* World & map */
+body.btt-redesign .overworld-map,
+body.btt-redesign .world-scene,
+body.btt-redesign .location-stage {
+  border-radius: calc(var(--btt-radius) + 2px);
+  border-color: var(--btt-line-strong);
+  box-shadow: var(--btt-shadow), inset 0 0 80px rgba(0, 0, 0, 0.35);
+}
+
+body.btt-redesign .overworld-node,
+body.btt-redesign .building-hotspot {
+  border-radius: 999px;
+  border-color: rgba(212, 168, 75, 0.55) !important;
+  box-shadow: 0 0 18px rgba(212, 168, 75, 0.2);
+}
+
+/* Combat */
+body.btt-redesign .combat-shell,
+body.btt-redesign .combat-stage {
+  border-radius: calc(var(--btt-radius) + 4px);
+  border-color: var(--btt-line-strong);
+  overflow: hidden;
+}
+
+body.btt-redesign .actions {
+  border-radius: var(--btt-radius) var(--btt-radius) 0 0;
+  border-color: var(--btt-line);
+  background: linear-gradient(180deg, rgba(10, 12, 18, 0.94), rgba(6, 8, 12, 0.98));
+  backdrop-filter: blur(14px);
+}
+
+body.btt-redesign .enemy.target,
+body.btt-redesign .combat-actor.target {
+  box-shadow: 0 0 28px rgba(212, 168, 75, 0.28) !important;
+}
+
+/* Opening / title flow */
+body.btt-redesign #setup .panel,
+body.btt-redesign .v59-title-card,
+body.btt-redesign .opening-class-grid .class-card {
+  border-radius: var(--btt-radius);
+  border-color: var(--btt-line);
+}
+
+body.btt-redesign .v59-title-kicker,
+body.btt-redesign .opening-kicker {
+  font-family: var(--btt-font-body);
+  color: var(--btt-ember);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+body.btt-redesign .toast {
+  top: auto;
+  bottom: calc(92px + env(safe-area-inset-bottom));
+  border-radius: var(--btt-radius-sm);
+  border-color: rgba(212, 168, 75, 0.45);
+  background: rgba(18, 14, 10, 0.94);
+  backdrop-filter: blur(10px);
+}
+
+body.btt-redesign .modal-back {
+  backdrop-filter: blur(8px);
+}
+
+body.btt-redesign input,
+body.btt-redesign select {
+  border-radius: var(--btt-radius-sm);
+  border-color: rgba(138, 150, 168, 0.35);
+  background: rgba(8, 10, 16, 0.92);
+  font-family: var(--btt-font-body);
+}
+
+/* Lower ward & district panels */
+body.btt-redesign .lower-ward-command {
+  border-radius: 12px;
+  border-color: var(--btt-line);
+  background: linear-gradient(180deg, rgba(22, 28, 40, 0.92), rgba(10, 12, 18, 0.96));
+}
+
+body.btt-redesign .lower-ward-command span {
+  color: var(--btt-gold-bright);
+}
+
+@media (min-width: 520px) {
+  body.btt-redesign #app {
+    padding-top: 8px;
+  }
+
+  body.btt-redesign .game-dock {
+    border-radius: 18px 18px 0 0;
+  }
+}
