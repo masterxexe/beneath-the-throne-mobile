@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.23-overnight-37",
-  "build": 37,
-  "cache": "v112",
-  "notes": "UI declutter: slim HUD, icon dock, clean map, compact combat"
+  "version": "2026.08.23-overnight-38",
+  "build": 38,
+  "cache": "v113",
+  "notes": "Mortal Kombat-style combat choreography: weapon combos, enemy strikes, move banners"
 }

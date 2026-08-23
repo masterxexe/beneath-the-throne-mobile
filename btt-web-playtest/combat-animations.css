@@ -1,0 +1,472 @@
+/* Mortal Kombat-inspired combat choreography — weapon swings, enemy strikes, hit FX */
+
+.combat-battlefield{
+  --mk-gold:#f0cc6a;
+  --mk-ember:#e06a5a;
+  --mk-ice:#7ec8ff;
+  --mk-violet:#b07cff;
+  position:relative;
+}
+
+.combat-move-banner{
+  position:absolute;
+  top:7%;
+  left:50%;
+  z-index:14;
+  pointer-events:none;
+  transform:translateX(-50%);
+  font-family:"Cinzel",Georgia,serif;
+  font-weight:900;
+  font-size:clamp(16px,3.8vw,32px);
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:#ffe7a8;
+  text-shadow:0 0 18px rgba(224,80,40,.9), 0 2px 0 #3a1408;
+  animation:mk-move-banner .72s cubic-bezier(.12,.82,.2,1) both;
+  white-space:nowrap;
+}
+.combat-move-enemy{color:#ffb8a8}
+
+.combat-shell.combat-impact .combat-battlefield::after,
+.combat-shell.combat-impact-heavy .combat-battlefield::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:7;
+  background:radial-gradient(circle at 58% 42%, rgba(255,244,210,.3), transparent 56%);
+  animation:mk-hitflash .28s ease-out both;
+}
+
+.combat-shell.combat-impact .combat-battlefield,
+.combat-shell.combat-impact-heavy .combat-battlefield{
+  animation:mk-camera-shake .32s cubic-bezier(.2,.7,.2,1) both;
+}
+
+.combat-shell.combat-impact-heavy .combat-battlefield{
+  animation-name:mk-camera-shake-heavy;
+  animation-duration:.42s;
+}
+
+.combat-battlefield .combat-actor{
+  transform-origin:60% 80%;
+}
+
+.combat-battlefield .combat-actor-enemy{
+  transform-origin:40% 80%;
+}
+
+.combat-battlefield .combat-actor.combat-motion-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-motion-enemy-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-motion-hurt .portrait-wrap,
+.combat-battlefield .combat-actor.combat-motion-enemy-hurt .portrait-wrap{
+  animation-fill-mode:both !important;
+  will-change:transform,filter;
+}
+
+.combat-battlefield .combat-actor.combat-motion-attack.combat-actor-hero .portrait-wrap,
+.combat-battlefield .combat-actor.combat-motion-attack.combat-actor-companion .portrait-wrap{
+  animation:mk-slash .56s cubic-bezier(.12,.82,.18,1) both;
+}
+.combat-battlefield .combat-actor.combat-motion-enemy-attack .portrait-wrap{
+  animation:mk-enemy-slash .56s cubic-bezier(.14,.82,.18,1) both;
+}
+
+.combat-battlefield .combat-motion-attack .paper-doll-avatar,
+.combat-battlefield .combat-motion-attack .companion-scene-art,
+.combat-battlefield .combat-motion-enemy-attack .enemy-pose-art{
+  filter:drop-shadow(0 0 14px rgba(240,204,106,.35));
+}
+
+.combat-battlefield .combat-motion-hurt .paper-doll-avatar,
+.combat-battlefield .combat-motion-enemy-hurt .enemy-pose-art{
+  filter:brightness(1.45) saturate(.7) drop-shadow(0 0 16px rgba(224,106,90,.55));
+}
+
+/* Player weapon styles */
+.combat-battlefield .combat-actor.combat-style-slash.combat-motion-attack .portrait-wrap{animation:mk-slash .56s cubic-bezier(.12,.82,.18,1) both !important}
+.combat-battlefield .combat-actor.combat-style-overhead.combat-motion-attack .portrait-wrap{animation:mk-overhead .62s cubic-bezier(.18,.78,.16,1) both !important}
+.combat-battlefield .combat-actor.combat-style-rising.combat-motion-attack .portrait-wrap{animation:mk-rising .58s cubic-bezier(.16,.84,.2,1) both !important}
+.combat-battlefield .combat-actor.combat-style-cross.combat-motion-attack .portrait-wrap{animation:mk-cross .6s cubic-bezier(.14,.8,.2,1) both !important}
+.combat-battlefield .combat-actor.combat-style-chop.combat-motion-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-style-cleave.combat-motion-attack .portrait-wrap{animation:mk-cleave .64s cubic-bezier(.2,.7,.18,1) both !important}
+.combat-battlefield .combat-actor.combat-style-whirl.combat-motion-attack .portrait-wrap{animation:mk-whirl .7s cubic-bezier(.18,.7,.22,1) both !important}
+.combat-battlefield .combat-actor.combat-style-thrust.combat-motion-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-style-lunge.combat-motion-attack .portrait-wrap{animation:mk-thrust .5s cubic-bezier(.1,.9,.18,1) both !important}
+.combat-battlefield .combat-actor.combat-style-sweep.combat-motion-attack .portrait-wrap{animation:mk-sweep .58s cubic-bezier(.16,.8,.2,1) both !important}
+.combat-battlefield .combat-actor.combat-style-crush.combat-motion-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-style-slam.combat-motion-attack .portrait-wrap{animation:mk-slam .66s cubic-bezier(.22,.62,.18,1) both !important}
+.combat-battlefield .combat-actor.combat-style-upper.combat-motion-attack .portrait-wrap{animation:mk-upper .56s cubic-bezier(.16,.84,.2,1) both !important}
+.combat-battlefield .combat-actor.combat-style-stab.combat-motion-attack .portrait-wrap{animation:mk-stab .42s cubic-bezier(.08,.9,.2,1) both !important}
+.combat-battlefield .combat-actor.combat-style-flurry.combat-motion-attack .portrait-wrap{animation:mk-flurry .72s steps(6,end) both !important}
+.combat-battlefield .combat-actor.combat-style-crosscut.combat-motion-attack .portrait-wrap{animation:mk-cross .52s cubic-bezier(.12,.86,.2,1) both !important}
+.combat-battlefield .combat-actor.combat-style-shot.combat-motion-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-style-draw.combat-motion-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-style-double.combat-motion-attack .portrait-wrap{animation:mk-shot .68s cubic-bezier(.2,.78,.22,1) both !important}
+.combat-battlefield .combat-actor.combat-style-bolt.combat-motion-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-style-nova.combat-motion-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-style-hexarc.combat-motion-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-motion-cast .portrait-wrap{animation:mk-cast .7s cubic-bezier(.18,.76,.22,1) both !important}
+.combat-battlefield .combat-actor.combat-style-bash.combat-motion-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-style-ram.combat-motion-attack .portrait-wrap{animation:mk-bash .54s cubic-bezier(.14,.82,.2,1) both !important}
+.combat-battlefield .combat-actor.combat-style-punch.combat-motion-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-style-kick.combat-motion-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-style-haymaker.combat-motion-attack .portrait-wrap{animation:mk-haymaker .58s cubic-bezier(.12,.86,.2,1) both !important}
+
+/* Enemy styles */
+.combat-battlefield .combat-actor.combat-style-bone-slash.combat-motion-enemy-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-style-greatslash.combat-motion-enemy-attack .portrait-wrap{animation:mk-enemy-slash .58s cubic-bezier(.14,.82,.18,1) both !important}
+.combat-battlefield .combat-actor.combat-style-bone-thrust.combat-motion-enemy-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-style-ritual-lunge.combat-motion-enemy-attack .portrait-wrap{animation:mk-enemy-thrust .5s cubic-bezier(.1,.88,.2,1) both !important}
+.combat-battlefield .combat-actor.combat-style-bone-overhead.combat-motion-enemy-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-style-execution.combat-motion-enemy-attack .portrait-wrap{animation:mk-enemy-overhead .66s cubic-bezier(.2,.7,.18,1) both !important}
+.combat-battlefield .combat-actor.combat-style-pounce.combat-motion-enemy-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-style-maul.combat-motion-enemy-attack .portrait-wrap{animation:mk-enemy-pounce .54s cubic-bezier(.08,.86,.22,1) both !important}
+.combat-battlefield .combat-actor.combat-style-snap.combat-motion-enemy-attack .portrait-wrap{animation:mk-enemy-snap .4s cubic-bezier(.1,.9,.2,1) both !important}
+.combat-battlefield .combat-actor.combat-style-knife-rush.combat-motion-enemy-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-style-cheap-shot.combat-motion-enemy-attack .portrait-wrap{animation:mk-enemy-rush .48s cubic-bezier(.1,.88,.2,1) both !important}
+.combat-battlefield .combat-actor.combat-style-spin.combat-motion-enemy-attack .portrait-wrap{animation:mk-enemy-spin .62s cubic-bezier(.16,.78,.2,1) both !important}
+.combat-battlefield .combat-actor.combat-style-hex-strike.combat-motion-enemy-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-style-dagger-arc.combat-motion-enemy-attack .portrait-wrap{animation:mk-enemy-hex .64s cubic-bezier(.18,.76,.22,1) both !important}
+.combat-battlefield .combat-actor.combat-style-shield-crash.combat-motion-enemy-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-style-smash.combat-motion-enemy-attack .portrait-wrap{animation:mk-enemy-crash .6s cubic-bezier(.2,.68,.18,1) both !important}
+.combat-battlefield .combat-actor.combat-style-rush.combat-motion-enemy-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-style-swipe.combat-motion-enemy-attack .portrait-wrap{animation:mk-enemy-slash .52s cubic-bezier(.14,.82,.18,1) both !important}
+
+/* Hurt / knockback */
+.combat-battlefield .combat-motion-hurt .portrait-wrap{animation:mk-hero-hurt .42s cubic-bezier(.2,.7,.2,1) both !important}
+.combat-battlefield .combat-motion-enemy-hurt .portrait-wrap{animation:mk-enemy-hurt .42s cubic-bezier(.2,.7,.2,1) both !important}
+.combat-battlefield .combat-motion-defeated .portrait-wrap{animation:mk-finish .9s cubic-bezier(.2,.7,.2,1) both !important}
+
+.combat-battlefield .combat-actor.combat-style-check.combat-motion-attack .portrait-wrap{animation:mk-bash .46s cubic-bezier(.14,.82,.2,1) both !important}
+
+.combat-battlefield .combat-actor.combat-combo-3.combat-motion-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-combo-3.combat-motion-enemy-attack .portrait-wrap{
+  animation-duration:.72s !important;
+  filter:drop-shadow(0 0 18px rgba(240,204,106,.55));
+}
+
+.attack-studio-debug-panel{
+  max-height:220px;
+  overflow:auto;
+}
+.attack-studio-debug-panel .grid3 button{
+  min-height:34px;
+  font-size:11px;
+}
+
+/* FX overlays */
+.combat-fx{
+  position:absolute;
+  inset:-8% -18% 8%;
+  pointer-events:none;
+  z-index:8;
+  overflow:visible;
+}
+.combat-fx i{
+  position:absolute;
+  display:block;
+  pointer-events:none;
+}
+.combat-fx-arc{
+  left:18%;
+  top:22%;
+  width:78%;
+  height:38%;
+  border-radius:50%;
+  border:3px solid transparent;
+  border-top-color:rgba(255,236,180,.92);
+  border-right-color:rgba(224,106,90,.55);
+  filter:drop-shadow(0 0 10px rgba(240,204,106,.65));
+  transform:rotate(-18deg) scale(.2);
+  opacity:0;
+  animation:mk-arc .42s ease-out .08s both;
+}
+.combat-fx-arc-b{
+  top:34%;
+  border-top-color:rgba(255,255,255,.8);
+  animation-delay:.14s;
+  animation-duration:.36s;
+}
+.combat-fx-spark,
+.combat-fx-spark-b{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#fff6d2;
+  box-shadow:0 0 12px #f0cc6a, 0 0 22px #e06a5a;
+  left:62%;
+  top:40%;
+  opacity:0;
+  animation:mk-spark .46s ease-out .12s both;
+}
+.combat-fx-spark-b{left:70%;top:32%;animation-delay:.18s}
+.combat-fx-burst{
+  left:48%;
+  top:36%;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(255,244,210,.95),rgba(224,106,90,.15) 55%,transparent 70%);
+  transform:translate(-50%,-50%) scale(.2);
+  animation:mk-burst .4s ease-out .1s both;
+}
+.combat-fx-afterimage{
+  inset:8% 22% 18%;
+  border-radius:18px;
+  box-shadow:18px 0 0 rgba(240,204,106,.18), 32px 0 0 rgba(224,106,90,.1);
+  animation:mk-afterimage .4s ease-out both;
+}
+
+.combat-fx-cleave .combat-fx-arc{transform:rotate(72deg) scale(.2);border-top-color:#ffd27a}
+.combat-fx-thrust .combat-fx-arc,
+.combat-fx-stab .combat-fx-arc{
+  width:70%;
+  height:8px;
+  border-radius:999px;
+  border:0;
+  background:linear-gradient(90deg,transparent,rgba(255,244,210,.95),transparent);
+  top:44%;
+  animation-name:mk-thrust-line;
+}
+.combat-fx-shot .combat-fx-arc{
+  width:84%;
+  height:4px;
+  border:0;
+  border-radius:999px;
+  background:linear-gradient(90deg,transparent,#fff,#f0cc6a);
+  top:42%;
+  animation-name:mk-thrust-line;
+}
+.combat-fx-arcane .combat-fx-arc{
+  border-color:rgba(176,124,255,.15);
+  border-top-color:#d4b8ff;
+  border-right-color:#7ec8ff;
+}
+.combat-fx-crush .combat-fx-burst,
+.combat-fx-strike .combat-fx-burst{
+  background:radial-gradient(circle,rgba(255,220,160,.95),rgba(180,70,40,.2) 50%,transparent 70%);
+}
+.combat-fx-enemy .combat-fx-arc{left:auto;right:12%;transform-origin:right center}
+
+@keyframes mk-slash{
+  0%{transform:translate3d(-18px,6px,0) rotate(-18deg) scale(.94)}
+  22%{transform:translate3d(-26px,10px,0) rotate(-26deg) scale(.9)}
+  46%{transform:translate3d(28px,-14px,0) rotate(18deg) scale(1.12)}
+  68%{transform:translate3d(10px,-4px,0) rotate(6deg) scale(1.04)}
+  100%{transform:none}
+}
+@keyframes mk-overhead{
+  0%{transform:translate3d(-8px,-22px,0) rotate(-8deg) scale(.96)}
+  28%{transform:translate3d(-6px,-34px,0) rotate(-4deg) scale(.9)}
+  48%{transform:translate3d(18px,18px,0) rotate(12deg) scale(1.14)}
+  72%{transform:translate3d(6px,6px,0) scale(1.04)}
+  100%{transform:none}
+}
+@keyframes mk-rising{
+  0%{transform:translate3d(-10px,16px,0) rotate(16deg)}
+  44%{transform:translate3d(22px,-24px,0) rotate(-14deg) scale(1.12)}
+  100%{transform:none}
+}
+@keyframes mk-cross{
+  0%{transform:translate3d(-16px,-8px,0) rotate(18deg)}
+  28%{transform:translate3d(24px,10px,0) rotate(-10deg) scale(1.1)}
+  52%{transform:translate3d(-8px,8px,0) rotate(8deg)}
+  76%{transform:translate3d(16px,-6px,0) rotate(-4deg)}
+  100%{transform:none}
+}
+@keyframes mk-cleave{
+  0%{transform:translate3d(-12px,-18px,0) rotate(-20deg)}
+  36%{transform:translate3d(-8px,-28px,0) rotate(-28deg) scale(.92)}
+  52%{transform:translate3d(20px,16px,0) rotate(16deg) scale(1.16)}
+  100%{transform:none}
+}
+@keyframes mk-whirl{
+  0%{transform:rotate(0) scale(.96)}
+  25%{transform:rotate(-120deg) translate3d(8px,-8px,0)}
+  50%{transform:rotate(-240deg) translate3d(12px,4px,0) scale(1.08)}
+  75%{transform:rotate(-320deg) translate3d(6px,0,0)}
+  100%{transform:none}
+}
+@keyframes mk-thrust{
+  0%{transform:translate3d(-22px,2px,0) scaleX(.9)}
+  18%{transform:translate3d(-28px,2px,0)}
+  42%{transform:translate3d(36px,-4px,0) scaleX(1.18)}
+  100%{transform:none}
+}
+@keyframes mk-sweep{
+  0%{transform:translate3d(-8px,8px,0) rotate(8deg)}
+  45%{transform:translate3d(26px,-6px,0) rotate(-22deg) scale(1.1)}
+  100%{transform:none}
+}
+@keyframes mk-slam{
+  0%{transform:translate3d(0,-24px,0) scale(.92)}
+  40%{transform:translate3d(8px,14px,0) scale(1.16)}
+  58%{transform:translate3d(8px,8px,0) scale(1.04)}
+  100%{transform:none}
+}
+@keyframes mk-upper{
+  0%{transform:translate3d(-8px,14px,0) rotate(10deg)}
+  44%{transform:translate3d(16px,-28px,0) rotate(-8deg) scale(1.14)}
+  100%{transform:none}
+}
+@keyframes mk-stab{
+  0%,100%{transform:none}
+  20%{transform:translate3d(-10px,0,0)}
+  40%{transform:translate3d(22px,-2px,0) scale(1.08)}
+  60%{transform:translate3d(-6px,2px,0)}
+  80%{transform:translate3d(18px,0,0)}
+}
+@keyframes mk-flurry{
+  0%{transform:translate3d(-8px,0,0)}
+  16%{transform:translate3d(16px,-8px,0)}
+  32%{transform:translate3d(-10px,8px,0)}
+  48%{transform:translate3d(18px,4px,0)}
+  64%{transform:translate3d(-6px,-6px,0)}
+  80%{transform:translate3d(14px,2px,0)}
+  100%{transform:none}
+}
+@keyframes mk-shot{
+  0%{transform:translate3d(-16px,0,0) scale(.96)}
+  30%{transform:translate3d(-22px,-4px,0)}
+  48%{transform:translate3d(-6px,-2px,0) scale(1.04)}
+  100%{transform:none}
+}
+@keyframes mk-cast{
+  0%{transform:translate3d(0,8px,0) scale(.94);filter:drop-shadow(0 0 0 transparent)}
+  40%{transform:translate3d(0,-10px,0) scale(1.08);filter:drop-shadow(0 0 16px rgba(176,124,255,.55))}
+  100%{transform:none}
+}
+@keyframes mk-bash{
+  0%{transform:translate3d(-20px,4px,0)}
+  40%{transform:translate3d(30px,2px,0) scale(1.12)}
+  100%{transform:none}
+}
+@keyframes mk-haymaker{
+  0%{transform:translate3d(-24px,8px,0) rotate(-12deg)}
+  44%{transform:translate3d(28px,-10px,0) rotate(10deg) scale(1.14)}
+  100%{transform:none}
+}
+
+@keyframes mk-enemy-slash{
+  0%{transform:translate3d(18px,6px,0) rotate(14deg)}
+  44%{transform:translate3d(-30px,-10px,0) rotate(-12deg) scale(1.12)}
+  100%{transform:none}
+}
+@keyframes mk-enemy-thrust{
+  0%{transform:translate3d(22px,0,0)}
+  40%{transform:translate3d(-34px,-4px,0) scaleX(1.16)}
+  100%{transform:none}
+}
+@keyframes mk-enemy-overhead{
+  0%{transform:translate3d(8px,-24px,0)}
+  46%{transform:translate3d(-16px,16px,0) scale(1.14)}
+  100%{transform:none}
+}
+@keyframes mk-enemy-pounce{
+  0%{transform:translate3d(12px,-8px,0) scale(.9)}
+  28%{transform:translate3d(4px,-28px,0)}
+  48%{transform:translate3d(-28px,10px,0) scale(1.16)}
+  100%{transform:none}
+}
+@keyframes mk-enemy-snap{
+  0%,100%{transform:none}
+  35%{transform:translate3d(-22px,4px,0) scale(1.1)}
+  55%{transform:translate3d(-8px,-2px,0)}
+}
+@keyframes mk-enemy-rush{
+  0%{transform:translate3d(24px,4px,0)}
+  40%{transform:translate3d(-28px,-2px,0) scale(1.1)}
+  100%{transform:none}
+}
+@keyframes mk-enemy-spin{
+  0%{transform:rotate(0)}
+  50%{transform:rotate(180deg) translate3d(-10px,0,0) scale(1.08)}
+  100%{transform:none}
+}
+@keyframes mk-enemy-hex{
+  0%{transform:translate3d(10px,8px,0);filter:drop-shadow(0 0 0 transparent)}
+  45%{transform:translate3d(-18px,-12px,0) scale(1.08);filter:drop-shadow(0 0 16px rgba(176,124,255,.5))}
+  100%{transform:none}
+}
+@keyframes mk-enemy-crash{
+  0%{transform:translate3d(8px,-20px,0)}
+  48%{transform:translate3d(-18px,12px,0) scale(1.18)}
+  100%{transform:none}
+}
+@keyframes mk-hero-hurt{
+  0%{transform:translate3d(0,0,0)}
+  24%{transform:translate3d(-16px,4px,0) rotate(-4deg)}
+  48%{transform:translate3d(8px,-2px,0)}
+  100%{transform:none}
+}
+@keyframes mk-enemy-hurt{
+  0%{transform:none}
+  26%{transform:translate3d(16px,-6px,0) rotate(5deg) scale(.96)}
+  52%{transform:translate3d(-6px,2px,0)}
+  100%{transform:none}
+}
+@keyframes mk-finish{
+  0%{transform:scale(1);filter:brightness(1)}
+  30%{transform:scale(1.08) translate3d(8px,-10px,0);filter:brightness(1.4) saturate(.6)}
+  100%{transform:translate3d(0,18px,0) rotate(8deg) scale(.92);filter:grayscale(.4) brightness(.8);opacity:.82}
+}
+
+@keyframes mk-arc{
+  0%{opacity:0;transform:rotate(-28deg) scale(.15)}
+  35%{opacity:1;transform:rotate(8deg) scale(1.05)}
+  100%{opacity:0;transform:rotate(28deg) scale(1.2)}
+}
+@keyframes mk-thrust-line{
+  0%{opacity:0;transform:scaleX(.15) translate3d(-20%,0,0)}
+  40%{opacity:1;transform:scaleX(1.1)}
+  100%{opacity:0;transform:scaleX(1.25) translate3d(12%,0,0)}
+}
+@keyframes mk-spark{
+  0%{opacity:0;transform:scale(.2)}
+  30%{opacity:1;transform:translate3d(8px,-10px,0) scale(1.2)}
+  100%{opacity:0;transform:translate3d(18px,-22px,0) scale(.2)}
+}
+@keyframes mk-burst{
+  0%{opacity:.2;transform:translate(-50%,-50%) scale(.2)}
+  40%{opacity:1;transform:translate(-50%,-50%) scale(1.6)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(2.4)}
+}
+@keyframes mk-afterimage{
+  0%{opacity:.55}
+  100%{opacity:0;transform:translate3d(-12px,0,0)}
+}
+@keyframes mk-camera-shake{
+  0%,100%{transform:none}
+  20%{transform:translate3d(-3px,2px,0)}
+  40%{transform:translate3d(4px,-2px,0)}
+  60%{transform:translate3d(-2px,1px,0)}
+  80%{transform:translate3d(2px,-1px,0)}
+}
+@keyframes mk-camera-shake-heavy{
+  0%,100%{transform:none}
+  18%{transform:translate3d(-7px,3px,0) scale(1.01)}
+  36%{transform:translate3d(8px,-4px,0)}
+  54%{transform:translate3d(-5px,2px,0)}
+  72%{transform:translate3d(4px,-2px,0)}
+}
+@keyframes mk-move-banner{
+  0%{opacity:0;transform:translateX(-50%) scale(.55) translateY(10px)}
+  28%{opacity:1;transform:translateX(-50%) scale(1.08)}
+  100%{opacity:0;transform:translateX(-50%) scale(1.02) translateY(-8px)}
+}
+@keyframes mk-hitflash{
+  0%{opacity:.8}
+  100%{opacity:0}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .combat-battlefield .combat-motion-attack .portrait-wrap,
+  .combat-battlefield .combat-motion-enemy-attack .portrait-wrap,
+  .combat-battlefield .combat-motion-hurt .portrait-wrap,
+  .combat-battlefield .combat-motion-enemy-hurt .portrait-wrap,
+  .combat-fx i,
+  .combat-shell.combat-impact .combat-battlefield{
+    animation:none !important;
+  }
+}

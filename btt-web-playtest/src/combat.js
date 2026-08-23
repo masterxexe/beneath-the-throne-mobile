@@ -4,6 +4,8 @@ import { bar, byId, esc, modal, render, show } from "./ui.js";
 import { backdropHTML, combatBackdrop, companionPortrait, enemyPortrait, isMajorVisual, portraitHTML } from "./visuals.js";
 import { getPlayerPoseAsset, preloadPlayerPoseAsset, renderPlayerCombatPortraitHook, resolvePlayerAttackPose } from "./portraitRenderer.js";
 import { resolvePlayerCombatPresentation } from "./characterRenderController.js";
+import { allEnemyStyleIds, allPlayerStyleIds, attackStyleClass, attackWeaponClass, fxOverlayHTML, nextCompanionAttackStyle, nextEnemyAttackStyle, nextHeroAttackStyle, presentationForStyle, styleDisplayName } from "./combatAnimations.js";
+import { applyGearVisuals } from "./gearVisuals.js";
 import { playAudioHook } from "./audioHooks.js";
 import { debugEnemyVisualRegistry, enemyVisualHTML, resolveEnemyPoseAsset } from "./enemyVisuals.js";
 import { actorDirectorAttributes, createBattlefieldComposition, directorStageAttributes } from "./combatSceneDirector.js";
@@ -20,22 +22,22 @@ let debugEnemyVisualPoseOverride = null;
 const NUMERIC_POPUP_SELECTOR = ".damage-pop,.damage-popup,.number-popup,.combat-number";
 
 const COMBAT_TIMING = {
-  poseAttack:640,
-  poseSkill:620,
+  poseAttack:760,
+  poseSkill:720,
   poseHurt:640,
   poseBlock:620,
-  poseDebug:920,
-  motion:520,
+  poseDebug:980,
+  motion:720,
   damagePop:760,
-  impact:220,
-  turnAdvance:540,
-  turnWindup:620,
+  impact:300,
+  turnAdvance:820,
+  turnWindup:560,
   victorySettle:680,
   defeatedHold:1200
 };
 
 const COMBAT_NUMBER_TTL = COMBAT_TIMING.damagePop;
-const COMBAT_NUMBER_PHASE_PAUSE = 420;
+const COMBAT_NUMBER_PHASE_PAUSE = 640;
 
 function combatDebug(message, detail = {}){
   if(typeof location === "undefined")return;
@@ -99,6 +101,7 @@ export function startBattle(enemies,text,options = {}){
     queue:[], index:0, round:1, defending:false, resolving:false, heroOffenseUsed:false,
     lastStandUsed:false, guardianPrayerUsed:false, steadyAim:false, heroActionLocked:false, companionGuard:null, effects:[], numberEvents:[], nextNumberEventId:1, recentNumberEventKeys:{},
     numberPhaseId:0, visibleNumberRegistry:{}, defeatedEnemyIds:{},
+    heroCombo:0, enemyCombo:{}, lastHeroAttack:null, lastEnemyAttack:{},
     sceneText:text || "", log:[text || "Battle begins."],
     meta: options || {}
   };
@@ -211,6 +214,7 @@ export function renderCombat(){
         <div class="combat-atmosphere-layer" aria-hidden="true">
           <span class="combat-embers"></span>
         </div>
+        ${moveBannerHTML()}
         <div class="combat-area party-area">
           <div class="combat-party-grid">
             ${unitHTML(h,true,0,composition.partyActors[0])}
@@ -224,6 +228,7 @@ export function renderCombat(){
       <div class="actions combat-actions">
         ${debugEnemyCombatControlsHTML()}
         ${debugCompanionMotionControlsHTML()}
+        ${debugAttackStudioHTML()}
         <div class="grid3">
           <button class="primary" ${playerTurn?'onclick="FE.heroAttack()"':'disabled'}>${tx("attack")}</button>
           <button ${playerTurn?'onclick="FE.toggleSkills()"':'disabled'}>${tx("skills")}</button>
@@ -275,6 +280,32 @@ function debugCompanionMotionControlsHTML(){
   `;
 }
 
+function debugAttackStudioHTML(){
+  if(typeof location === "undefined" || !new URLSearchParams(location.search).has("debug"))return "";
+  const heroButtons = allPlayerStyleIds().map(style=>`<button onclick="FE.debugPlayAttackStyle('${style}','hero')">${esc(styleDisplayName(style))}</button>`).join("");
+  const enemyButtons = allEnemyStyleIds().map(style=>`<button onclick="FE.debugPlayAttackStyle('${style}','enemy')">${esc(styleDisplayName(style))}</button>`).join("");
+  return `
+    <div class="panel attack-studio-debug-panel">
+      <h3>Attack Studio</h3>
+      <div class="grid3">
+        <button onclick="FE.debugEquipWeaponCategory('sword')">Sword</button>
+        <button onclick="FE.debugEquipWeaponCategory('axe')">Axe</button>
+        <button onclick="FE.debugEquipWeaponCategory('spear')">Spear</button>
+        <button onclick="FE.debugEquipWeaponCategory('mace')">Mace</button>
+        <button onclick="FE.debugEquipWeaponCategory('dagger')">Dagger</button>
+        <button onclick="FE.debugEquipWeaponCategory('bow')">Bow</button>
+        <button onclick="FE.debugEquipWeaponCategory('staff')">Staff</button>
+        <button onclick="FE.debugEquipWeaponCategory('shield')">Shield</button>
+        <button onclick="FE.debugEquipWeaponCategory('unarmed')">Unarmed</button>
+      </div>
+      <p class="muted">Hero swings</p>
+      <div class="grid3">${heroButtons}</div>
+      <p class="muted">Enemy strikes</p>
+      <div class="grid3">${enemyButtons}</div>
+    </div>
+  `;
+}
+
 function potionButtonsHTML(playerTurn,h){
   const healthDisabled = !playerTurn || h.potions <= 0;
   const manaDisabled = !playerTurn || h.manaPotions <= 0 || h.mana >= h.maxMana;
@@ -294,7 +325,7 @@ function unitHTML(unit,isHero,slotIndex = 0,directorActor = null){
   const companionKind = !isHero ? (unit.class || unit.role || "fighter") : "";
   const companionTone = !isHero ? (portrait?.tone || "steel") : "";
   return `
-    <div class="unit combat-card combat-actor combat-actor-${actorRole} combat-slot-${slot} ${!isHero?`combat-companion-${esc(companionKind)}`:""} ${effectClass(id)}" data-combat-actor="${actorRole}" data-combat-slot="${slot}" ${!isHero?`data-companion-kind="${esc(companionKind)}" data-companion-tone="${esc(companionTone)}"`:""} ${actorDirectorAttributes(directorActor)}>
+    <div class="unit combat-card combat-actor combat-actor-${actorRole} combat-slot-${slot} ${!isHero?`combat-companion-${esc(companionKind)}`:""} ${effectClass(id)}" data-combat-actor="${actorRole}" data-combat-slot="${slot}" ${!isHero?`data-companion-kind="${esc(companionKind)}" data-companion-tone="${esc(companionTone)}"`:""}${attackMetaAttrs(id)} ${actorDirectorAttributes(directorActor)}>
       <div class="portrait-wrap">
         ${isHero ? renderPlayerCombatPortraitHook(state.hero, {visualState:combatPlayerVisualState}) : companionSceneArtHTML(unit, portrait)}
         ${effectHTML(id)}
@@ -340,7 +371,7 @@ function enemyHTML(enemy,index,playerTurn,slotIndex = 0,presentation = null,dire
   const targetable = enemy.hp > 0 && index >= 0;
   const selected = targetable && index === targetIndex;
   return `
-    <div class="enemy combat-card combat-actor combat-actor-enemy combat-slot-${slotIndex} enemy-scale-${scaleTier} ${majorClass} ${selected?'target':''} ${effectClass(id)}" data-combat-actor="enemy" data-combat-slot="${slotIndex}" data-enemy-scale="${scaleTier}" data-enemy-state="${pose}" ${actorDirectorAttributes(directorActor)} ${playerTurn && targetable?`onclick="FE.setTarget(${index})" role="button"`:""}>
+    <div class="enemy combat-card combat-actor combat-actor-enemy combat-slot-${slotIndex} enemy-scale-${scaleTier} ${majorClass} ${selected?'target':''} ${effectClass(id)}" data-combat-actor="enemy" data-combat-slot="${slotIndex}" data-enemy-scale="${scaleTier}" data-enemy-state="${pose}"${attackMetaAttrs(id)} ${actorDirectorAttributes(directorActor)} ${playerTurn && targetable?`onclick="FE.setTarget(${index})" role="button"`:""}>
       <div class="portrait-wrap">
         ${poseArt || portraitHTML(portrait)}
         ${effectHTML(id)}
@@ -478,7 +509,17 @@ function pushEffect(target,type,text = "", detail = {}){
     return pushCombatNumber(target,type,text,detail);
   }
   battle.effects ||= [];
-  const effect = {id:"fx_"+Date.now()+"_"+Math.random().toString(36).slice(2),target,type};
+  const effect = {
+    id:"fx_"+Date.now()+"_"+Math.random().toString(36).slice(2),
+    target,
+    type,
+    style:detail.style || "",
+    weapon:detail.weapon || "",
+    combo:detail.combo || 0,
+    heavy:!!detail.heavy,
+    side:detail.side || "",
+    fx:detail.fx || ""
+  };
   battle.effects.push(effect);
   const duration = {
     attack:COMBAT_TIMING.motion,
@@ -504,7 +545,7 @@ function pushEffect(target,type,text = "", detail = {}){
     defeated:COMBAT_TIMING.poseDebug,
     brace:COMBAT_TIMING.motion,
     cast:COMBAT_TIMING.motion,
-    impact:COMBAT_TIMING.impact
+    impact:detail.heavy ? 420 : COMBAT_TIMING.impact
   }[type] || COMBAT_TIMING.damagePop;
   setTimeout(()=>{
     if(!battle?.effects)return;
@@ -513,8 +554,55 @@ function pushEffect(target,type,text = "", detail = {}){
   },duration);
 }
 
-function pushImpact(){
-  pushEffect("battlefield","impact");
+function pushImpact(heavy = false){
+  pushEffect("battlefield","impact","",{heavy});
+}
+
+function beginHeroAttackPresentation(){
+  battle.heroCombo = (battle.heroCombo || 0) + 1;
+  const presentation = nextHeroAttackStyle(state.hero, battle.heroCombo - 1);
+  battle.lastHeroAttack = presentation;
+  return presentation;
+}
+
+function beginEnemyAttackPresentation(enemy){
+  battle.enemyCombo ||= {};
+  const id = enemy?.id || "enemy";
+  battle.enemyCombo[id] = (battle.enemyCombo[id] || 0) + 1;
+  const presentation = nextEnemyAttackStyle(enemy, battle.enemyCombo[id] - 1);
+  battle.lastEnemyAttack ||= {};
+  battle.lastEnemyAttack[id] = presentation;
+  return presentation;
+}
+
+function beginCompanionAttackPresentation(companion){
+  battle.companionCombo ||= {};
+  const id = companion?.id || "comp";
+  battle.companionCombo[id] = (battle.companionCombo[id] || 0) + 1;
+  return nextCompanionAttackStyle(companion, battle.companionCombo[id] - 1);
+}
+
+function presentationDetail(presentation, side, extra = {}){
+  return {
+    style:presentation.style,
+    weapon:presentation.category,
+    combo:presentation.combo,
+    fx:presentation.effect,
+    heavy:!!extra.heavy || presentation.combo >= 3,
+    side
+  };
+}
+
+function attackMetaAttrs(id){
+  const attack = targetEffects(id).find(effect=>effect.type==="attack" || effect.type==="enemyAttack" || effect.type==="cast");
+  if(!attack?.style)return "";
+  return ` data-attack-style="${esc(attack.style)}" data-weapon-category="${esc(attack.weapon || "")}"`;
+}
+
+function moveBannerHTML(){
+  const attack = (battle?.effects || []).find(effect=>(effect.type==="attack" || effect.type==="enemyAttack") && effect.style);
+  if(!attack)return "";
+  return `<div class="combat-move-banner combat-move-${esc(attack.side || "hero")}" aria-hidden="true">${esc(styleDisplayName(attack.style))}</div>`;
 }
 
 function setCombatPlayerVisualState(visualState = "combatIdle", duration = COMBAT_TIMING.poseAttack){
@@ -572,6 +660,7 @@ function effectClass(target){
   const numbers = targetNumberEvents(target);
   const classes = [];
   if(numbers.some(event=>event.type==="damage" || event.type==="miss"))classes.push("hit-flash");
+  const attack = effects.find(effect=>effect.type==="attack" || effect.type==="enemyAttack" || effect.type==="cast");
   if(effects.some(effect=>effect.type==="attack"))classes.push("combat-motion-attack");
   if(effects.some(effect=>effect.type==="enemyAttack"))classes.push("combat-motion-enemy-attack");
   if(effects.some(effect=>effect.type==="hurt"))classes.push("combat-motion-hurt");
@@ -580,12 +669,19 @@ function effectClass(target){
   if(effects.some(effect=>effect.type==="brace"))classes.push("combat-motion-brace");
   if(effects.some(effect=>effect.type==="cast"))classes.push("combat-motion-cast");
   if(effects.some(effect=>effect.type==="impact"))classes.push("combat-impact");
+  if(effects.some(effect=>effect.type==="impact" && effect.heavy))classes.push("combat-impact-heavy");
+  if(attack?.style)classes.push(attackStyleClass(attack.style));
+  if(attack?.weapon)classes.push(attackWeaponClass(attack.weapon));
+  if(attack?.combo)classes.push(`combat-combo-${attack.combo}`);
   return classes.join(" ");
 }
 
 function effectHTML(target){
   const overlayEffects = targetEffects(target).map(effect=>{
-    if(isWeaponImpactEffect(effect.type))return `<span class="combat-weapon-effect combat-${esc(effect.type)}-effect" data-weapon-effect="${esc(effect.type)}" aria-hidden="true"></span>`;
+    if(effect.type==="attack" || effect.type==="enemyAttack" || effect.type==="cast"){
+      return fxOverlayHTML(effect.style || effect.type, effect.fx || effect.type, effect.side || (effect.type==="enemyAttack" ? "enemy" : "hero"));
+    }
+    if(isWeaponImpactEffect(effect.type))return `<span class="combat-weapon-effect combat-${esc(effect.type)}-effect" data-weapon-effect="${esc(effect.type)}" aria-hidden="true"></span>${fxOverlayHTML(effect.style || effect.type, effect.type, effect.side || "hero")}`;
     if(isSpellImpactEffect(effect.type))return `<span class="combat-spell-effect combat-${esc(effect.type)}-effect" data-spell-effect="${esc(effect.type)}" aria-hidden="true"></span>`;
     return "";
   }).join("");
@@ -613,8 +709,9 @@ function isSpellImpactEffect(type){
   return ["spellFire","spellFrost","spellStorm","spellHoly","spellShadow","spellHeal","spellMana","spellWard"].includes(type);
 }
 
-function pushWeaponImpact(target){
-  pushEffect(target, resolvePlayerCombatPresentation(state.hero).effect);
+function pushWeaponImpact(target, presentation = null){
+  const style = presentation || battle?.lastHeroAttack || resolvePlayerCombatPresentation(state.hero);
+  pushEffect(target, style.effect || "slash", "", {style:style.style, weapon:style.category || style.weaponCategory, combo:style.combo, side:"hero"});
 }
 
 function spellImpactForAbility(id, fallback = "spellHoly"){
@@ -780,8 +877,7 @@ export function heroAttack(){
   if(!e)return;
   battle.heroActionLocked = true;
   beginNumberPhase();
-  setCombatPlayerVisualState(resolvePlayerAttackPose(state.hero), COMBAT_TIMING.poseAttack);
-  pushEffect("hero","attack");
+  const presentation = beginHeroAttackPresentation();
   const armor = hasPassive("warrior_armor_splitter") ? Math.floor(e.defense*.7) : e.defense;
   const weaponType = activeWeaponType(state.hero);
   const weaponBonus = weaponMasteryBonus(weaponType,state.hero);
@@ -790,17 +886,21 @@ export function heroAttack(){
   dmg *= 1 + (activeClassDefinition(state.hero)?.bonus?.physicalDamagePct || 0) + classPathCombatBonus("physical", {weaponType});
   if(hasPassive("rogue_ambush_discipline") && !battle.heroOffenseUsed)dmg *= 1.3;
   if(hasPassive("ranger_steady_aim") && battle.steadyAim){dmg *= 1.25; battle.steadyAim = false;}
+  let crit = false;
   if(Math.random()*100<heroCritChance()){
+    crit = true;
     dmg *= hasPassive("rogue_deadly_timing") || state.hero.passives.deadly_timing ? 2.35 : 2;
     battle.log.push("Critical hit!");
   }
+  setCombatPlayerVisualState(presentation.pose, COMBAT_TIMING.poseAttack);
+  pushEffect("hero","attack","",presentationDetail(presentation,"hero",{heavy:crit || presentation.combo >= 3}));
   const dealt = Math.floor(dmg);
   e.hp = Math.max(0,e.hp-dealt);
-  pushImpact();
+  pushImpact(crit || presentation.combo >= 3);
   pushEffect(e.id,"enemyHurt");
-  pushWeaponImpact(e.id);
+  pushWeaponImpact(e.id, presentation);
   pushEffect(e.id,"damage",`-${dealt}`,{source:"heroAttack",actor:"hero"});
-  battle.log.push(`${state.hero.name} hits ${e.name} for ${dealt}.`);
+  battle.log.push(`${state.hero.name} uses ${styleDisplayName(presentation.style)} on ${e.name} for ${dealt}.`);
   if(hasPassive("rogue_bleed_pressure") && e.hp>0){
     const bleed = Math.max(2,Math.floor(state.hero.level*.8)+3);
     e.hp = Math.max(0,e.hp-bleed);
@@ -815,7 +915,10 @@ export function heroAttack(){
     pushImpact();
     pushEffect(e.id,"enemyHurt");
     pushEffect(e.id,"damage",`-${extra}`,{source:"heroDoubleStrike"});
-    battle.log.push(`${state.hero.name} follows through for ${extra}.`);
+    const follow = beginHeroAttackPresentation();
+    setCombatPlayerVisualState(follow.pose, COMBAT_TIMING.poseAttack);
+    pushEffect("hero","attack","",presentationDetail(follow,"hero",{heavy:true}));
+    battle.log.push(`${state.hero.name} follows through with ${styleDisplayName(follow.style)} for ${extra}.`);
   }
   markEnemyDefeated(e);
   addWeaponXp(weaponType,5);
@@ -868,6 +971,7 @@ export function useSkill(id){
     addSpellXp(id,5);
   }else if(/guard|shield|wall/.test(low)){
     battle.defending = true;
+    battle.heroCombo = 0;
     setCombatPlayerVisualState("block", COMBAT_TIMING.poseBlock);
     pushEffect("hero","brace");
     pushEffect("hero",spellImpactForAbility(id,"spellWard"));
@@ -876,25 +980,27 @@ export function useSkill(id){
   }else{
     const e = liveTarget();
     if(e){
-      setCombatPlayerVisualState(isMagicSkill(id) ? "castAttack" : resolvePlayerAttackPose(state.hero), COMBAT_TIMING.poseSkill);
-      pushEffect("hero",isMagicSkill(id) ? "cast" : "attack");
-      let dmg = isMagicSkill(id)
+      const magic = isMagicSkill(id);
+      const presentation = magic ? null : beginHeroAttackPresentation();
+      setCombatPlayerVisualState(magic ? "castAttack" : presentation.pose, COMBAT_TIMING.poseSkill);
+      pushEffect("hero", magic ? "cast" : "attack", "", magic ? {side:"hero"} : presentationDetail(presentation,"hero"));
+      let dmg = magic
         ? Math.floor(16+h.level*5+(h.stats.wisdom||0)*7)
         : Math.floor(12+h.level*4+(h.stats.strength||0)*4+totalAttack()*.8);
       dmg = Math.floor(dmg * skillDamageMultiplier(id));
       if(hasPassive("rogue_ambush_discipline") && !battle.heroOffenseUsed)dmg = Math.floor(dmg*1.25);
-      if(hasPassive("mage_overchannel") && isMagicSkill(id) && Math.random()<.15){
+      if(hasPassive("mage_overchannel") && magic && Math.random()<.15){
         dmg = Math.floor(dmg*1.35);
         battle.log.push("Overchannel!");
       }
       e.hp = Math.max(0,e.hp-dmg);
-      pushImpact();
+      pushImpact(presentation?.combo >= 3);
       pushEffect(e.id,"enemyHurt");
-      if(isMagicSkill(id))pushEffect(e.id,spellImpactForAbility(id,"arcane"));
-      else pushWeaponImpact(e.id);
+      if(magic)pushEffect(e.id,spellImpactForAbility(id,"arcane"));
+      else pushWeaponImpact(e.id, presentation);
       pushEffect(e.id,"damage",`-${dmg}`,{source:`skill:${id}`,actor:"hero"});
       markEnemyDefeated(e);
-      battle.log.push(`${h.name} uses ${title(id)} on ${e.name} for ${dmg}.`);
+      battle.log.push(`${h.name} uses ${title(id)}${presentation ? ` (${styleDisplayName(presentation.style)})` : ""} on ${e.name} for ${dmg}.`);
       battle.heroOffenseUsed = true;
       if(isMagicSkill(id) || school)addSpellXp(id,6);
       else addWeaponXp(activeWeaponType(h),3);
@@ -959,6 +1065,7 @@ export function defend(){
   battle.heroActionLocked = true;
   beginNumberPhase();
   battle.defending = true;
+  battle.heroCombo = 0;
   if(hasPassive("ranger_steady_aim"))battle.steadyAim = true;
   setCombatPlayerVisualState("block", COMBAT_TIMING.poseBlock);
   pushEffect("hero","brace");
@@ -1021,16 +1128,17 @@ function compAct(id){
   if(!e)return;
   const attackEffect = companionAttackEffect(c);
   const isCasterAttack = isSpellImpactEffect(attackEffect) || attackEffect === "arcane";
-  pushEffect(`comp_${c.id}`,isCasterAttack ? "cast" : "attack");
+  const presentation = isCasterAttack ? null : beginCompanionAttackPresentation(c);
+  pushEffect(`comp_${c.id}`, isCasterAttack ? "cast" : "attack", "", isCasterAttack ? {side:"hero"} : presentationDetail(presentation,"hero"));
   if(isCasterAttack)pushEffect(`comp_${c.id}`,attackEffect);
   const dmg = companionDamage(c,e);
   e.hp = Math.max(0,e.hp-dmg);
-  pushImpact();
+  pushImpact(presentation?.combo >= 3);
   pushEffect(e.id,"enemyHurt");
   pushEffect(e.id,attackEffect);
   pushEffect(e.id,"damage",`-${dmg}`,{source:`comp:${id}`,actor:id});
   markEnemyDefeated(e);
-  battle.log.push(`${c.name} hits ${e.name} for ${dmg}.`);
+  battle.log.push(`${c.name} ${presentation ? `uses ${styleDisplayName(presentation.style)} on` : "hits"} ${e.name} for ${dmg}.`);
 }
 
 function companionShouldHeal(c){
@@ -1094,7 +1202,8 @@ function enemyAct(id){
   const e = battle.enemies.find(x=>x.id===id);
   if(!e||e.hp<=0)return;
   beginNumberPhase();
-  pushEffect(e.id,"enemyAttack");
+  const presentation = beginEnemyAttackPresentation(e);
+  pushEffect(e.id,"enemyAttack","",presentationDetail(presentation,"enemy"));
   const targets = [{type:"hero",u:state.hero},...liveComps().map(c=>({type:"comp",u:c}))];
   const target = targets[rnd(0,targets.length-1)];
   if(target.type==="hero" && enemyMisses()){
@@ -1138,10 +1247,11 @@ function enemyAct(id){
   target.u.hp = Math.max(0,target.u.hp-dmg);
   const hitTarget = target.type==="hero" ? "hero" : `comp_${target.u.id}`;
   if(target.type==="hero")setCombatPlayerVisualState(target.u.hp <= 0 ? "defeated" : "hurt", target.u.hp <= 0 ? 0 : COMBAT_TIMING.poseHurt);
-      pushImpact();
-      pushEffect(hitTarget,"hurt");
-      pushEffect(hitTarget,"damage",`-${dmg}`,{source:`enemyAttack:${id}`,actor:id});
-  battle.log.push(`${e.name} attacks ${target.u.name} for ${dmg}.`);
+  pushImpact(presentation.combo >= 3);
+  pushEffect(hitTarget,"hurt");
+  pushEffect(hitTarget, presentation.effect, "", presentationDetail(presentation,"enemy"));
+  pushEffect(hitTarget,"damage",`-${dmg}`,{source:`enemyAttack:${id}`,actor:id});
+  battle.log.push(`${e.name} uses ${styleDisplayName(presentation.style)} on ${target.u.name} for ${dmg}.`);
 }
 
 export function debugCombatMotion(){
@@ -1165,11 +1275,65 @@ export function debugCombatMotion(){
 
 export function debugTriggerPlayerAttackMotion(){
   if(!battle)startBattle([makeEnemy(false)], "Debug player attack motion.", {source:"debug"});
-  setCombatPlayerVisualState(resolvePlayerAttackPose(state.hero), COMBAT_TIMING.poseDebug);
-  pushEffect("hero","attack");
-  pushImpact();
+  const presentation = beginHeroAttackPresentation();
+  setCombatPlayerVisualState(presentation.pose, COMBAT_TIMING.poseDebug);
+  pushEffect("hero","attack","",presentationDetail(presentation,"hero",{heavy:true}));
+  pushImpact(true);
   renderCombat();
-  return {ok:true,target:"hero",type:"attack",pose:getPlayerPoseAsset(state.hero, combatPlayerVisualState)};
+  return {ok:true,target:"hero",type:"attack",style:presentation.style,pose:getPlayerPoseAsset(state.hero, combatPlayerVisualState)};
+}
+
+export function debugPlayAttackStyle(style, side = "hero"){
+  if(!battle)startBattle([makeEnemy(false)], "Attack style preview.", {source:"debug"});
+  if(side === "enemy"){
+    const e = liveEnemies()[0];
+    if(!e)return {ok:false,reason:"no enemy"};
+    const presentation = presentationForStyle(style, "enemy", e);
+    pushEffect(e.id,"enemyAttack","",presentationDetail(presentation,"enemy",{heavy:true}));
+    pushImpact(true);
+    pushEffect("hero","hurt");
+    setCombatPlayerVisualState("hurt", COMBAT_TIMING.poseHurt);
+  }else{
+    const presentation = presentationForStyle(style, "hero", state.hero);
+    setCombatPlayerVisualState(presentation.pose, COMBAT_TIMING.poseDebug);
+    pushEffect("hero","attack","",presentationDetail(presentation,"hero",{heavy:true}));
+    const e = liveEnemies()[0];
+    if(e){
+      pushEffect(e.id,"enemyHurt");
+      pushWeaponImpact(e.id, presentation);
+    }
+    pushImpact(true);
+  }
+  renderCombat();
+  return {ok:true,style,side};
+}
+
+export function debugEquipWeaponCategory(category){
+  state.hero.gear ||= {};
+  if(category === "unarmed"){
+    state.hero.gear.weapon = null;
+  }else if(category === "shield"){
+    state.hero.gear.weapon = null;
+    state.hero.gear.offhand = applyGearVisuals({name:"Wooden Shield", slot:"offhand", defense:4});
+  }else{
+    const names = {
+      sword:"Iron Sword",
+      axe:"Ash Axe",
+      spear:"War Spear",
+      mace:"Iron Mace",
+      dagger:"Crypt Dagger",
+      bow:"Hunter Bow",
+      staff:"Oak Staff"
+    };
+    state.hero.gear.weapon = applyGearVisuals({name:names[category] || "Iron Sword", slot:"weapon", attack:8, level:3});
+    if(category !== "unarmed")state.hero.gear.offhand = category === "bow" ? null : state.hero.gear.offhand;
+  }
+  save();
+  if(battle){
+    battle.heroCombo = 0;
+    renderCombat();
+  }
+  return {ok:true, category, weapon:state.hero.gear.weapon, offhand:state.hero.gear.offhand};
 }
 
 export function debugTriggerPlayerHurtMotion(){

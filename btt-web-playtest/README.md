@@ -25,9 +25,14 @@ Append `?debug` to the URL for dev cheats exposed on `window.FE`.
 FE.debugStartEnemyVisualTest('skeleton')  // enemy pose cycling
 FE.debugStartEnemyVisualTest('cultist')    // distinct cultist sprites
 FE.debugTriggerCombatPose('attack')        // player attack animation
+FE.debugPlayAttackStyle('overhead')        // force a named hero swing
+FE.debugPlayAttackStyle('pounce','enemy')  // force a named enemy strike
+FE.debugEquipWeaponCategory('axe')         // sword, axe, spear, mace, dagger, bow, staff, shield, unarmed
 FE.debugBootSlumScene()                    // jump to slum world scene
 FE.debugBootLowerWard()                    // jump to lower ward scene
 ```
+
+Combat attacks now cycle Mortal Kombat-style choreography per weapon: slash / overhead / rising / cross for swords, plus unique sets for axe, spear, mace, dagger, bow, staff, shield, and unarmed. Enemies have their own strike sets (skeleton, wolf, bandit, cultist, corrupted knight). Open `?debug` in combat to use the Attack Studio.
 
 ## Art pipeline
 
@@ -55,7 +60,7 @@ node scripts/test-combat-debug.mjs
 btt-web-playtest/
 ├── index.html
 ├── styles.css
-├── redesign.css          # Ash Court visual overlay
+├── combat-animations.css # MK-style attack choreography
 ├── version.json          # PWA update version
 ├── OVERNIGHT_CHANGELOG.md
 ├── manifest.webmanifest
@@ -84,4 +89,4 @@ Highlights:
 
 ## Cache version
 
-Current: **v112** (`index.html`, `service-worker.js`, `version.json`)
+Current: **v113** (`index.html`, `service-worker.js`, `version.json`, `combat-animations.css`)

@@ -78,3 +78,10 @@ node scripts/test-combat-debug.mjs
 - **Map mood overlays** tied to current location (ember, ash, storm, fog, gold)
 - **Hotspot breathe** animation on world/interior hotspots
 - Class-based **UI theme tint** (imperial, holy, corrupted, nature, royal)
+
+## Pass 6 — Combat choreography (v113)
+- Player attacks cycle unique swings per weapon (sword, axe, spear, mace, dagger, bow, staff, shield, unarmed)
+- Enemy strikes cycle per visual class (skeleton, wolf, bandit, cultist, corrupted knight)
+- Mortal Kombat-style timing: anticipation, lunge, slash arcs, afterimages, camera shake, move-name banners
+- Debug Attack Studio (`?debug`) to preview every swing and swap weapons
+- New stylesheet `combat-animations.css` loaded after `styles.css` / `redesign.css` so motion wins over the old 8px nudge
