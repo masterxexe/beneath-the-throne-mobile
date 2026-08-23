@@ -1,0 +1,9 @@
+{
+  "name": "btt-web-playtest",
+  "private": true,
+  "description": "Beneath the Throne — browser/mobile RPG playtest",
+  "scripts": {
+    "dev": "npx --yes serve -l 43123 .",
+    "start": "npm run dev"
+  }
+}
