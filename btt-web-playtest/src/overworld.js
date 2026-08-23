@@ -10,7 +10,7 @@ import { createMapTraversalPresence, traversalActorClass, traversalAttributes, t
 import { npcsForWorldScene } from "./npcRegistry.js";
 
 const ROUTE_DEBUG = false;
-const WORLD_PLAYER_IDLE_ASSET = "assets/portraits/player/poses/base/player-idle-crop-v76.png";
+const WORLD_PLAYER_IDLE_ASSET = "assets/portraits/player/poses/base/player-idle-v80.png";
 
 function esc(value){
   return String(value ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));

@@ -6,7 +6,7 @@ import puppeteer from "puppeteer-core";
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const OUT = path.join(ROOT, "agent-tools", "screenshots");
-const BASE = "http://localhost:43123/?debug&v=105";
+const BASE = "http://localhost:43123/?debug&v=107";
 
 async function shot(page, name) {
   fs.mkdirSync(OUT, { recursive: true });

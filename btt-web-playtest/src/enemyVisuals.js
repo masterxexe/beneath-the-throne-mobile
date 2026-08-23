@@ -38,9 +38,9 @@ export const ENEMY_VISUAL_ASSETS = {
     label:"Cultist",
     tone:"violet",
     poses:{
-      idle:V80_ACTOR_ROOT+"cultist-bandit-idle-v80.png",
-      attack:V80_ACTOR_ROOT+"cultist-bandit-attack-v80.png",
-      hurt:V80_ACTOR_ROOT+"cultist-bandit-hurt-v80.png",
+      idle:V80_ACTOR_ROOT+"cultist-acolyte-idle-v80.png",
+      attack:V80_ACTOR_ROOT+"cultist-acolyte-attack-v80.png",
+      hurt:V80_ACTOR_ROOT+"cultist-acolyte-hurt-v80.png",
       defeated:ENEMY_ROOT+"cultist/defeated-v80.png"
     }
   },
