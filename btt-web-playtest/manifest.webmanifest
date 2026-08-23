@@ -8,8 +8,8 @@
   "display": "standalone",
   "display_override": ["standalone", "fullscreen", "browser"],
   "orientation": "portrait",
-  "background_color": "#090706",
-  "theme_color": "#090706",
+  "background_color": "#07080c",
+  "theme_color": "#07080c",
   "categories": ["games", "roleplaying"],
   "icons": [
     {
