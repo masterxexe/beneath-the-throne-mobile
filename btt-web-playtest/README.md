@@ -89,4 +89,4 @@ Highlights:
 
 ## Cache version
 
-Current: **v115** (`index.html`, `service-worker.js`, `version.json`, `combat-animations.css`)
+Current: **v116** (`index.html`, `service-worker.js`, `version.json`, `combat-animations.css`)

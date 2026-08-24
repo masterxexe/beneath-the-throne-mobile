@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.23-overnight-40",
-  "build": 40,
-  "cache": "v115",
-  "notes": "Transparent combat sprites and unclipped full-body framing for player and enemies"
+  "version": "2026.08.23-overnight-41",
+  "build": 41,
+  "cache": "v116",
+  "notes": "Usable overworld map: inspect places, listed roads, pan/zoom, and two-way routes from Cinderhook"
 }

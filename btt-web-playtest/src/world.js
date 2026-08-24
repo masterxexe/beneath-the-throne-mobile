@@ -231,6 +231,15 @@ export const WORLD_LOCATIONS = {
   }
 };
 
+(function makeRoutesTwoWay(){
+  Object.values(WORLD_LOCATIONS).forEach(loc=>{
+    (loc.routes || []).forEach(otherId=>{
+      const other = WORLD_LOCATIONS[otherId];
+      if(other && !other.routes.includes(loc.id)) other.routes.push(loc.id);
+    });
+  });
+})();
+
 export const HARD_AREAS = {
   cinderhook_rat_depths: {
     id: "cinderhook_rat_depths",
@@ -412,6 +421,9 @@ const WORLD_SCENE_TRAVERSAL_PRELOAD_STATES = [
 ];
 
 let activeTravel = null;
+let selectedMapLocationId = null;
+let mapPointerMoved = false;
+const mapCamera = { scale: 1.78, x: 18, y: 78, userPanned: false };
 let travelTimer = null;
 let activeWorldSceneTraversal = null;
 let worldSceneTraversalTimers = [];
@@ -880,6 +892,8 @@ export function travelToLocation(id){
   const lockReason = routeLockReason(to);
   if(lockReason)return toast(lockReason);
   if(!from.routes.includes(id) && id !== state.world.previousLocationId)return toast(tx("routeLocked"));
+  selectedMapLocationId = id;
+  mapCamera.userPanned = false;
   activeTravel = createTravelState(from,to);
   travelDebug("started", {from:from.id,to:to.id,routeNodeIds:activeTravel.routeNodeIds});
   playAudioHook("travel-ambience", {from:from.id,to:to.id});
@@ -1082,12 +1096,19 @@ function updateTravelMapDOM(){
   }
   const progress = document.querySelector("[data-travel-progress]");
   if(progress)progress.textContent = `${Math.floor((activeTravel.progress || 0) * 100)}%`;
+  const dockProgress = document.querySelector("[data-map-progress]");
+  if(dockProgress)dockProgress.textContent = `${Math.floor((activeTravel.progress || 0) * 100)}%`;
   const stopLabel = document.querySelector("[data-travel-stop-label]");
   if(stopLabel)stopLabel.textContent = `${tx("travelRoadStop")}: ${activeTravel.currentStopName || ""}`;
   document.querySelectorAll(".travel-stop").forEach(stop=>{
     const id = stop.getAttribute("data-stop-id");
     stop.classList.toggle("active-travel-stop", id === activeTravel.currentRoadNodeId || id === activeTravel.nextRoadNodeId);
   });
+  if(!mapCamera.userPanned && marker){
+    mapCamera.x = parseFloat(marker.style.getPropertyValue("--marker-x")) || mapCamera.x;
+    mapCamera.y = parseFloat(marker.style.getPropertyValue("--marker-y")) || mapCamera.y;
+    applyMapCamera();
+  }
 }
 
 function nodeName(node){
@@ -1738,11 +1759,193 @@ function makeHardAreaEnemy(area,index = 0){
 
 export function renderWorldMap(){
   const current = ensureWorld();
+  if(!selectedMapLocationId || !WORLD_LOCATIONS[selectedMapLocationId]){
+    selectedMapLocationId = activeTravel?.destinationLocationId || current.id;
+  }
+  if(!mapCamera.userPanned){
+    const focus = WORLD_LOCATIONS[selectedMapLocationId] || current;
+    mapCamera.x = focus.x;
+    mapCamera.y = focus.y;
+  }
+  const lockedIds = Object.values(WORLD_LOCATIONS).filter(loc=>routeLockReason(loc)).map(loc=>loc.id);
   byId("map").innerHTML = `
-    <div class="map-screen map-screen-clean">
-      ${renderOverworldHTML({locations:WORLD_LOCATIONS,currentId:current.id,previousId:state.world.previousLocationId,traveling:activeTravel})}
+    <div class="map-screen map-screen-usable">
+      ${renderOverworldHTML({
+        locations:WORLD_LOCATIONS,
+        currentId:current.id,
+        previousId:state.world.previousLocationId,
+        traveling:activeTravel,
+        selectedId:selectedMapLocationId,
+        lockedIds
+      })}
+      ${mapDockHTML(current, selectedMapLocationId, activeTravel)}
     </div>
   `;
+  bindMapViewport();
+}
+
+export function selectMapLocation(id){
+  if(mapPointerMoved)return;
+  if(!locationById(id))return;
+  selectedMapLocationId = id;
+  mapCamera.userPanned = false;
+  renderWorldMap();
+}
+
+export function zoomWorldMap(direction = 1){
+  const next = Math.max(1.05, Math.min(2.7, mapCamera.scale + (direction > 0 ? 0.22 : -0.22)));
+  if(next === mapCamera.scale)return;
+  mapCamera.scale = next;
+  applyMapCamera();
+}
+
+export function centerWorldMap(){
+  const current = ensureWorld();
+  const focus = activeTravel
+    ? {x: parseFloat(document.querySelector(".overworld-marker")?.style.getPropertyValue("--marker-x")) || current.x, y: parseFloat(document.querySelector(".overworld-marker")?.style.getPropertyValue("--marker-y")) || current.y}
+    : current;
+  mapCamera.x = Number.isFinite(focus.x) ? focus.x : current.x;
+  mapCamera.y = Number.isFinite(focus.y) ? focus.y : current.y;
+  mapCamera.scale = 1.78;
+  mapCamera.userPanned = false;
+  applyMapCamera();
+}
+
+function mapDockHTML(current, selectedId, traveling){
+  const selected = locationById(selectedId) || current;
+  const lockReason = routeLockReason(selected);
+  const isHere = selected.id === current.id;
+  const connected = current.routes.includes(selected.id) || selected.id === state.world.previousLocationId;
+  const roads = current.routes.map(id=>locationById(id)).filter(Boolean);
+  const services = locationServices(selected.id);
+  const danger = selected.danger || 0;
+  const pips = Array.from({length:5}, (_,i)=>`<span class="${i < danger ? "is-on" : ""}"></span>`).join("");
+  let status = tx("noRoadFromHere");
+  if(isHere)status = tx("youAreHere");
+  else if(lockReason)status = lockReason;
+  else if(connected)status = tx("roadOpen");
+  else status = tx("noRoadFromHere");
+  let action = "";
+  if(traveling){
+    const dest = locationById(traveling.destinationLocationId);
+    const pct = Math.floor((traveling.progress || 0) * 100);
+    action = `
+      <div class="map-dock-travel">
+        <span class="map-dock-kicker">${tx("travelInProgress")}</span>
+        <strong>${esc(locationText(dest, "name"))}</strong>
+        <span class="pill" data-map-progress>${pct}%</span>
+        <button class="secondary" onclick="FE.cancelTravel()">${tx("cancelTravel")}</button>
+      </div>
+    `;
+  }else if(isHere){
+    action = `<button class="secondary" onclick="FE.show('home')">${tx("backToLocation")}</button>`;
+  }else if(lockReason){
+    action = `<button class="primary" disabled title="${esc(lockReason)}">${tx("locked")}</button>
+      <p class="map-dock-lock">${esc(lockReason)}</p>`;
+  }else if(connected){
+    action = `<button class="primary" onclick="FE.travelToLocation('${selected.id}')">${tx("travelTo")} ${esc(locationText(selected,"name"))}</button>`;
+  }else{
+    action = `<p class="map-dock-lock">${tx("distantPlaceHint")}</p>`;
+  }
+  const returnBtn = !traveling && state.world.previousLocationId && WORLD_LOCATIONS[state.world.previousLocationId]
+    ? `<button class="secondary" onclick="FE.returnToPreviousLocation()">${tx("returnTo")} ${esc(locationText(state.world.previousLocationId,"name"))}</button>`
+    : "";
+  return `
+    <aside class="map-dock">
+      <p class="map-dock-help">${tx("tapPlaceToInspect")}</p>
+      <div class="map-dock-card">
+        <span class="map-dock-kicker">${isHere ? tx("youAreHere") : tx("selectedPlace")}</span>
+        <h2>${esc(locationText(selected,"name"))}</h2>
+        <div class="map-dock-meta">
+          <span class="map-danger-pips" aria-label="${tx("danger")} ${danger}">${pips}</span>
+          <span class="pill ${danger >= 3 ? "warn" : "good"}">${tx("danger")} ${danger}</span>
+          <span class="pill">${tx("services")}: ${services.length}</span>
+        </div>
+        <p>${esc(locationText(selected,"desc"))}</p>
+        <p class="map-dock-status">${esc(status)}</p>
+        <div class="map-dock-actions">${action}${returnBtn}</div>
+      </div>
+      ${traveling ? roadStopPanelHTML(traveling) : `
+        <div class="map-dock-roads">
+          <span class="map-dock-kicker">${tx("roadsFromHere")}</span>
+          <div class="map-road-chips">
+            ${roads.length ? roads.map(loc=>{
+              const locked = routeLockReason(loc);
+              return `<button type="button" class="map-road-chip ${loc.id === selected.id ? "is-selected" : ""} ${locked ? "is-locked" : ""}" onclick="FE.selectMapLocation('${loc.id}')">
+                <strong>${esc(locationText(loc,"name"))}</strong>
+                <small>${locked ? tx("locked") : `${tx("danger")} ${loc.danger || 0}`}</small>
+              </button>`;
+            }).join("") : `<p class="map-dock-lock">${tx("noRoadFromHere")}</p>`}
+          </div>
+        </div>
+      `}
+    </aside>
+  `;
+}
+
+function bindMapViewport(){
+  const viewport = document.querySelector("[data-map-viewport]");
+  const stage = document.querySelector("[data-map-stage]");
+  if(!viewport || !stage)return;
+  applyMapCamera();
+  let dragging = false;
+  let lastX = 0;
+  let lastY = 0;
+  let moved = false;
+  const start = event=>{
+    if(event.pointerType === "mouse" && event.button !== 0)return;
+    if(event.target.closest("button, .overworld-node, .map-zoom-bar, .map-travel-slim, .map-you-chip"))return;
+    dragging = true;
+    moved = false;
+    mapPointerMoved = false;
+    lastX = event.clientX;
+    lastY = event.clientY;
+    viewport.setPointerCapture?.(event.pointerId);
+  };
+  const move = event=>{
+    if(!dragging)return;
+    const dx = event.clientX - lastX;
+    const dy = event.clientY - lastY;
+    if(Math.abs(dx) + Math.abs(dy) < 8 && !moved)return;
+    moved = true;
+    mapPointerMoved = true;
+    mapCamera.userPanned = true;
+    lastX = event.clientX;
+    lastY = event.clientY;
+    const rect = viewport.getBoundingClientRect();
+    const mapW = rect.width;
+    const mapH = rect.width * 9 / 16;
+    mapCamera.x -= (dx / (mapW * mapCamera.scale)) * 100;
+    mapCamera.y -= (dy / (mapH * mapCamera.scale)) * 100;
+    mapCamera.x = Math.max(-8, Math.min(108, mapCamera.x));
+    mapCamera.y = Math.max(-8, Math.min(108, mapCamera.y));
+    applyMapCamera();
+  };
+  const end = ()=>{
+    dragging = false;
+    setTimeout(()=>{ mapPointerMoved = false; }, 0);
+  };
+  viewport.addEventListener("pointerdown", start);
+  viewport.addEventListener("pointermove", move);
+  viewport.addEventListener("pointerup", end);
+  viewport.addEventListener("pointercancel", end);
+  viewport.addEventListener("wheel", event=>{
+    event.preventDefault();
+    zoomWorldMap(event.deltaY < 0 ? 1 : -1);
+  }, {passive:false});
+}
+
+function applyMapCamera(){
+  const viewport = document.querySelector("[data-map-viewport]");
+  const stage = document.querySelector("[data-map-stage]");
+  if(!viewport || !stage)return;
+  const rect = viewport.getBoundingClientRect();
+  const scale = mapCamera.scale;
+  const mapW = rect.width || 1;
+  const mapH = mapW * 9 / 16;
+  const panX = rect.width / 2 - (mapCamera.x / 100) * mapW * scale;
+  const panY = rect.height / 2 - (mapCamera.y / 100) * mapH * scale;
+  stage.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
 }
 
 function roadStopPanelHTML(journey){

@@ -90,3 +90,9 @@ node scripts/test-combat-debug.mjs
 - Knocked out studio-black plates behind player and enemy combat sprites so they no longer sit on a black icon
 - Combat frames no longer clip heads, weapons, or feet (`overflow: visible`, `object-fit: contain`)
 - Softened the battlefield ground blob so it reads as a shadow, not a black rectangle
+
+## Pass 9 — Usable world map (v116)
+- Map nodes inspect first, then travel; locked and distant places explain why they are closed
+- Road chips list every connected town from where you stand
+- Pan/zoom the painted map and center on the player; Cinderhook cluster labels no longer sit on top of each other
+- Keep and Market Town now have return roads to the slums and Lower Ward

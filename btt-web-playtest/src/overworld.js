@@ -133,7 +133,19 @@ function dangerTier(danger = 0){
   return "safe";
 }
 
-export function renderOverworldHTML({locations,currentId,previousId,traveling}){
+
+const NODE_LABEL_SIDES = Object.freeze({
+  ashen_slums: "se",
+  lower_ward: "n",
+  ashen_keep: "e",
+  ashen_fields: "s",
+  old_road: "s",
+  forest_edge: "n",
+  ruined_watchtower: "s",
+  market_town: "w"
+});
+
+export function renderOverworldHTML({locations,currentId,previousId,traveling,selectedId,lockedIds = []}){
   const locationList = Object.values(locations);
   const allNodes = getMapNodes(locations);
   const current = locations[currentId] || locationList[0];
@@ -164,7 +176,9 @@ export function renderOverworldHTML({locations,currentId,previousId,traveling}){
   return `
     <div class="overworld-shell ${traveling ? "is-traveling" : ""} map-mood-${mapMood}">
       <div class="map-canvas-frame">
-        <div class="overworld-map ${ROUTE_DEBUG ? "route-debug-on" : ""}" role="img" aria-label="${tx("overworldMap")}">
+        <div class="map-viewport" data-map-viewport>
+          <div class="map-viewport-stage" data-map-stage>
+        <div class="overworld-map ${ROUTE_DEBUG ? "route-debug-on" : ""}" role="application" aria-label="${tx("overworldMap")}">
           <span class="map-parchment-wash" aria-hidden="true"></span>
           <span class="map-light-sweep" aria-hidden="true"></span>
           <svg class="overworld-roads" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
@@ -172,7 +186,7 @@ export function renderOverworldHTML({locations,currentId,previousId,traveling}){
           </svg>
           ${renderMapActivityHTML({locations, currentId, traveling})}
           ${Object.values(ROAD_NODES).map(node=>roadStopHTML(node,traveling)).join("")}
-          ${locationList.map(loc=>nodeHTML(loc,current,traveling)).join("")}
+          ${locationList.map(loc=>nodeHTML(loc,current,traveling,selectedId,lockedIds)).join("")}
           <div class="overworld-marker ${traveling ? "marker-traveling" : ""} ${markerPresence.className}" style="${markerStyle}" ${markerPresence.attrs} aria-label="${tx("playerMarker")}">
             <span class="marker-pulse" aria-hidden="true"></span>
             <span class="marker-shadow" aria-hidden="true"></span>
@@ -184,24 +198,24 @@ export function renderOverworldHTML({locations,currentId,previousId,traveling}){
             <span class="marker-step marker-step-a" aria-hidden="true"></span>
             <span class="marker-step marker-step-b" aria-hidden="true"></span>
           </div>
-          ${traveling ? `
-            <div class="travel-banner travel-banner-premium travel-banner-active">
-              <div class="travel-banner-copy">
-                <span class="travel-banner-kicker">${traveling.direction < 0 ? tx("returnTo") : tx("travelingTo")}</span>
-                <strong>${esc(text(travelTarget?.name))}</strong>
+        </div>
+          </div>
+          <div class="map-viewport-hud">
+            <div class="map-zoom-bar" role="group" aria-label="${tx("mapZoom")}">
+              <button type="button" class="map-zoom-btn" onclick="FE.zoomWorldMap(-1)" aria-label="${tx("mapZoomOut")}">−</button>
+              <button type="button" class="map-zoom-btn" onclick="FE.centerWorldMap()" aria-label="${tx("mapRecenter")}">${tx("mapYou")}</button>
+              <button type="button" class="map-zoom-btn" onclick="FE.zoomWorldMap(1)" aria-label="${tx("mapZoomIn")}">+</button>
+            </div>
+            <div class="map-you-chip">${tx("youAreHere")}: <strong>${esc(text(current.name))}</strong></div>
+            ${traveling ? `
+              <div class="map-travel-slim">
+                <span>${traveling.direction < 0 ? tx("returnTo") : tx("travelingTo")} ${esc(text(travelTarget?.name))} · <b data-travel-progress>${travelProgress}%</b></span>
                 ${traveling.currentStopName ? `<small data-travel-stop-label>${tx("travelRoadStop")}: ${esc(traveling.currentStopName)}</small>` : ""}
+                <button type="button" class="secondary" onclick="FE.cancelTravel()">${tx("cancelTravel")}</button>
+                <div class="travel-progress-track" aria-hidden="true"><span style="width:${travelProgress}%"></span></div>
               </div>
-              <div class="travel-banner-meta">
-                <span class="pill" data-travel-progress>${travelProgress}%</span>
-                <button class="secondary" onclick="FE.cancelTravel()">${tx("cancelTravel")}</button>
-              </div>
-              <div class="travel-progress-track" aria-hidden="true"><span style="width:${travelProgress}%"></span></div>
-            </div>
-          ` : previousId && locations[previousId] ? `
-            <div class="travel-banner travel-banner-premium travel-banner-return">
-              <button class="secondary" onclick="FE.returnToPreviousLocation()">${tx("returnTo")} ${esc(text(locations[previousId].name))}</button>
-            </div>
-          ` : ""}
+            ` : ""}
+          </div>
         </div>
       </div>
     </div>
@@ -256,21 +270,32 @@ function roadStopHTML(node,traveling){
   `;
 }
 
-function nodeHTML(loc,current,traveling){
+function nodeHTML(loc,current,traveling,selectedId,lockedIds = []){
   const isCurrent = loc.id === current.id;
   const connected = current.routes.includes(loc.id);
-  const enabled = !traveling && !isCurrent && connected;
+  const isSelected = loc.id === selectedId;
+  const isLocked = lockedIds.includes(loc.id);
+  const isDistant = !isCurrent && !connected;
   const tier = dangerTier(loc.danger);
+  const side = NODE_LABEL_SIDES[loc.id] || "s";
+  const pips = Array.from({length:5}, (_,i)=>`<span class="${i < (loc.danger || 0) ? "is-on" : ""}"></span>`).join("");
+  const stateLabel = isCurrent ? tx("youAreHere") : isLocked ? tx("locked") : connected ? tx("connectedRoutes") : tx("noRoadFromHere");
   return `
-    <button class="overworld-node overworld-node-premium overworld-node-${esc(loc.id)} world-node-scene-${esc(loc.scene || "area")} danger-tier-${tier} ${isCurrent ? "current-node" : ""} ${connected ? "connected-node" : ""}"
+    <button type="button" class="overworld-node overworld-node-premium overworld-node-${esc(loc.id)} world-node-scene-${esc(loc.scene || "area")} danger-tier-${tier} label-side-${side} ${isCurrent ? "current-node" : ""} ${connected ? "connected-node" : ""} ${isSelected ? "selected-node" : ""} ${isLocked ? "locked-node" : ""} ${isDistant ? "distant-node" : ""}"
       style="--node-x:${loc.x}%;--node-y:${loc.y}%"
-      ${enabled ? `onclick="FE.travelToLocation('${loc.id}')"` : "disabled"}
-      aria-label="${esc(text(loc.name))}">
+      data-map-node="${esc(loc.id)}"
+      onclick="FE.selectMapLocation('${loc.id}')"
+      aria-pressed="${isSelected ? "true" : "false"}"
+      aria-current="${isCurrent ? "true" : "false"}"
+      aria-label="${esc(text(loc.name))}. ${esc(stateLabel)}">
+      <span class="node-hit" aria-hidden="true"></span>
       <span class="node-halo" aria-hidden="true"></span>
       <span class="node-sigil">
         <span class="node-sigil-ring" aria-hidden="true"></span>
         <span class="node-sigil-core" aria-hidden="true"></span>
       </span>
+      ${isCurrent ? `<span class="node-here-flag">${tx("mapYou")}</span>` : ""}
+      <span class="node-danger-pips" aria-hidden="true">${pips}</span>
       <span class="node-label">${esc(text(loc.name))}</span>
     </button>
   `;

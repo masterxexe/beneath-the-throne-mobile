@@ -1551,3 +1551,308 @@ body.btt-redesign.cinematic-combat-active .topbar {
     border-radius: 18px 18px 0 0;
   }
 }
+
+/* Usable overworld map: inspect, zoom, readable clustered towns */
+body.btt-redesign .map-screen-usable {
+  display: grid;
+  gap: 10px;
+}
+
+body.btt-redesign .map-viewport {
+  position: relative;
+  overflow: hidden;
+  height: min(58vh, 540px);
+  border-radius: 12px;
+  touch-action: none;
+  cursor: grab;
+  background: #07080c;
+}
+
+body.btt-redesign .map-viewport:active {
+  cursor: grabbing;
+}
+
+body.btt-redesign .map-viewport-stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+body.btt-redesign .map-viewport .overworld-map {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  aspect-ratio: auto;
+}
+
+body.btt-redesign .map-viewport-hud {
+  position: absolute;
+  inset: 8px 8px auto 8px;
+  z-index: 8;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+body.btt-redesign .map-zoom-bar,
+body.btt-redesign .map-you-chip,
+body.btt-redesign .map-travel-slim {
+  pointer-events: auto;
+}
+
+body.btt-redesign .map-zoom-bar {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(212, 168, 75, 0.38);
+  border-radius: 999px;
+  background: rgba(8, 10, 16, 0.86);
+}
+
+body.btt-redesign .map-zoom-btn {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(212, 168, 75, 0.12);
+  color: var(--btt-gold-bright);
+  font-weight: 800;
+}
+
+body.btt-redesign .map-you-chip,
+body.btt-redesign .map-travel-slim {
+  padding: 8px 10px;
+  border: 1px solid rgba(212, 168, 75, 0.32);
+  border-radius: 12px;
+  background: rgba(8, 10, 16, 0.88);
+  color: var(--btt-text);
+  font-size: 0.78rem;
+}
+
+body.btt-redesign .map-travel-slim {
+  flex: 1 1 220px;
+  display: grid;
+  gap: 4px;
+}
+
+body.btt-redesign .overworld-node-premium {
+  width: 48px;
+  min-height: 48px;
+  overflow: visible;
+}
+
+body.btt-redesign .overworld-node-premium .node-hit {
+  position: absolute;
+  width: 52px;
+  height: 52px;
+  left: 50%;
+  top: 10px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+}
+
+body.btt-redesign .overworld-node-premium .node-sigil {
+  width: 28px;
+  height: 28px;
+}
+
+body.btt-redesign .overworld-node-premium .node-label {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 2px);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  max-width: none;
+  pointer-events: none;
+  font-size: 0.62rem;
+}
+
+body.btt-redesign .overworld-node-premium.label-side-n .node-label {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+body.btt-redesign .overworld-node-premium.label-side-e .node-label {
+  left: calc(100% + 6px);
+  top: 12px;
+  transform: none;
+}
+
+body.btt-redesign .overworld-node-premium.label-side-w .node-label {
+  left: auto;
+  right: calc(100% + 6px);
+  top: 12px;
+  transform: none;
+}
+
+body.btt-redesign .overworld-node-premium.label-side-se .node-label {
+  left: calc(100% - 4px);
+  top: calc(100% - 2px);
+  transform: none;
+}
+
+body.btt-redesign .overworld-node-premium .node-here-flag {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #1d4a2c;
+  color: #d6f5de;
+  font-size: 0.52rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+body.btt-redesign .overworld-node-premium .node-danger-pips {
+  display: flex;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+body.btt-redesign .overworld-node-premium .node-danger-pips span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(138, 150, 168, 0.35);
+}
+
+body.btt-redesign .overworld-node-premium .node-danger-pips span.is-on {
+  background: #e06a5a;
+}
+
+body.btt-redesign .overworld-node-premium.selected-node {
+  z-index: 6;
+  filter: drop-shadow(0 0 14px rgba(212, 168, 75, 0.55));
+}
+
+body.btt-redesign .overworld-node-premium.selected-node .node-sigil-ring {
+  border-color: #f0cc6a;
+  box-shadow: 0 0 0 2px rgba(240, 204, 106, 0.35);
+}
+
+body.btt-redesign .overworld-node-premium.distant-node {
+  opacity: 0.72;
+}
+
+body.btt-redesign .overworld-node-premium.locked-node .node-sigil-core {
+  filter: grayscale(0.4);
+}
+
+body.btt-redesign .overworld-node-premium.connected-node:not(.current-node) .node-sigil-ring {
+  border-color: rgba(240, 204, 106, 0.92);
+}
+
+body.btt-redesign .map-dock {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(212, 168, 75, 0.28);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(16, 18, 26, 0.94), rgba(8, 10, 14, 0.96));
+}
+
+body.btt-redesign .map-dock-help,
+body.btt-redesign .map-dock-status,
+body.btt-redesign .map-dock-lock {
+  margin: 0;
+  color: var(--btt-muted);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+body.btt-redesign .map-dock-kicker {
+  display: block;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--btt-ember);
+}
+
+body.btt-redesign .map-dock-card h2 {
+  margin: 4px 0 8px;
+  font-family: var(--btt-font-display);
+  font-size: 1.2rem;
+  color: var(--btt-gold-bright);
+}
+
+body.btt-redesign .map-dock-meta,
+body.btt-redesign .map-dock-actions,
+body.btt-redesign .map-road-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+body.btt-redesign .map-danger-pips {
+  display: inline-flex;
+  gap: 3px;
+}
+
+body.btt-redesign .map-danger-pips span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(138, 150, 168, 0.28);
+}
+
+body.btt-redesign .map-danger-pips span.is-on {
+  background: #e06a5a;
+}
+
+body.btt-redesign .map-road-chip {
+  display: grid;
+  gap: 2px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid rgba(212, 168, 75, 0.28);
+  border-radius: 10px;
+  background: rgba(8, 10, 16, 0.72);
+  color: var(--btt-text);
+  text-align: left;
+}
+
+body.btt-redesign .map-road-chip.is-selected {
+  border-color: rgba(240, 204, 106, 0.8);
+  box-shadow: 0 0 0 1px rgba(240, 204, 106, 0.25);
+}
+
+body.btt-redesign .map-road-chip.is-locked {
+  opacity: 0.7;
+}
+
+body.btt-redesign .map-road-chip small {
+  color: var(--btt-muted);
+}
+
+@media (min-width: 900px) {
+  body.btt-redesign .map-screen-usable {
+    grid-template-columns: minmax(0, 1fr) min(320px, 34vw);
+    align-items: start;
+  }
+
+  body.btt-redesign .map-viewport {
+    height: min(68vh, 640px);
+  }
+}
+
+@media (max-width: 720px) {
+  body.btt-redesign .map-viewport {
+    height: min(52vh, 420px);
+  }
+
+  body.btt-redesign .overworld-node-premium .node-label {
+    font-size: 0.58rem;
+  }
+}

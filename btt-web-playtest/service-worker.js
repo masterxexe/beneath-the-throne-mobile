@@ -1,4 +1,4 @@
-const APP_VERSION = "2026.08.23-overnight-40";
+const APP_VERSION = "2026.08.23-overnight-41";
 const CORE_CACHE = `beneath-throne-core-${APP_VERSION}`;
 const RUNTIME_CACHE = `beneath-throne-runtime-${APP_VERSION}`;
 const CACHE_PREFIX = "beneath-throne-";
