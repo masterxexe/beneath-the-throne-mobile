@@ -70,6 +70,8 @@ document.addEventListener("click", event => {
   }
   const saveButton = event.target.closest("[data-action='save-slots']");
   if(saveButton)showSaveSlots("save");
+  const ledgerButton = event.target.closest("[data-action='court-ledger']");
+  if(ledgerButton)show("support");
   const appUpdateButton = event.target.closest("[data-action='app-update']");
   if(appUpdateButton)window.FE.showAppUpdatePanel?.();
 });

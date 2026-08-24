@@ -10,6 +10,24 @@ npm run dev
 
 Open `http://127.0.0.1:43123` in your browser.
 
+### Court Ledger (real-money path)
+
+The **Court Ledger** (scales icon next to Save) sells looks and convenience only. Combat power stays earned.
+
+Playtest checkout grants on this save without charging a card. To take real money, paste Stripe Payment Links:
+
+```js
+localStorage.setItem("btt_checkout_urls", JSON.stringify({
+  founder_pack: "https://buy.stripe.com/...",
+  ash_court_pass: "https://buy.stripe.com/...",
+  ember_cloak: "https://buy.stripe.com/...",
+  keep_frame: "https://buy.stripe.com/...",
+  ash_patron: "https://buy.stripe.com/..."
+}));
+```
+
+Ko-fi or Patreon can map to **Patron of Ash**. App Store / Play Billing come later if you wrap the PWA.
+
 ### Debug mode
 
 Append `?debug` to the URL for dev cheats exposed on `window.FE`.
@@ -89,4 +107,4 @@ Highlights:
 
 ## Cache version
 
-Current: **v117** (`index.html`, `service-worker.js`, `version.json`, `redesign.css`)
+Current: **v118** (`index.html`, `service-worker.js`, `version.json`, `redesign.css`)

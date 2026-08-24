@@ -91,7 +91,7 @@ export function updateTop(){
   updateNavLabels();
   byId("topStats").innerHTML = `
     <div class="top-status-hero">
-      <div class="top-status-portrait">${renderPlayerHudPortrait(h)}</div>
+      <div class="top-status-portrait">${renderPlayerHudPortrait(h, {supporterFrame:state.supporter?.equipped?.frame, supporterCloak:state.supporter?.equipped?.cloak})}</div>
       <div class="top-vital-readout" aria-label="${tx("hp")} ${h.hp}/${h.maxHp}, ${tx("mana")} ${h.mana}/${h.maxMana}">
         <div class="top-vital-line ${hudVitalClass(h.hp, h.maxHp)}">
           ${bar(h.hp, h.maxHp, "hp vital-hp")}
@@ -106,6 +106,7 @@ export function updateTop(){
     <div class="top-status-meta">
       <div class="top-status-pills top-pills-core">
         <span class="pill good hud-token hud-token-hero">${esc(h.name)} ${h.level}</span>
+        ${state.supporter?.title ? `<span class="pill hud-token hud-token-founder">${esc(state.supporter.title)}</span>` : ""}
         <span class="pill hud-token hud-token-gold">${h.gold}g</span>
         ${showSupplies ? `
           <span class="pill hud-token hud-token-supply">${h.food} ${tx("food")}</span>
@@ -155,11 +156,22 @@ function updateNavLabels(){
     saveBtn.setAttribute("aria-label", tx("save"));
     saveBtn.title = tx("save");
   }
+  const ledgerBtn = document.querySelector("[data-action='court-ledger']");
+  if(ledgerBtn){
+    ledgerBtn.setAttribute("aria-label", tx("courtLedger"));
+    ledgerBtn.title = tx("courtLedger");
+  }
+}
+
+function saveSlotCount(){
+  const owned = state.supporter?.owned || [];
+  return state.supporter?.extraSlots || owned.includes("founder_pack") || owned.includes("ash_court_pass") ? 5 : 3;
 }
 
 export function showSaveSlots(mode){
   const saveMode = mode === "save";
-  const body = [1,2,3].map(slot=>{
+  const slots = Array.from({length: saveSlotCount()}, (_, i) => i + 1);
+  const body = slots.map(slot=>{
     const info = slotInfo(slot);
     let text = tx("emptySlot");
     if(info===false)text = tx("damagedSave");

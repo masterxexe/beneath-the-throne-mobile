@@ -554,8 +554,8 @@ function slumSupportButtonHTML(complete){
   if(!complete)return "";
   return `
     <button class="secondary slum-group-button" onclick="FE.show('support')">
-      <span>Support Future Builds</span>
-      <small>Optional founder rewards</small>
+      <span>Court Ledger</span>
+      <small>Looks, founder writs, extra save beds</small>
     </button>
   `;
 }
@@ -980,7 +980,7 @@ export function slumSeekGate(){
   addLog("Your name reaches the iron wicket. The Lower Ward gate opens for the first time.");
   modal("Slum Prologue Complete", `<p>The iron wicket opens. Cinderhook is no longer the whole world; it is the first rung below the castle road.</p>`, [
     {label:"Enter the Lower Ward",cls:"primary",fn:()=>window.FE.enterLowerWard?.() || refresh()},
-    {label:"Support Future Builds",cls:"secondary",fn:()=>window.FE.show("support")}
+    {label:"Court Ledger",cls:"secondary",fn:()=>window.FE.show("support")}
   ]);
   refresh(true);
 }

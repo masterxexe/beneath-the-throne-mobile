@@ -102,3 +102,9 @@ node scripts/test-combat-debug.mjs
 - Locked towns show a lock mark; far towns fade; gold roads are the ones you can take now
 - Road-stop dots and roaming labels stay quiet until you are traveling
 - The side panel uses one Here / Open / Locked / Far stamp instead of stacked status text
+
+## Pass 11 — Court Ledger (v118)
+- Real-money shop: Founder Writ, Ash Court Pass, ember cloak, keep frame, Patron of Ash tip
+- Playtest checkout grants looks on the save; Stripe Payment Links can be pasted later
+- Optional once-a-day Court Crier stand-in for rewarded ads
+- Extra save beds 4–5 with the pass or founder writ; no combat power for sale

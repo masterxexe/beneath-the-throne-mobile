@@ -396,7 +396,7 @@ export function createNewState(name, classId){
     kingdoms:createKingdoms(),
     market:{items:[],day:0},
     tavern:{recruits:[],day:0},
-    supporter:{interested:[],previewed:[],notes:[],readiness:[]},
+    supporter:{interested:[],previewed:[],notes:[],readiness:[],owned:[],equipped:{frame:null,cloak:null,banner:null},title:"",adsRemoved:false,extraSlots:false,receipts:[],lastAdDay:null},
     tutorialsSeen:{}
   };
 }
@@ -465,11 +465,17 @@ export function normalize(){
   state.tavern ||= {recruits:[],day:0};
   state.tavern.recruits ||= [];
   state.tavern.day = num(state.tavern.day);
-  state.supporter ||= {interested:[],previewed:[],notes:[],readiness:[]};
+  state.supporter ||= {interested:[],previewed:[],notes:[],readiness:[],owned:[],equipped:{frame:null,cloak:null,banner:null},title:"",adsRemoved:false,extraSlots:false,receipts:[],lastAdDay:null};
   state.supporter.interested = Array.isArray(state.supporter.interested) ? [...new Set(state.supporter.interested.filter(Boolean))] : [];
   state.supporter.previewed = Array.isArray(state.supporter.previewed) ? [...new Set(state.supporter.previewed.filter(Boolean))] : [];
   state.supporter.notes = Array.isArray(state.supporter.notes) ? state.supporter.notes.slice(-20) : [];
   state.supporter.readiness = Array.isArray(state.supporter.readiness) ? [...new Set(state.supporter.readiness.filter(Boolean))] : [];
+  state.supporter.owned = Array.isArray(state.supporter.owned) ? [...new Set(state.supporter.owned.filter(Boolean))] : [];
+  state.supporter.equipped ||= {frame:null,cloak:null,banner:null};
+  state.supporter.receipts = Array.isArray(state.supporter.receipts) ? state.supporter.receipts.slice(0, 40) : [];
+  state.supporter.title = typeof state.supporter.title === "string" ? state.supporter.title : "";
+  state.supporter.adsRemoved = !!state.supporter.adsRemoved;
+  state.supporter.extraSlots = !!state.supporter.extraSlots;
   state.tutorialsSeen ||= {};
   normalizeSlumPrologue(num);
   h.companions.forEach((c,i)=>{

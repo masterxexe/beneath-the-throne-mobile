@@ -1,118 +1,198 @@
 import { save, state } from "./state.js";
-import { byId, esc, modal, toast } from "./ui.js";
+import { byId, esc, modal, toast, updateTop } from "./ui.js";
+import { tx } from "./language.js";
+
+const CHECKOUT_STORAGE_KEY = "btt_checkout_urls";
+const AD_GOLD = 8;
+const AD_FOOD = 1;
+const AD_WAIT_MS = 4200;
 
 const SUPPORTER_OFFERS = [
   {
-    id:"founder_pack",
-    name:"Founder Pack",
-    tag:"One-time",
-    price:"$4.99-$9.99 target",
-    desc:"A fair first purchase for players who want to support Chapter 1 without buying power.",
-    includes:["Founder title","bronze name frame","exclusive cloak look","remove ads flag","small cosmetic banner"]
+    id: "founder_pack",
+    nameKey: "offerFounderName",
+    tagKey: "offerTagOnce",
+    descKey: "offerFounderDesc",
+    cents: 799,
+    includesKeys: ["offerFounderTitle", "offerFounderFrame", "offerFounderCloak", "offerFounderAds"],
+    grants: {title: "Founder", frame: "bronze", cloak: "ember", adsRemoved: true, extraSlots: true}
   },
   {
-    id:"remove_ads",
-    name:"Remove Ads",
-    tag:"Quality",
-    price:"$2.99 target",
-    desc:"Turns off optional ad prompts after the game has real rewarded ads wired.",
-    includes:["No interstitial ads","reward prompts stay opt-in","cleaner rest and post-battle flow"]
+    id: "ash_court_pass",
+    nameKey: "offerPassName",
+    tagKey: "offerTagConvenience",
+    descKey: "offerPassDesc",
+    cents: 499,
+    includesKeys: ["offerPassSlots", "offerPassBanner", "offerPassAds"],
+    grants: {banner: "keep", adsRemoved: true, extraSlots: true}
   },
   {
-    id:"cosmetic_vault",
-    name:"Cosmetic Vault",
-    tag:"Looks",
-    price:"Rotating",
-    desc:"A safe shop lane for armor looks, weapon glows, companion outfits, banners, and portrait frames.",
-    includes:["weapon skins","spell effects","companion outfits","camp banners","town badge frames"]
+    id: "ember_cloak",
+    nameKey: "offerCloakName",
+    tagKey: "offerTagLooks",
+    descKey: "offerCloakDesc",
+    cents: 299,
+    includesKeys: ["offerCloakLook"],
+    grants: {cloak: "ember"}
   },
   {
-    id:"rewarded_boosts",
-    name:"Rewarded Boosts",
-    tag:"Optional Ads",
-    price:"Ad reward",
-    desc:"Optional ad placements that should never interrupt combat or block progress.",
-    includes:["extra scouting report","inn recovery boost","small post-fight supply bonus","one defeat recovery offer"]
+    id: "keep_frame",
+    nameKey: "offerFrameName",
+    tagKey: "offerTagLooks",
+    descKey: "offerFrameDesc",
+    cents: 199,
+    includesKeys: ["offerFrameLook"],
+    grants: {frame: "keep"}
+  },
+  {
+    id: "ash_patron",
+    nameKey: "offerPatronName",
+    tagKey: "offerTagTip",
+    descKey: "offerPatronDesc",
+    cents: 199,
+    includesKeys: ["offerPatronTitle"],
+    grants: {title: "Patron of Ash"}
   }
 ];
 
-const ECONOMY_RULES = [
-  "Free path: Cinderhook and Lower Ward core progression stay playable.",
-  "Paid path: cosmetics, founder identity, ad removal, and convenience previews only.",
-  "No power sales: class unlocks, companions, writs, and hard-area rewards remain earned in-game.",
-  "Ads must be opt-in: no forced ad breaks during combat, class selection, or quest completion."
-];
+function emptySupporter(){
+  return {
+    interested: [],
+    previewed: [],
+    notes: [],
+    readiness: [],
+    owned: [],
+    equipped: {frame: null, cloak: null, banner: null},
+    title: "",
+    adsRemoved: false,
+    extraSlots: false,
+    receipts: [],
+    lastAdDay: null
+  };
+}
 
-const APP_STORE_READINESS = [
-  {id:"phone_qa",name:"Phone QA",desc:"Verify portrait layout, tap targets, monster visibility, and loading flow on the actual phone."},
-  {id:"save_stability",name:"Save Stability",desc:"Check new game, reload, update button, and cache clear across at least two save slots."},
-  {id:"store_assets",name:"Store Assets",desc:"Prepare icon, app screenshots, short description, and gameplay preview captures."},
-  {id:"privacy_copy",name:"Privacy Copy",desc:"Draft plain-language privacy notes before analytics, ads, or purchases are connected."},
-  {id:"billing_plan",name:"Billing Plan",desc:"Keep purchase IDs, prices, restore flow, and no-pay-to-win rules documented before store wiring."},
-  {id:"performance_budget",name:"Performance Budget",desc:"Track slow loading screens and image weight before adding more art or effects."}
-];
+export function supporterState(){
+  state.supporter ||= emptySupporter();
+  const ss = state.supporter;
+  ss.owned = Array.isArray(ss.owned) ? [...new Set(ss.owned.filter(Boolean))] : [];
+  ss.equipped ||= {frame: null, cloak: null, banner: null};
+  ss.receipts = Array.isArray(ss.receipts) ? ss.receipts.slice(0, 40) : [];
+  ss.title = typeof ss.title === "string" ? ss.title : "";
+  ss.adsRemoved = !!ss.adsRemoved;
+  ss.extraSlots = !!ss.extraSlots;
+  return ss;
+}
 
-function supporterState(){
-  state.supporter ||= {interested:[],previewed:[],notes:[]};
-  state.supporter.interested ||= [];
-  state.supporter.previewed ||= [];
-  state.supporter.notes ||= [];
-  state.supporter.readiness ||= [];
-  return state.supporter;
+export function offerById(id){
+  return SUPPORTER_OFFERS.find(offer => offer.id === id) || null;
+}
+
+export function ownsOffer(id){
+  return supporterState().owned.includes(id);
+}
+
+export function extraSaveSlotCount(){
+  const ss = supporterState();
+  return ss.extraSlots || ownsOffer("founder_pack") || ownsOffer("ash_court_pass") ? 5 : 3;
+}
+
+function money(cents){
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+function checkoutUrl(offer){
+  try{
+    const raw = localStorage.getItem(CHECKOUT_STORAGE_KEY);
+    const map = raw ? JSON.parse(raw) : {};
+    return map[offer.id] || window.BTT_CHECKOUT_URLS?.[offer.id] || "";
+  }catch{
+    return "";
+  }
+}
+
+function grantOffer(offer){
+  const ss = supporterState();
+  if(!ss.owned.includes(offer.id))ss.owned.push(offer.id);
+  const grants = offer.grants || {};
+  if(grants.frame)ss.equipped.frame = grants.frame;
+  if(grants.cloak)ss.equipped.cloak = grants.cloak;
+  if(grants.banner)ss.equipped.banner = grants.banner;
+  if(grants.title)ss.title = grants.title;
+  if(grants.adsRemoved)ss.adsRemoved = true;
+  if(grants.extraSlots)ss.extraSlots = true;
+}
+
+function addReceipt(offer, method){
+  const ss = supporterState();
+  ss.receipts.unshift({
+    id: `rcpt_${Date.now()}`,
+    offerId: offer.id,
+    cents: offer.cents,
+    method,
+    at: Date.now()
+  });
+  ss.receipts = ss.receipts.slice(0, 40);
+}
+
+function ledgerTotals(){
+  const ss = supporterState();
+  return ss.receipts.reduce((sum, row) => sum + (Number(row.cents) || 0), 0);
+}
+
+function offerName(offer){
+  return tx(offer.nameKey);
 }
 
 function offerCardHTML(offer){
-  const ss = supporterState();
-  const interested = ss.interested.includes(offer.id);
+  const owned = ownsOffer(offer.id);
   return `
-    <div class="supporter-card supporter-offer-${esc(offer.id)}">
+    <article class="supporter-card supporter-offer-${esc(offer.id)} ${owned ? "is-owned" : ""}">
       <div class="supporter-card-head">
-        <span class="pill good">${esc(offer.tag)}</span>
-        <span class="pill">${esc(offer.price)}</span>
+        <span class="pill good">${esc(tx(offer.tagKey))}</span>
+        <span class="pill">${owned ? tx("owned") : money(offer.cents)}</span>
       </div>
-      <h2>${esc(offer.name)}</h2>
-      <p>${esc(offer.desc)}</p>
+      <h2>${esc(offerName(offer))}</h2>
+      <p>${esc(tx(offer.descKey))}</p>
       <div class="supporter-includes">
-        ${offer.includes.map(item=>`<span>${esc(item)}</span>`).join("")}
+        ${offer.includesKeys.map(key => `<span>${esc(tx(key))}</span>`).join("")}
       </div>
       <div class="grid2">
-        <button class="primary" onclick="FE.previewSupporterOffer('${esc(offer.id)}')">Preview</button>
-        <button class="${interested ? "good" : "secondary"}" onclick="FE.markSupporterInterest('${esc(offer.id)}')">${interested ? "Marked" : "Mark Interest"}</button>
+        <button type="button" class="secondary" onclick="FE.previewSupporterOffer('${esc(offer.id)}')">${tx("whatsInside")}</button>
+        ${owned
+          ? `<button type="button" class="good" disabled>${tx("owned")}</button>`
+          : `<button type="button" class="primary" onclick="FE.buySupporterOffer('${esc(offer.id)}')">${tx("buyFor")} ${money(offer.cents)}</button>`}
       </div>
-    </div>
+    </article>
   `;
 }
 
-function economyRulesHTML(){
-  return `
-    <div class="supporter-roadmap supporter-economy-rules">
-      <h2>Economy Rules</h2>
-      <div class="supporter-includes">
-        ${ECONOMY_RULES.map(rule=>`<span>${esc(rule)}</span>`).join("")}
-      </div>
-    </div>
-  `;
-}
-
-function appStoreReadinessHTML(){
+function receiptsHTML(){
   const ss = supporterState();
+  const total = ledgerTotals();
+  if(!ss.receipts.length){
+    return `<p class="map-dock-help">${tx("ledgerEmpty")}</p>`;
+  }
   return `
-    <div class="supporter-roadmap supporter-readiness">
-      <h2>App Store Readiness</h2>
-      <p>Use this as the pre-release checklist before real billing, ads, or store submission work starts.</p>
-      <div class="supporter-readiness-grid">
-        ${APP_STORE_READINESS.map(item=>{
-          const done = ss.readiness.includes(item.id);
-          return `
-            <button class="supporter-readiness-item ${done ? "is-done" : ""}" onclick="FE.toggleStoreReadiness('${esc(item.id)}')">
-              <span class="pill ${done ? "good" : "warn"}">${done ? "Done" : "Open"}</span>
-              <b>${esc(item.name)}</b>
-              <small>${esc(item.desc)}</small>
-            </button>
-          `;
-        }).join("")}
-      </div>
-    </div>
+    <p class="supporter-ledger-total">${tx("ledgerTaken")}: <strong>${money(total)}</strong> <small>${tx("ledgerMockNote")}</small></p>
+    <ol class="supporter-receipts">
+      ${ss.receipts.slice(0, 8).map(row => {
+        const offer = offerById(row.offerId);
+        const when = new Date(row.at).toLocaleString();
+        return `<li><strong>${esc(offer ? offerName(offer) : row.offerId)}</strong> ${money(row.cents)} <small>${esc(row.method)} · ${esc(when)}</small></li>`;
+      }).join("")}
+    </ol>
+  `;
+}
+
+function crierHTML(){
+  const ss = supporterState();
+  if(ss.adsRemoved){
+    return `<p class="map-dock-help">${tx("crierGone")}</p>`;
+  }
+  const used = ss.lastAdDay === state.world?.day;
+  return `
+    <p>${tx("crierBody")}</p>
+    <button type="button" class="secondary" ${used ? "disabled" : ""} onclick="FE.watchCourtCrier()">${used ? tx("crierDoneToday") : tx("watchCrier")}</button>
   `;
 }
 
@@ -124,78 +204,129 @@ export function renderSupport(){
     <div class="panel supporter-shell">
       <div class="supporter-hero">
         <div>
-          <span class="pill good">Monetization Shell</span>
-          <h1>Supporter Store</h1>
-          <p>Playtest-only storefront. These buttons do not charge money yet; they define the fair purchase structure before App Store and Play Billing are connected.</p>
+          <span class="pill good">${tx("courtLedger")}</span>
+          <h1>${tx("courtLedgerTitle")}</h1>
+          <p>${tx("courtLedgerBody")}</p>
         </div>
         <div class="supporter-rules">
-          <span class="pill">No pay-to-win</span>
-          <span class="pill">Cosmetics first</span>
-          <span class="pill">Ads optional</span>
+          <span class="pill">${tx("noPayToWin")}</span>
+          <span class="pill">${tx("cosmeticsFirst")}</span>
+          <span class="pill">${ss.adsRemoved ? tx("adsRemoved") : tx("adsOptional")}</span>
         </div>
       </div>
+      ${ss.title ? `<p class="supporter-interest-note">${tx("wearingTitle")}: <b>${esc(ss.title)}</b></p>` : ""}
       <div class="supporter-grid">
         ${SUPPORTER_OFFERS.map(offerCardHTML).join("")}
       </div>
-      ${economyRulesHTML()}
-      ${appStoreReadinessHTML()}
       <div class="supporter-roadmap">
-        <h2>Build Order</h2>
-        <p>First: polish Chapter 1 and retention. Next: wire rewarded ad test placements. Last: connect real App Store / Google Play purchases once the game loop is stable.</p>
+        <h2>${tx("crierTitle")}</h2>
+        ${crierHTML()}
+      </div>
+      <div class="supporter-roadmap">
+        <h2>${tx("ledgerTitle")}</h2>
+        ${receiptsHTML()}
+      </div>
+      <div class="supporter-roadmap">
+        <h2>${tx("realMoneyHow")}</h2>
+        <p>${tx("realMoneyBody")}</p>
         <div class="supporter-includes">
-          <span>Founder pack art</span>
-          <span>cosmetic inventory</span>
-          <span>rewarded ad service</span>
-          <span>store compliance copy</span>
+          <span>${tx("realMoneyStripe")}</span>
+          <span>${tx("realMoneyStores")}</span>
+          <span>${tx("realMoneyTips")}</span>
         </div>
       </div>
-      ${ss.interested.length ? `<p class="supporter-interest-note">Marked for testing: ${ss.interested.map(id=>esc(SUPPORTER_OFFERS.find(offer=>offer.id===id)?.name || id)).join(", ")}</p>` : ""}
     </div>
   `;
 }
 
-export function toggleStoreReadiness(id){
-  const item = APP_STORE_READINESS.find(entry=>entry.id === id);
-  if(!item)return toast("Checklist item not found.");
-  const ss = supporterState();
-  if(ss.readiness.includes(id)){
-    ss.readiness = ss.readiness.filter(value=>value !== id);
-    toast("Marked open.");
-  }else{
-    ss.readiness.push(id);
-    toast("Marked done.");
-  }
-  save();
-  renderSupport();
-}
-
 export function previewSupporterOffer(id){
-  const offer = SUPPORTER_OFFERS.find(item=>item.id === id);
-  if(!offer)return toast("Offer not found.");
+  const offer = offerById(id);
+  if(!offer)return toast(tx("offerMissing"));
   const ss = supporterState();
   if(!ss.previewed.includes(id))ss.previewed.push(id);
   save();
-  modal(offer.name, `
-    <p>${esc(offer.desc)}</p>
-    <p><b>Target:</b> ${esc(offer.price)}</p>
+  modal(offerName(offer), `
+    <p>${esc(tx(offer.descKey))}</p>
+    <p><b>${tx("price")}:</b> ${money(offer.cents)}</p>
     <div class="supporter-includes">
-      ${offer.includes.map(item=>`<span>${esc(item)}</span>`).join("")}
+      ${offer.includesKeys.map(key => `<span>${esc(tx(key))}</span>`).join("")}
     </div>
-    <p>This is a playtest preview. Real purchases will be connected through official store billing later.</p>
+    <p>${tx("noPowerSales")}</p>
   `);
 }
 
-export function markSupporterInterest(id){
-  const offer = SUPPORTER_OFFERS.find(item=>item.id === id);
-  if(!offer)return toast("Offer not found.");
-  const ss = supporterState();
-  if(ss.interested.includes(id)){
-    ss.interested = ss.interested.filter(item=>item !== id);
-    toast("Removed from test interest.");
-  }else{
-    ss.interested.push(id);
-    toast("Marked for store testing.");
+export function buySupporterOffer(id){
+  const offer = offerById(id);
+  if(!offer)return toast(tx("offerMissing"));
+  if(ownsOffer(id))return toast(tx("alreadyOwned"));
+  const url = checkoutUrl(offer);
+  const method = url ? "stripe" : "mock";
+  modal(offerName(offer), `
+    <p>${esc(tx(offer.descKey))}</p>
+    <p><b>${tx("price")}:</b> ${money(offer.cents)}</p>
+    <p>${url ? tx("checkoutOpensTab") : tx("checkoutMockBody")}</p>
+  `, [
+    {
+      label: url ? tx("openCheckout") : tx("payPlaytest"),
+      cls: "primary",
+      fn: () => completePurchase(offer, method, url)
+    },
+    {label: tx("close"), cls: "secondary"}
+  ]);
+}
+
+function completePurchase(offer, method, url){
+  if(url){
+    window.open(url, "_blank", "noopener");
   }
+  grantOffer(offer);
+  addReceipt(offer, method);
   save();
+  updateTop();
   renderSupport();
+  toast(tx("purchaseGranted"));
+}
+
+export function watchCourtCrier(){
+  const ss = supporterState();
+  if(ss.adsRemoved)return toast(tx("crierGone"));
+  if(ss.lastAdDay === state.world?.day)return toast(tx("crierDoneToday"));
+  const overlay = document.createElement("div");
+  overlay.className = "court-crier-overlay";
+  overlay.innerHTML = `
+    <div class="court-crier-card">
+      <span class="pill">${tx("crierTitle")}</span>
+      <h2>${tx("crierWatching")}</h2>
+      <p>${tx("crierWatchBody")}</p>
+      <div class="travel-progress-track" aria-hidden="true"><span style="width:0%"></span></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  const bar = overlay.querySelector(".travel-progress-track span");
+  const started = Date.now();
+  const tick = () => {
+    const t = Math.min(1, (Date.now() - started) / AD_WAIT_MS);
+    if(bar)bar.style.width = `${Math.floor(t * 100)}%`;
+    if(t < 1){
+      requestAnimationFrame(tick);
+      return;
+    }
+    overlay.remove();
+    ss.lastAdDay = state.world?.day ?? 1;
+    state.hero.gold = (state.hero.gold || 0) + AD_GOLD;
+    state.hero.food = (state.hero.food || 0) + AD_FOOD;
+    save();
+    updateTop();
+    renderSupport();
+    toast(`${tx("crierPaid")} +${AD_GOLD}g, +${AD_FOOD} ${tx("food")}`);
+  };
+  requestAnimationFrame(tick);
+}
+
+export function toggleStoreReadiness(){
+  toast(tx("realMoneyBody"));
+}
+
+export function markSupporterInterest(id){
+  return previewSupporterOffer(id);
 }

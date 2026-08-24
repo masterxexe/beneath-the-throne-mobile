@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.24-overnight-42",
-  "build": 42,
-  "cache": "v117",
-  "notes": "Clearer world map: You / Open road / Locked colors, a visible key, quieter extras, and a simpler travel dock"
+  "version": "2026.08.24-overnight-43",
+  "build": 43,
+  "cache": "v118",
+  "notes": "Court Ledger: founder writs, cosmetics, extra save beds, optional crier ads, mock checkout ready for Stripe"
 }

@@ -265,7 +265,7 @@ export function renderPlayerPaperDoll(hero, options={}){
   ].join("") : "";
   const className = hero?.class ? title(hero.class) : tx("survivor");
   const label = options.label || `${hero?.name || tx("survivor")} ${className}`;
-  const frameClass = `${options.compact ? " paper-doll-frame-compact" : ""}${options.hud ? " paper-doll-frame-hud" : ""}${options.combat ? " paper-doll-frame-combat" : ""}`;
+  const frameClass = `${options.compact ? " paper-doll-frame-compact" : ""}${options.hud ? " paper-doll-frame-hud" : ""}${options.combat ? " paper-doll-frame-combat" : ""}${options.supporterFrame ? ` supporter-frame-${options.supporterFrame}` : ""}${options.supporterCloak ? ` supporter-cloak-${options.supporterCloak}` : ""}`;
   const visual = resolvePlayerVisualState(hero);
   const motionMode = options.motion === false ? "static" : options.motionState || (options.hud ? "hudIdle" : options.combat ? "combatIdle" : "idle");
   const renderMode = useGeneratedOnly ? "generated" : "layered";
@@ -363,6 +363,6 @@ export function renderPlayerCombatPortraitHook(hero, options={}){
   return renderPlayerPaperDoll(hero, {...options, compact:true, combat:true});
 }
 
-export function renderPlayerHudPortrait(hero){
-  return renderPlayerPaperDoll(hero, {compact:true, hud:true});
+export function renderPlayerHudPortrait(hero, extra={}){
+  return renderPlayerPaperDoll(hero, {compact:true, hud:true, ...extra});
 }

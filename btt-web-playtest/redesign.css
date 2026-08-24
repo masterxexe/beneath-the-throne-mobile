@@ -2227,3 +2227,97 @@ body.btt-redesign .map-road-chip small {
     bottom: 6px;
   }
 }
+
+/* Court Ledger */
+body.btt-redesign .supporter-shell {
+  display: grid;
+  gap: 12px;
+}
+
+body.btt-redesign .supporter-grid {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 720px) {
+  body.btt-redesign:has(#support.active) #app {
+    max-width: 760px;
+  }
+
+  body.btt-redesign .supporter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+body.btt-redesign .supporter-card {
+  min-height: 0;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+body.btt-redesign .supporter-card.is-owned {
+  border-color: rgba(110, 207, 138, 0.4);
+}
+
+body.btt-redesign .supporter-card .grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+body.btt-redesign .supporter-ledger-total {
+  margin: 0 0 8px;
+}
+
+body.btt-redesign .supporter-receipts {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 6px;
+  color: var(--btt-muted);
+}
+
+body.btt-redesign .hud-token-founder {
+  border-color: rgba(196, 92, 58, 0.55);
+  color: #f0c8b0;
+}
+
+body.btt-redesign .paper-doll-frame.supporter-frame-bronze {
+  box-shadow: 0 0 0 2px #b07a3a, 0 0 12px rgba(176, 122, 58, 0.45);
+}
+
+body.btt-redesign .paper-doll-frame.supporter-frame-keep {
+  box-shadow: 0 0 0 2px #f0cc6a, 0 0 14px rgba(240, 204, 106, 0.4);
+}
+
+body.btt-redesign .paper-doll-frame.supporter-cloak-ember .paper-doll-motion-cape,
+body.btt-redesign .paper-doll-frame.supporter-cloak-ember {
+  filter: drop-shadow(0 0 8px rgba(196, 92, 58, 0.55));
+}
+
+.court-crier-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(5, 6, 10, 0.78);
+}
+
+.court-crier-card {
+  width: min(360px, 100%);
+  padding: 16px;
+  border: 1px solid rgba(212, 168, 75, 0.4);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(18, 16, 14, 0.96), rgba(8, 8, 10, 0.98));
+  color: #f3e8d4;
+  display: grid;
+  gap: 8px;
+}
+
+.court-crier-card h2 {
+  margin: 0;
+  font-family: var(--btt-font-display, Georgia, serif);
+  color: #f0cc6a;
+}
