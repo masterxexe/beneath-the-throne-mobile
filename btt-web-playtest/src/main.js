@@ -19,6 +19,8 @@ import { initAudioEngine } from "./audioEngine.js";
 
 setLanguage(getLanguage());
 
+const debugMode = new URLSearchParams(location.search).has("debug");
+
 window.FE = {
   ...tutorials,
   ...combat,
@@ -37,7 +39,11 @@ window.FE = {
   showSaveSlots
 };
 
-const debugMode = new URLSearchParams(location.search).has("debug");
+if(!debugMode){
+  for(const key of Object.keys(window.FE)){
+    if(/^debug/i.test(key))delete window.FE[key];
+  }
+}
 
 if(debugMode){
   window.FE.debugLevelTo = level => {

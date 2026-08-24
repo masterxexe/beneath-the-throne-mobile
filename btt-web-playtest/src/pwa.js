@@ -1,6 +1,6 @@
 import { modal, toast } from "./ui.js";
 
-const BUILD_VERSION = "2026.08.24-overnight-43";
+const BUILD_VERSION = "2026.08.24-overnight-44";
 const VERSION_URL = "./version.json";
 const WORKER_URL = "./service-worker.js";
 const WORKER_SCOPE = "./";
@@ -78,7 +78,7 @@ export function showAppUpdatePanel(){
 
   const body = `
     <div class="app-update-panel">
-      <p>Phone playtest build: <b>${BUILD_VERSION}</b></p>
+      <p>Web build: <b>${BUILD_VERSION}</b></p>
       <div class="app-status-grid">
         ${statusPill("Mode", status.standalone ? "App" : "Browser", status.standalone ? "good" : "")}
         ${statusPill("Install", status.installPrompt || status.standalone ? "Ready" : "Manual", status.installPrompt || status.standalone ? "good" : "warn")}

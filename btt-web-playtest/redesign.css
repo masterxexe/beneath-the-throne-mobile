@@ -2228,7 +2228,17 @@ body.btt-redesign .map-road-chip small {
   }
 }
 
-/* Court Ledger */
+body.btt-redesign .v59-title-legal {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--btt-muted);
+}
+
+body.btt-redesign .v59-title-legal a {
+  color: var(--btt-gold);
+  text-decoration: none;
+}
 body.btt-redesign .supporter-shell {
   display: grid;
   gap: 12px;

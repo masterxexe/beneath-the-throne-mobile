@@ -108,3 +108,9 @@ node scripts/test-combat-debug.mjs
 - Playtest checkout grants looks on the save; Stripe Payment Links can be pasted later
 - Optional once-a-day Court Crier stand-in for rewarded ads
 - Extra save beds 4–5 with the pass or founder writ; no combat power for sale
+
+## Pass 12 — Ship-readiness (v119)
+- Load Game on the title screen no longer crashes when no save exists
+- Debug cheats stay off `window.FE` unless `?debug` is in the URL
+- PWA icons are real 192 and 512 assets, with a separate maskable 512
+- Privacy Policy and Terms of Use pages, linked from the title screen

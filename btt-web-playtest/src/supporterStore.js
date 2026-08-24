@@ -72,6 +72,7 @@ function emptySupporter(){
 }
 
 export function supporterState(){
+  if(!state)return emptySupporter();
   state.supporter ||= emptySupporter();
   const ss = state.supporter;
   ss.owned = Array.isArray(ss.owned) ? [...new Set(ss.owned.filter(Boolean))] : [];

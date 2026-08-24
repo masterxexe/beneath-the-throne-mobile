@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.24-overnight-43",
-  "build": 43,
-  "cache": "v118",
-  "notes": "Court Ledger: founder writs, cosmetics, extra save beds, optional crier ads, mock checkout ready for Stripe"
+  "version": "2026.08.24-overnight-44",
+  "build": 44,
+  "cache": "v119",
+  "notes": "Ship pass: Load Game on title no longer crashes, debug cheats stay behind ?debug, real PWA icons, privacy and terms pages"
 }

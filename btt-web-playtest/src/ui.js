@@ -84,6 +84,7 @@ function hudVitalClass(value, max){
 }
 
 export function updateTop(){
+  if(!state?.hero || !byId("topStats"))return;
   const h = state.hero;
   const screen = currentScreen;
   const showSupplies = screen === "gear" || screen === "town" || screen === "party";
@@ -164,8 +165,8 @@ function updateNavLabels(){
 }
 
 function saveSlotCount(){
-  const owned = state.supporter?.owned || [];
-  return state.supporter?.extraSlots || owned.includes("founder_pack") || owned.includes("ash_court_pass") ? 5 : 3;
+  const owned = state?.supporter?.owned || [];
+  return state?.supporter?.extraSlots || owned.includes("founder_pack") || owned.includes("ash_court_pass") ? 5 : 3;
 }
 
 export function showSaveSlots(mode){

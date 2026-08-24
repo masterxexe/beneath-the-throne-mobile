@@ -42,7 +42,9 @@ function openingCopy(){
       classSub:"La barrera de Kael se rompe, pero deja un camino vivo en tu sangre.",
       titleSettings:"Idioma",
       newGame:"Nueva Partida",
-      loadGame:"Cargar Partida"
+      loadGame:"Cargar Partida",
+      privacy:"Privacidad",
+      terms:"Términos"
     };
   }
   return {
@@ -63,7 +65,9 @@ function openingCopy(){
     classSub:"Kael's barrier breaks, but it leaves a living path in your blood.",
     titleSettings:"Language",
     newGame:"New Game",
-    loadGame:"Load Game"
+    loadGame:"Load Game",
+    privacy:"Privacy",
+    terms:"Terms"
   };
 }
 
@@ -167,6 +171,7 @@ export function renderStart(){
         <button class="primary v59-title-command" onclick="FE.startOpeningJourney()">${esc(copy.newGame)}</button>
         <button class="secondary v59-title-command" onclick="FE.showSaveSlots('load')">${esc(copy.loadGame)}</button>
         <button class="secondary v59-title-command" onclick="FE.toggleOpeningSettings()">${esc(copy.settings)}</button>
+        <p class="v59-title-legal"><a href="./privacy.html">${esc(copy.privacy)}</a> · <a href="./terms.html">${esc(copy.terms)}</a></p>
         ${openingSettingsOpen ? `
           <div class="v59-settings-panel">
             <span>${esc(copy.titleSettings)}: ${l==="es" ? tx("spanish") : tx("english")}</span>
