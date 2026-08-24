@@ -106,7 +106,8 @@ Highlights:
 - v80 walk cycles and full gear composite poses
 - PWA cache sync, procedural combat audio, i18n combat strings
 - Ambient NPCs in slums and lower ward
+- Visual class trees in Growth (oaths, path ranks, and base mastery branches)
 
 ## Cache version
 
-Current: **v123** (`index.html`, `service-worker.js`, `version.json`, `redesign.css`)
+Current: **v124** (`index.html`, `service-worker.js`, `version.json`, `redesign.css`)

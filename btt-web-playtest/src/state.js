@@ -790,8 +790,20 @@ export function cmNodeById(id){
   return CLASS_MASTERY.find(node=>node.id===id);
 }
 
-export function classMasteryNodes(classId=activeClassId(state?.hero)){
-  return CLASS_MASTERY.filter(node=>node.classId === classId);
+export function classMasteryNodes(classId=activeClassId(state?.hero), hero=state?.hero){
+  const ids = new Set([classId, hero?.class, hero?.advancedClass].filter(Boolean));
+  return CLASS_MASTERY.filter(node=>ids.has(node.classId));
+}
+
+export function pathMasteryNodes(pathId){
+  return CLASS_MASTERY.filter(node=>node.classId === pathId).sort((a,b)=>(a.level||0)-(b.level||0) || String(a.id).localeCompare(String(b.id)));
+}
+
+export function masteryOwnedByHero(node, hero=state?.hero){
+  if(!node || !hero)return false;
+  if(node.classId === hero.class)return true;
+  if(hero.advancedClass && node.classId === hero.advancedClass)return true;
+  return false;
 }
 
 export function syncMasteryPassives(hero=state?.hero){

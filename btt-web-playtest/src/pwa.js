@@ -1,6 +1,6 @@
 import { modal, toast } from "./ui.js";
 
-const BUILD_VERSION = "2026.08.24-overnight-48";
+const BUILD_VERSION = "2026.08.24-overnight-49";
 const VERSION_URL = "./version.json";
 const WORKER_URL = "./service-worker.js";
 const WORKER_SCOPE = "./";

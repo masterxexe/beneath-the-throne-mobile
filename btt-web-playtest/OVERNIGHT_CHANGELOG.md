@@ -136,3 +136,8 @@ node scripts/test-combat-debug.mjs
 ## Pass 16 — Opening flow (v123)
 - A service-worker update no longer reloads the page during the title/tutorial, which was dumping players back to New Game after the skeleton
 - First Victory auto-continues into Kael's stand after a short beat
+
+## Pass 17 — Class trees (v124)
+- Growth opens on a visual class tree: base class forks into two oaths, each with Path / Signature / Capstone ranks
+- Base mastery stays visible after you take a path, laid out from real requirement links (including merge capstones)
+- Class Mastery tab uses the same tree nodes instead of a flat card list

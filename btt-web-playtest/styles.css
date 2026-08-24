@@ -17586,3 +17586,186 @@ body.cinematic-combat-active .combat-shell.combat-impact{
   }
 }
 
+/* v124: class trees */
+.class-tree-card{
+  overflow:auto;
+}
+.class-tree{
+  display:grid;
+  justify-items:center;
+  gap:0;
+}
+.class-tree-root{
+  width:min(420px,100%);
+}
+.class-tree-fork{
+  width:min(78%,520px);
+  height:28px;
+  margin:0 auto;
+  background:
+    linear-gradient(#d4a84b,#d4a84b) center top / 2px 14px no-repeat,
+    linear-gradient(#d4a84b,#d4a84b) center 14px / calc(50% + 1px) 2px no-repeat,
+    linear-gradient(#d4a84b,#d4a84b) 0 14px / 2px 14px no-repeat,
+    linear-gradient(#d4a84b,#d4a84b) 100% 14px / 2px 14px no-repeat;
+}
+.class-tree-paths{
+  width:100%;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+  align-items:start;
+}
+.class-tree-path{
+  min-width:0;
+  display:grid;
+  gap:0;
+}
+.class-tree-grid{
+  width:100%;
+  display:grid;
+  gap:0;
+}
+.class-tree-row{
+  width:100%;
+  display:grid;
+  grid-template-columns:repeat(var(--tree-cols,2),minmax(0,1fr));
+  gap:12px;
+  align-items:stretch;
+}
+.class-tree-row .class-tree-node{
+  margin-top:16px;
+}
+.class-tree-row:first-child .class-tree-node{
+  margin-top:0;
+}
+.class-tree-slot{
+  min-height:0;
+}
+.class-tree-ranks,
+.class-tree-path-line{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:grid;
+  gap:0;
+}
+.class-tree-node{
+  position:relative;
+  display:grid;
+  gap:6px;
+  padding:10px 10px 12px;
+  border:1px solid rgba(185,142,76,.42);
+  border-radius:10px;
+  background:linear-gradient(180deg,rgba(18,16,12,.94),rgba(6,7,8,.98));
+  color:#e8d7b4;
+  text-align:left;
+}
+.class-tree-title{
+  color:#ffe7b8;
+  font-size:16px;
+  line-height:1.1;
+  font-weight:800;
+}
+.class-tree-label{
+  color:#d9a451;
+  font-weight:700;
+}
+.class-tree-node p{
+  margin:0;
+  color:#cbb892;
+  font-size:12px;
+  line-height:1.35;
+}
+.class-tree-kicker{
+  color:#d9a451;
+  font:800 10px/1 system-ui,sans-serif;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.class-tree-req{
+  color:#e0b070 !important;
+}
+.class-tree-ranks .class-tree-node{
+  margin-top:16px;
+}
+.class-tree-ranks .class-tree-node::before,
+.class-tree-rank.has-parent::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:-16px;
+  width:2px;
+  height:16px;
+  background:#d4a84b;
+  transform:translateX(-50%);
+}
+.class-tree-ranks .class-tree-node:first-child::before{
+  display:none;
+}
+.class-tree-path .class-tree-ranks .class-tree-node:first-child::before{
+  display:block;
+}
+.class-tree-node.is-active{
+  border-color:#f0d48a;
+  box-shadow:0 0 16px rgba(212,168,75,.22),inset 0 0 18px rgba(230,176,84,.08);
+}
+.class-tree-node.is-unlocked{
+  border-color:rgba(110,168,108,.7);
+}
+.class-tree-node.is-bought{
+  border-color:rgba(117,238,136,.7);
+  box-shadow:inset 0 0 16px rgba(90,160,88,.12);
+}
+.class-tree-node.is-available{
+  border-color:rgba(240,204,106,.55);
+}
+.class-tree-node.is-locked{
+  opacity:.72;
+  filter:saturate(.75);
+}
+.class-tree-node.is-available:not(.class-tree-root){
+  animation:btt-tree-available 1.6s ease-in-out infinite;
+}
+.class-tree-merge-fork{
+  margin-top:4px;
+}
+.class-tree-merge{
+  width:min(420px,100%);
+  margin:0 auto;
+}
+.class-tree-merge .class-tree-node{
+  margin-top:0;
+}
+@keyframes btt-tree-available{
+  0%,100%{filter:brightness(1)}
+  50%{filter:brightness(1.12)}
+}
+@media(max-width:520px){
+  .class-tree-paths,
+  .class-tree-row{
+    gap:8px;
+  }
+  .class-tree-title{
+    font-size:15px;
+  }
+  .class-tree-node button{
+    min-height:36px;
+  }
+}
+@media(max-width:380px){
+  .class-tree-paths,
+  .class-tree-row{
+    grid-template-columns:1fr;
+  }
+  .class-tree-slot,
+  .class-tree-fork,
+  .class-tree-rank.has-parent::before{
+    display:none;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .class-tree-node.is-available:not(.class-tree-root){
+    animation:none;
+  }
+}
+

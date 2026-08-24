@@ -2615,8 +2615,24 @@ body.btt-redesign select:focus-visible {
     0 0 0 3px rgba(240, 204, 106, 0.22);
 }
 
-body.btt-redesign .map-canvas-frame {
-  border: 2px solid var(--btt-line-strong);
+body.btt-redesign .class-tree-node {
+  border: 1px solid var(--btt-line);
+  box-shadow: var(--btt-frame-tight);
+}
+
+body.btt-redesign .class-tree-node.is-active {
+  border-color: var(--btt-gold-bright);
+  box-shadow:
+    var(--btt-frame-tight),
+    0 0 16px rgba(212, 168, 75, 0.2);
+}
+
+body.btt-redesign .class-tree-node.is-bought {
+  border-color: rgba(117, 238, 136, 0.62);
+}
+
+body.btt-redesign .class-tree-card {
+  border: 1px solid var(--btt-line-strong);
   box-shadow: var(--btt-frame);
 }
 

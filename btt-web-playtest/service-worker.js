@@ -1,4 +1,4 @@
-const APP_VERSION = "2026.08.24-overnight-48";
+const APP_VERSION = "2026.08.24-overnight-49";
 const CORE_CACHE = `beneath-throne-core-${APP_VERSION}`;
 const RUNTIME_CACHE = `beneath-throne-runtime-${APP_VERSION}`;
 const CACHE_PREFIX = "beneath-throne-";
@@ -8,15 +8,15 @@ const APP_SHELL = [
   "./index.html",
   "./privacy.html",
   "./terms.html",
-  "./styles.css?v=123",
-  "./redesign.css?v=16",
+  "./styles.css?v=124",
+  "./redesign.css?v=17",
   "./combat-animations.css?v=123",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-512-maskable.png",
   "./icons/apple-touch-icon.png",
-  "./src/main.js?v=123",
+  "./src/main.js?v=124",
   "./src/pwa.js",
   "./assets/ui/generated/title-bg-v19d.png",
   "./version.json"

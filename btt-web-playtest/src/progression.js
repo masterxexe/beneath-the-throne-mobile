@@ -1,8 +1,8 @@
-import { ABILITY_SLOT_COUNT, ADVANCED_CLASSES, CLASSES, CM_ALLOCATIONS, SPELL_SCHOOLS, WEAPON_TYPES, activeClassDefinition, activeClassId, activeWeaponType, classMasteryNodes, classPathOptions, cmNodeById, cmPointNeed, normalizeAbilityLoadout, normalizeCMAllocation, save, spellSchoolMasteryBonus, spellMasteryNeed, state, syncMasteryPassives, weaponMasteryBonus, weaponMasteryNeed } from "./state.js";
+import { ABILITY_SLOT_COUNT, ADVANCED_CLASSES, CLASSES, CM_ALLOCATIONS, SPELL_SCHOOLS, WEAPON_TYPES, activeClassDefinition, activeClassId, activeWeaponType, classMasteryNodes, classPathOptions, cmNodeById, cmPointNeed, masteryOwnedByHero, normalizeAbilityLoadout, normalizeCMAllocation, pathMasteryNodes, save, spellSchoolMasteryBonus, spellMasteryNeed, state, syncMasteryPassives, weaponMasteryBonus, weaponMasteryNeed } from "./state.js";
 import { getLanguage, title, tx } from "./language.js";
 import { bar, byId, esc, modal } from "./ui.js";
 
-let tab = "stats";
+let tab = "classes";
 
 export function renderProgression(){
   byId("progression").innerHTML = `
@@ -10,7 +10,7 @@ export function renderProgression(){
       <h1>${tx("progression")}</h1>
       <div class="progress-tab-row">
         <button class="${tab==="stats"?"primary":""}" onclick="FE.progressTab('stats')">${tx("stats")}</button>
-        <button class="${tab==="classes"?"primary":""}" onclick="FE.progressTab('classes')">${tx("classes")}</button>
+        <button class="${tab==="classes"?"primary":""}" onclick="FE.progressTab('classes')">${tx("classTree")}</button>
         <button class="${tab==="abilities"?"primary":""}" onclick="FE.progressTab('abilities')">${tx("abilityBook")}</button>
         <button class="${tab==="weapons"?"primary":""}" onclick="FE.progressTab('weapons')">${tx("weapons")}</button>
         <button class="${tab==="mastery"?"primary":""}" onclick="FE.progressTab('mastery')">${tx("mastery")}</button>
@@ -57,66 +57,192 @@ function classesHTML(){
   const h = state.hero;
   const activeId = activeClassId(h);
   const current = activeClassDefinition(h);
+  const m = h.mastery;
+  const need = cmPointNeed(m);
+  const paths = classPathOptions(h);
   return `
     <div class="card progression-current-class">
-      <h2>${tx("currentClass")}: ${esc(className(activeId))}</h2>
-      <span class="pill">${tx("baseClass")} ${esc(className(h.class))}</span>
-      <span class="pill good">${esc(current.role || tx("classPath"))}</span>
-      <p>${esc(current.desc || "")}</p>
+      <h2>${tx("classTree")}</h2>
+      <p>${esc(tx("classTreeHelp"))}</p>
       <div class="progression-summary-grid">
+        <span class="pill good">${tx("currentClass")}: ${esc(className(activeId))}</span>
+        <span class="pill">${tx("baseClass")} ${esc(className(h.class))}</span>
+        <span class="pill">${tx("cmBank")} ${m.cmPoints}</span>
+        <span class="pill">${tx("cmXp")} ${m.cmXp}/${need}</span>
         ${classBonusPills(current).join("")}
       </div>
     </div>
-    <div class="card">
-      <h2>${tx("classPaths")}</h2>
-      <div class="progress-class-grid">
-        ${baseClassPathHTML()}
-        ${classPathOptions(h).map(path=>classPathHTML(path.id,path)).join("")}
-      </div>
+    <div class="card class-tree-card">
+      ${classPathTreeHTML(paths)}
+    </div>
+    <div class="card class-tree-card">
+      <h2>${tx("classMastery")}: ${esc(className(h.class))}</h2>
+      <p>${esc(tx("classTreeBaseHelp"))}</p>
+      ${masteryForestHTML(classMasteryNodes(h.class, h).filter(node=>node.classId === h.class))}
     </div>
   `;
 }
 
-function baseClassPathHTML(){
+function classPathTreeHTML(paths){
   const h = state.hero;
   const active = !h.advancedClass;
   const base = CLASSES[h.class] || CLASSES.warrior;
   return `
-    <div class="stat-card progress-class-card ${active?"is-active":""}">
-      <h3>${esc(className(h.class))}</h3>
-      <span class="pill">${tx("baseClass")}</span>
-      <p>${esc(tx("baseClassPathBody"))}</p>
-      <div class="progression-summary-grid">
-        ${Object.entries(base.stats || {}).map(([k,v])=>`<span class="pill">${title(k)} +${v}</span>`).join("")}
+    <div class="class-tree class-tree-paths-view" data-base="${esc(h.class)}">
+      <div class="class-tree-node class-tree-root ${active?"is-active":"is-unlocked"}">
+        <span class="class-tree-kicker">${tx("baseClass")}</span>
+        <strong class="class-tree-title">${esc(className(h.class))}</strong>
+        <p>${esc(tx("baseClassPathBody"))}</p>
+        <div class="progression-summary-grid">
+          ${Object.entries(base.stats || {}).filter(([,v])=>v).map(([k,v])=>`<span class="pill">${title(k)} +${v}</span>`).join("")}
+        </div>
+        <button ${active?"disabled":""} onclick="FE.returnBaseClass()">${active?tx("activeClass"):tx("switchClass")}</button>
       </div>
-      <button ${active?"disabled":""} onclick="FE.returnBaseClass()">${active?tx("activeClass"):tx("switchClass")}</button>
+      <div class="class-tree-fork" aria-hidden="true"></div>
+      <div class="class-tree-paths">
+        ${paths.map(path=>classTreePathColumnHTML(path.id, path)).join("") || `<p>${esc(tx("cmNoNodes"))}</p>`}
+      </div>
     </div>
   `;
 }
 
-function classPathHTML(id,path){
-  const status = classPathStatus(id,path);
-  const abilities = (path.abilities || []).map(title).join(" | ");
+function classTreePathColumnHTML(id, path){
+  const status = classPathStatus(id, path);
+  const ranks = pathMasteryNodes(id);
+  const tone = status.active ? "is-active" : status.unlocked ? "is-unlocked" : status.locked ? "is-locked" : "is-available";
   return `
-    <div class="stat-card progress-class-card ${status.active?"is-active":status.unlocked?"is-unlocked":""}">
-      <h3>${esc(path.name)}</h3>
-      <span class="pill">${esc(path.role || tx("classPath"))}</span>
-      <span class="pill ${status.active?"good":status.locked?"warn":status.unlocked?"good":""}">${status.active?tx("activeClass"):status.unlocked?tx("unlocked"):status.locked?tx("locked"):tx("available")}</span>
-      <p>${esc(path.desc || "")}</p>
-      <div class="progression-summary-grid">
-        <span class="pill">${tx("requiresLevel")} ${path.level}</span>
-        ${path.cmCost ? `<span class="pill">${tx("cmCost")} ${path.cmCost}</span>` : ""}
-        ${classBonusPills(path).join("")}
+    <div class="class-tree-path ${tone}">
+      <div class="class-tree-node class-tree-path-head ${tone}">
+        <span class="class-tree-kicker">${esc(path.role || tx("classPath"))}</span>
+        <strong class="class-tree-title">${esc(path.name)}</strong>
+        <span class="pill ${status.active?"good":status.locked?"warn":status.unlocked?"good":""}">${status.active?tx("activeClass"):status.unlocked?tx("unlocked"):status.locked?tx("locked"):tx("available")}</span>
+        <p>${esc(path.desc || "")}</p>
+        <div class="progression-summary-grid">
+          <span class="pill">${tx("requiresLevel")} ${path.level}</span>
+          ${path.cmCost ? `<span class="pill">${tx("cmCost")} ${path.cmCost}</span>` : ""}
+          ${classBonusPills(path).join("")}
+        </div>
+        ${(path.abilities || []).length ? `<p><span class="class-tree-label">${tx("learnAbility")}:</span> ${esc(path.abilities.map(title).join(" | "))}</p>` : ""}
+        ${classHistoryLine(id)}
+        ${status.reasons.length && !status.unlocked ? `<p class="class-tree-req">${tx("cmRequires")}: ${status.reasons.map(esc).join(" | ")}</p>` : ""}
+        ${status.active
+          ? `<button disabled>${tx("activeClass")}</button>`
+          : status.unlocked
+            ? `<button class="primary" onclick="FE.switchClassPath('${id}')">${tx("switchClass")}</button>`
+            : `<button ${status.locked||!status.affordable?"disabled":""} onclick="FE.unlockClassPath('${id}')">${tx("unlockClass")}</button>`}
       </div>
-      ${classHistoryLine(id)}
-      ${abilities ? `<p><b>${tx("learnAbility")}:</b> ${esc(abilities)}</p>` : ""}
-      ${status.reasons.length ? `<p>${tx("cmRequires")}: ${status.reasons.map(esc).join(" | ")}</p>` : ""}
-      ${status.active
-        ? `<button disabled>${tx("activeClass")}</button>`
-        : status.unlocked
-          ? `<button class="primary" onclick="FE.switchClassPath('${id}')">${tx("switchClass")}</button>`
-          : `<button ${status.locked||!status.affordable?"disabled":""} onclick="FE.unlockClassPath('${id}')">${tx("unlockClass")}</button>`}
+      <ol class="class-tree-ranks">
+        ${ranks.map((node, index)=>classTreeRankHTML(node, status, index)).join("")}
+      </ol>
     </div>
+  `;
+}
+
+function classTreeRankHTML(node, pathStatus, index){
+  const rank = cmStatus(node);
+  const lockedByPath = !pathStatus.active;
+  const canBuy = pathStatus.active && !rank.bought && !rank.locked && state.hero.mastery.cmPoints >= node.cost;
+  const tone = rank.bought ? "is-bought" : (lockedByPath || rank.locked || !pathStatus.unlocked) ? "is-locked" : "is-available";
+  const spendHint = !rank.bought && lockedByPath
+    ? (pathStatus.unlocked ? tx("switchPathToSpend") : tx("unlockPathFirst"))
+    : "";
+  return `
+    <li class="class-tree-node class-tree-rank ${tone}">
+      <span class="class-tree-kicker">${tx("treeRank")} ${index + 1} · ${esc(branchName(node.branch))}</span>
+      <strong class="class-tree-title">${esc(nodeText(node,"name"))}</strong>
+      <p>${esc(nodeText(node,"desc"))}</p>
+      <div class="progression-summary-grid">
+        <span class="pill">${tx("cmCost")} ${node.cost}</span>
+        <span class="pill">${tx("cmRequiresLevel")} ${node.level}</span>
+        <span class="pill ${rank.bought?"good":(lockedByPath||rank.locked)?"warn":""}">${rank.bought?tx("cmPurchased"):(lockedByPath||rank.locked)?tx("cmLocked"):tx("cmAvailable")}</span>
+      </div>
+      ${spendHint ? `<p class="class-tree-req">${esc(spendHint)}</p>` : ""}
+      ${!lockedByPath && rank.reasons.length ? `<p class="class-tree-req">${tx("cmRequires")}: ${rank.reasons.map(esc).join(" | ")}</p>` : ""}
+      <button ${canBuy?`class="primary" onclick="FE.buyCM('${esc(node.id)}')"`:"disabled"}>${rank.bought?tx("boughtStatus"):tx("buy")}</button>
+    </li>
+  `;
+}
+
+function masteryForestHTML(nodes){
+  if(!nodes.length)return `<p>${esc(tx("cmNoNodes"))}</p>`;
+  const layout = layoutMasteryForest(nodes);
+  const rows = layout.rows.map(row=>`
+    <div class="class-tree-row">
+      ${row.map(node=>node ? masteryNodeHTML(node, layout) : `<div class="class-tree-slot" aria-hidden="true"></div>`).join("")}
+    </div>
+  `).join("");
+  return `
+    <div class="class-tree class-tree-mastery">
+      <div class="class-tree-grid" style="--tree-cols:${layout.cols}">
+        ${rows}
+      </div>
+      ${layout.merge.length ? `
+        <div class="class-tree-fork class-tree-merge-fork" aria-hidden="true"></div>
+        <div class="class-tree-merge" aria-label="${esc(tx("classTreeMerge"))}">
+          ${layout.merge.map(node=>masteryNodeHTML(node, layout)).join("")}
+        </div>
+      ` : ""}
+    </div>
+  `;
+}
+
+function layoutMasteryForest(nodes){
+  const byId = new Map(nodes.map(node=>[node.id, node]));
+  const parentsOf = node => (node.requires || []).map(id=>byId.get(id)).filter(Boolean);
+  const depthOf = (node, seen = new Set())=>{
+    if(!node || seen.has(node.id))return 0;
+    seen.add(node.id);
+    const parents = parentsOf(node);
+    if(!parents.length)return 0;
+    return 1 + Math.max(...parents.map(parent=>depthOf(parent, seen)));
+  };
+  const depths = new Map(nodes.map(node=>[node.id, depthOf(node)]));
+  const roots = nodes.filter(node=>!parentsOf(node).length);
+  const column = new Map();
+  roots.forEach((node, index)=>column.set(node.id, index));
+  [...nodes].sort((a,b)=>depths.get(a.id)-depths.get(b.id)).forEach(node=>{
+    if(column.has(node.id))return;
+    const parentCols = [...new Set(parentsOf(node).map(parent=>column.get(parent.id)).filter(value=>Number.isInteger(value) && value >= 0))];
+    if(parentCols.length === 1)column.set(node.id, parentCols[0]);
+    else if(parentCols.length > 1)column.set(node.id, -1);
+    else column.set(node.id, 0);
+  });
+  const merge = nodes.filter(node=>column.get(node.id) === -1).sort((a,b)=>depths.get(a.id)-depths.get(b.id));
+  const chain = nodes.filter(node=>column.get(node.id) !== -1);
+  const cols = Math.max(1, roots.length);
+  const maxDepth = chain.length ? Math.max(...chain.map(node=>depths.get(node.id))) : -1;
+  const rows = [];
+  for(let depth = 0; depth <= maxDepth; depth++){
+    const row = Array.from({length:cols}, ()=>null);
+    chain.filter(node=>depths.get(node.id) === depth).forEach(node=>{
+      row[column.get(node.id)] = node;
+    });
+    rows.push(row);
+  }
+  return {cols, rows, merge, depths, column, parentsOf};
+}
+
+function masteryNodeHTML(node, layout=null){
+  const rank = cmStatus(node);
+  const owned = masteryOwnedByHero(node);
+  const canBuy = owned && !rank.bought && !rank.locked && state.hero.mastery.cmPoints >= node.cost;
+  const tone = rank.bought ? "is-bought" : (!owned || rank.locked) ? "is-locked" : "is-available";
+  const parents = layout?.parentsOf ? layout.parentsOf(node) : [];
+  const sameColumnParent = parents.length === 1 && layout?.column?.get(node.id) === layout.column.get(parents[0].id);
+  const depth = layout?.depths?.get(node.id) ?? 0;
+  return `
+    <article class="class-tree-node class-tree-rank ${tone}${sameColumnParent?" has-parent":""}${parents.length > 1?" is-merge":""}" data-node="${esc(node.id)}">
+      <span class="class-tree-kicker">${tx("treeRank")} ${depth + 1} · ${esc(branchName(node.branch))}</span>
+      <strong class="class-tree-title">${esc(nodeText(node,"name"))}</strong>
+      <p>${esc(nodeText(node,"desc"))}</p>
+      <div class="progression-summary-grid">
+        <span class="pill">${tx("cmCost")} ${node.cost}</span>
+        <span class="pill">${tx("cmRequiresLevel")} ${node.level}</span>
+        <span class="pill ${rank.bought?"good":rank.locked?"warn":""}">${rank.bought?tx("cmPurchased"):rank.locked?tx("cmLocked"):tx("cmAvailable")}</span>
+      </div>
+      ${rank.reasons.length ? `<p class="class-tree-req">${tx("cmRequires")}: ${rank.reasons.map(esc).join(" | ")}</p>` : ""}
+      <button ${canBuy?`class="primary" onclick="FE.buyCM('${esc(node.id)}')"`:"disabled"}>${rank.bought?tx("boughtStatus"):tx("buy")}</button>
+    </article>
   `;
 }
 
@@ -124,7 +250,7 @@ function classHistoryLine(id){
   const info = state.hero.classHistory?.[id];
   if(!info)return "";
   const source = info.source === "lower_ward_trainer" ? "Lower Ward trainer" : "Class history";
-  return `<p><b>Unlocked:</b> ${esc(source)}${info.day ? `, day ${esc(info.day)}` : ""}${info.unlockedAt ? `, level ${esc(info.unlockedAt)}` : ""}</p>`;
+  return `<p><span class="class-tree-label">${tx("unlocked")}:</span> ${esc(source)}${info.day ? `, day ${esc(info.day)}` : ""}${info.unlockedAt ? `, level ${esc(info.unlockedAt)}` : ""}</p>`;
 }
 
 function classBonusPills(def){
@@ -393,29 +519,38 @@ export function unequipAbility(slotIndex){
 function masteryHTML(){
   const h = state.hero, m = h.mastery, need = cmPointNeed(m);
   const classId = activeClassId(h);
-  const nodes = classMasteryNodes(classId);
-  const branches = {};
-  nodes.forEach(node=>{(branches[node.branch] ||= []).push(node);});
+  const baseNodes = classMasteryNodes(h.class, h).filter(node=>node.classId === h.class);
+  const pathNodes = h.advancedClass ? pathMasteryNodes(h.advancedClass) : [];
   return `
     <div class="card">
-      <h2>${tx("classMastery")}: ${esc(className(classId))}</h2>
+      <h2>${tx("cmBank")}</h2>
       <p>${tx("cmAllocationHelp")}</p>
-      <span class="pill good">${tx("cmPoints")} ${m.cmPoints}</span>
-      <span class="pill">${tx("cmSpent")} ${m.cmSpent}</span>
-      <span class="pill">${tx("cmXp")} ${m.cmXp}/${need}</span>
-      <span class="pill warn">${tx("cmAllocation")} ${m.cmAllocation}%</span>
+      <div class="progression-summary-grid">
+        <span class="pill good">${tx("cmPoints")} ${m.cmPoints}</span>
+        <span class="pill">${tx("cmSpent")} ${m.cmSpent}</span>
+        <span class="pill">${tx("cmXp")} ${m.cmXp}/${need}</span>
+        <span class="pill warn">${tx("cmAllocation")} ${m.cmAllocation}%</span>
+      </div>
       ${bar(m.cmXp,need,"xp")}
       <input type="range" min="0" max="100" step="25" value="${m.cmAllocation}" oninput="FE.setCM(this.value)" />
       <div class="grid3" style="margin-top:8px">
         ${CM_ALLOCATIONS.map(value=>`<button class="${m.cmAllocation===value?"primary":""}" onclick="FE.setCM(${value})">${value}%</button>`).join("")}
       </div>
     </div>
-    ${nodes.length ? Object.entries(branches).map(([branch,items])=>`
-      <div class="card">
-        <h2>${esc(branchName(branch))}</h2>
-        <div class="grid">${items.map(cmHTML).join("")}</div>
+    ${pathNodes.length ? `
+      <div class="card class-tree-card">
+        <h2>${tx("classMastery")}: ${esc(className(classId))}</h2>
+        <p>${esc(tx("classTreePathActiveHelp"))}</p>
+        <ol class="class-tree-ranks class-tree-path-line">
+          ${pathNodes.map((node, index)=>classTreeRankHTML(node, {active:true, unlocked:true, locked:false}, index)).join("")}
+        </ol>
       </div>
-    `).join("") : `<div class="card"><p>${tx("cmNoNodes")}</p></div>`}
+    ` : ""}
+    <div class="card class-tree-card">
+      <h2>${tx("classMastery")}: ${esc(className(h.class))}</h2>
+      <p>${esc(tx("classTreeBaseHelp"))}</p>
+      ${baseNodes.length ? masteryForestHTML(baseNodes) : `<p>${esc(tx("cmNoNodes"))}</p>`}
+    </div>
   `;
 }
 
@@ -437,20 +572,6 @@ function spellSchoolName(school){
 
 function percent(value){
   return `${Math.round((Number(value) || 0) * 100)}%`;
-}
-
-function cmHTML(node){
-  const status = cmStatus(node);
-  return `
-    <div class="stat-card">
-      <h3>${esc(nodeText(node,"name"))}</h3>
-      <p>${esc(nodeText(node,"desc"))}</p>
-      <span class="pill">${tx("cmCost")} ${node.cost}</span>
-      <span class="pill ${status.bought?"good":status.locked?"warn":""}">${status.bought?tx("cmPurchased"):status.locked?tx("cmLocked"):tx("cmAvailable")}</span>
-      ${status.reasons.length ? `<p>${tx("cmRequires")}: ${status.reasons.map(esc).join(" | ")}</p>` : ""}
-      <button ${status.bought||status.locked||state.hero.mastery.cmPoints<node.cost?"disabled":""} onclick="FE.buyCM('${node.id}')">${status.bought?tx("boughtStatus"):tx("buy")}</button>
-    </div>
-  `;
 }
 
 function nodeText(node,field){
@@ -481,8 +602,7 @@ export function setCM(value){
 
 export function buyCM(id){
   const item = cmNodeById(id);
-  if(item?.classId !== activeClassId(state.hero))return;
-  if(!item)return;
+  if(!item || !masteryOwnedByHero(item))return;
   const m = state.hero.mastery;
   const status = cmStatus(item);
   if(status.bought || status.locked || m.cmPoints<item.cost)return;
