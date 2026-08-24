@@ -513,7 +513,7 @@ function contractSummaryHTML(p, complete){
   const available = visibleContracts(p);
   const next = active || available[0];
   const done = p.contracts.completed.length;
-  if(!next){
+  if(!next || complete){
     return `
       <div class="slum-contract-summary">
         <div>
