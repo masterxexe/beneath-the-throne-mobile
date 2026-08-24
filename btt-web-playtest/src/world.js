@@ -1818,14 +1818,19 @@ function mapDockHTML(current, selectedId, traveling){
   const isHere = selected.id === current.id;
   const connected = current.routes.includes(selected.id) || selected.id === state.world.previousLocationId;
   const roads = current.routes.map(id=>locationById(id)).filter(Boolean);
-  const services = locationServices(selected.id);
   const danger = selected.danger || 0;
-  const pips = Array.from({length:5}, (_,i)=>`<span class="${i < danger ? "is-on" : ""}"></span>`).join("");
-  let status = tx("noRoadFromHere");
-  if(isHere)status = tx("youAreHere");
-  else if(lockReason)status = lockReason;
-  else if(connected)status = tx("roadOpen");
-  else status = tx("noRoadFromHere");
+  let stampClass = "map-stamp-far";
+  let stamp = tx("statusFar");
+  if(isHere){
+    stampClass = "map-stamp-here";
+    stamp = tx("statusHere");
+  }else if(lockReason){
+    stampClass = "map-stamp-locked";
+    stamp = tx("statusLocked");
+  }else if(connected){
+    stampClass = "map-stamp-open";
+    stamp = tx("statusOpen");
+  }
   let action = "";
   if(traveling){
     const dest = locationById(traveling.destinationLocationId);
@@ -1841,30 +1846,35 @@ function mapDockHTML(current, selectedId, traveling){
   }else if(isHere){
     action = `<button class="secondary" onclick="FE.show('home')">${tx("backToLocation")}</button>`;
   }else if(lockReason){
-    action = `<button class="primary" disabled title="${esc(lockReason)}">${tx("locked")}</button>
-      <p class="map-dock-lock">${esc(lockReason)}</p>`;
+    action = `<button class="primary" disabled title="${esc(lockReason)}">${tx("locked")}</button>`;
   }else if(connected){
     action = `<button class="primary" onclick="FE.travelToLocation('${selected.id}')">${tx("travelTo")} ${esc(locationText(selected,"name"))}</button>`;
   }else{
-    action = `<p class="map-dock-lock">${tx("distantPlaceHint")}</p>`;
+    action = "";
   }
   const previousId = state.world.previousLocationId;
   const returnBtn = !traveling && isHere && previousId && previousId !== current.id && WORLD_LOCATIONS[previousId]
     ? `<button class="secondary" onclick="FE.returnToPreviousLocation()">${tx("returnTo")} ${esc(locationText(previousId,"name"))}</button>`
     : "";
+  const reason = !isHere && lockReason
+    ? `<p class="map-dock-lock">${esc(lockReason)}</p>`
+    : !isHere && !connected
+      ? `<p class="map-dock-lock">${tx("distantPlaceHint")}</p>`
+      : "";
   return `
     <aside class="map-dock">
       <p class="map-dock-help">${tx("tapPlaceToInspect")}</p>
       <div class="map-dock-card">
-        <span class="map-dock-kicker">${isHere ? tx("youAreHere") : tx("selectedPlace")}</span>
-        <h2>${esc(locationText(selected,"name"))}</h2>
-        <div class="map-dock-meta">
-          <span class="map-danger-pips" aria-label="${tx("danger")} ${danger}">${pips}</span>
-          <span class="pill ${danger >= 3 ? "warn" : "good"}">${tx("danger")} ${danger}</span>
-          <span class="pill">${tx("services")}: ${services.length}</span>
+        <div class="map-dock-head">
+          <span class="map-status-stamp ${stampClass}">${stamp}</span>
+          <div class="map-dock-titles">
+            <span class="map-dock-kicker">${isHere ? tx("youAreHere") : tx("selectedPlace")}</span>
+            <h2>${esc(locationText(selected,"name"))}</h2>
+          </div>
         </div>
-        <p>${esc(locationText(selected,"desc"))}</p>
-        <p class="map-dock-status">${esc(status)}</p>
+        <span class="pill ${danger >= 3 ? "warn" : "good"}">${tx("danger")} ${danger}</span>
+        <p class="map-dock-desc">${esc(locationText(selected,"desc"))}</p>
+        ${reason}
         <div class="map-dock-actions">${action}${returnBtn}</div>
       </div>
       ${traveling ? roadStopPanelHTML(traveling) : `
@@ -1875,7 +1885,7 @@ function mapDockHTML(current, selectedId, traveling){
               const locked = routeLockReason(loc);
               return `<button type="button" class="map-road-chip ${loc.id === selected.id ? "is-selected" : ""} ${locked ? "is-locked" : ""}" onclick="FE.selectMapLocation('${loc.id}')">
                 <strong>${esc(locationText(loc,"name"))}</strong>
-                <small>${locked ? tx("locked") : `${tx("danger")} ${loc.danger || 0}`}</small>
+                <small>${locked ? tx("legendLocked") : tx("legendOpenRoad")}</small>
               </button>`;
             }).join("") : `<p class="map-dock-lock">${tx("noRoadFromHere")}</p>`}
           </div>
@@ -1896,7 +1906,7 @@ function bindMapViewport(){
   let moved = false;
   const start = event=>{
     if(event.pointerType === "mouse" && event.button !== 0)return;
-    if(event.target.closest("button, .overworld-node, .map-zoom-bar, .map-travel-slim, .map-you-chip"))return;
+    if(event.target.closest("button, .overworld-node, .map-zoom-bar, .map-travel-slim, .map-you-chip, .map-key"))return;
     dragging = true;
     moved = false;
     mapPointerMoved = false;

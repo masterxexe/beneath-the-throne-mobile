@@ -216,6 +216,13 @@ export function renderOverworldHTML({locations,currentId,previousId,traveling,se
               </div>
             ` : ""}
           </div>
+          <div class="map-viewport-legend">
+            <div class="map-key" aria-label="${tx("mapKey")}">
+              <span class="map-key-item map-key-you"><i aria-hidden="true"></i>${tx("legendYou")}</span>
+              <span class="map-key-item map-key-open"><i aria-hidden="true"></i>${tx("legendOpenRoad")}</span>
+              <span class="map-key-item map-key-locked"><i aria-hidden="true"></i>${tx("legendLocked")}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -278,8 +285,7 @@ function nodeHTML(loc,current,traveling,selectedId,lockedIds = []){
   const isDistant = !isCurrent && !connected;
   const tier = dangerTier(loc.danger);
   const side = NODE_LABEL_SIDES[loc.id] || "s";
-  const pips = Array.from({length:5}, (_,i)=>`<span class="${i < (loc.danger || 0) ? "is-on" : ""}"></span>`).join("");
-  const stateLabel = isCurrent ? tx("youAreHere") : isLocked ? tx("locked") : connected ? tx("connectedRoutes") : tx("noRoadFromHere");
+  const stateLabel = isCurrent ? tx("youAreHere") : isLocked ? tx("locked") : connected ? tx("legendOpenRoad") : tx("noRoadFromHere");
   return `
     <button type="button" class="overworld-node overworld-node-premium overworld-node-${esc(loc.id)} world-node-scene-${esc(loc.scene || "area")} danger-tier-${tier} label-side-${side} ${isCurrent ? "current-node" : ""} ${connected ? "connected-node" : ""} ${isSelected ? "selected-node" : ""} ${isLocked ? "locked-node" : ""} ${isDistant ? "distant-node" : ""}"
       style="--node-x:${loc.x}%;--node-y:${loc.y}%"
@@ -294,8 +300,7 @@ function nodeHTML(loc,current,traveling,selectedId,lockedIds = []){
         <span class="node-sigil-ring" aria-hidden="true"></span>
         <span class="node-sigil-core" aria-hidden="true"></span>
       </span>
-      ${isCurrent ? `<span class="node-here-flag">${tx("mapYou")}</span>` : ""}
-      <span class="node-danger-pips" aria-hidden="true">${pips}</span>
+      ${isCurrent ? `<span class="node-here-flag">${tx("mapYou")}</span>` : isLocked ? `<span class="node-lock-flag" aria-hidden="true"></span>` : ""}
       <span class="node-label">${esc(text(loc.name))}</span>
     </button>
   `;

@@ -1856,3 +1856,366 @@ body.btt-redesign .map-road-chip small {
     font-size: 0.58rem;
   }
 }
+
+/* Map clarity: one color language, quieter extras, readable painting */
+body.btt-redesign .map-screen-usable .overworld-map {
+  background-color: #17130e !important;
+  background-image:
+    linear-gradient(180deg, rgba(12, 10, 8, 0.1), rgba(8, 8, 10, 0.2)),
+    url("./assets/overworld-map-v20.png") !important;
+  filter: saturate(1.06) contrast(1.04) brightness(1.16);
+  box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.22);
+}
+
+body.btt-redesign .map-screen-usable .overworld-map::before {
+  background: radial-gradient(ellipse at center, transparent 0 72%, rgba(0, 0, 0, 0.22) 100%) !important;
+  opacity: 0.5;
+}
+
+body.btt-redesign .map-screen-usable .overworld-map::after {
+  box-shadow: inset 0 0 36px rgba(0, 0, 0, 0.14);
+  opacity: 0.45;
+}
+
+body.btt-redesign .map-screen-usable .map-parchment-wash {
+  opacity: 0.32;
+  mix-blend-mode: soft-light;
+}
+
+body.btt-redesign .map-screen-usable .map-light-sweep {
+  opacity: 0.22;
+}
+
+body.btt-redesign .map-viewport-legend {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 8;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+body.btt-redesign .map-key {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 12px;
+  border: 1px solid rgba(232, 214, 170, 0.28);
+  border-radius: 999px;
+  background: rgba(8, 10, 14, 0.9);
+  color: #f3e8d4;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+body.btt-redesign .map-key-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+body.btt-redesign .map-key-item i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45);
+}
+
+body.btt-redesign .map-key-you i {
+  background: #6ecf8a;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45), 0 0 8px rgba(110, 207, 138, 0.7);
+}
+
+body.btt-redesign .map-key-open i {
+  background: #f0cc6a;
+}
+
+body.btt-redesign .map-key-locked i {
+  background: #8a7060;
+}
+
+body.btt-redesign .map-screen-usable .overworld-route-highlight {
+  stroke: rgba(196, 176, 140, 0.28);
+  stroke-width: 0.2;
+  opacity: 0.32;
+}
+
+body.btt-redesign .map-screen-usable .overworld-route-stones,
+body.btt-redesign .map-screen-usable .overworld-route-glow {
+  opacity: 0.08;
+}
+
+body.btt-redesign .map-screen-usable .overworld-route.route-active .overworld-route-highlight {
+  stroke: rgba(240, 204, 106, 0.95);
+  stroke-width: 0.5;
+  opacity: 1;
+  filter: drop-shadow(0 0 4px rgba(212, 168, 75, 0.45));
+}
+
+body.btt-redesign .map-screen-usable .overworld-route.route-active .overworld-route-stones {
+  opacity: 0.82;
+}
+
+body.btt-redesign .map-screen-usable .overworld-route.route-active .overworld-route-glow {
+  opacity: 0.7;
+}
+
+body.btt-redesign .map-screen-usable .travel-stop {
+  display: none;
+}
+
+body.btt-redesign .map-screen-usable .overworld-shell.is-traveling .travel-stop {
+  display: block;
+  opacity: 0.42;
+}
+
+body.btt-redesign .map-screen-usable .overworld-shell.is-traveling .active-travel-stop {
+  opacity: 1;
+}
+
+body.btt-redesign .map-screen-usable .map-activity-layer {
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+body.btt-redesign .map-screen-usable .map-entity::before,
+body.btt-redesign .map-screen-usable .map-event::after,
+body.btt-redesign .map-screen-usable .travel-stop::after {
+  content: none !important;
+  display: none !important;
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium.danger-tier-high .node-sigil-core,
+body.btt-redesign .map-screen-usable .overworld-node-premium.danger-tier-extreme .node-sigil-core {
+  background: radial-gradient(circle, #f0cc6a 0 24%, #8a5f1e 26% 48%, rgba(18, 12, 4, 0.95) 52%);
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium .node-sigil {
+  width: 22px;
+  height: 22px;
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium .node-sigil-core {
+  background: radial-gradient(circle, #c8b898 0 22%, #5a4a34 24% 50%, rgba(14, 10, 8, 0.95) 54%);
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium .node-sigil-ring {
+  border-color: rgba(200, 184, 150, 0.35);
+  animation: none;
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium .node-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #ece2cc;
+  background: rgba(8, 10, 14, 0.82);
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium.current-node {
+  z-index: 7;
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium.current-node .node-sigil {
+  width: 28px;
+  height: 28px;
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium.current-node .node-sigil-core {
+  background: radial-gradient(circle, #ffffff 0 18%, #6ecf8a 20% 44%, rgba(10, 27, 13, 0.95) 48%);
+  box-shadow: 0 0 16px rgba(110, 207, 138, 0.55);
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium.current-node .node-sigil-ring {
+  border-color: rgba(122, 214, 154, 0.9);
+  box-shadow: 0 0 0 3px rgba(74, 168, 112, 0.22);
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium.current-node .node-label {
+  font-size: 0.78rem;
+  border-color: rgba(122, 214, 154, 0.5);
+  background: rgba(8, 22, 14, 0.92);
+  color: #e8fff0;
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium.connected-node:not(.current-node) .node-sigil {
+  width: 24px;
+  height: 24px;
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium.connected-node:not(.current-node) .node-sigil-core {
+  background: radial-gradient(circle, #fff8e0 0 28%, #b07a28 100%);
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium.connected-node:not(.current-node) .node-sigil-ring {
+  border-color: rgba(240, 204, 106, 0.95);
+  box-shadow: 0 0 0 2px rgba(212, 168, 75, 0.2);
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium.connected-node:not(.current-node) .node-label {
+  font-size: 0.72rem;
+  border-color: rgba(201, 164, 90, 0.45);
+  color: #fff4d8;
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium.selected-node:not(.current-node) .node-sigil-ring {
+  border-color: #fff0c8;
+  box-shadow: 0 0 0 3px rgba(255, 236, 186, 0.28);
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium.locked-node .node-sigil {
+  width: 18px;
+  height: 18px;
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium.locked-node .node-sigil-core {
+  background: radial-gradient(circle, #8a7060 0 28%, #2a1814 100%);
+  filter: grayscale(0.15);
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium.locked-node .node-sigil-ring {
+  border-color: rgba(140, 110, 90, 0.5);
+  box-shadow: none;
+  animation: none;
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium.locked-node .node-label {
+  color: #d8c8b8;
+  opacity: 0.86;
+}
+
+body.btt-redesign .map-screen-usable .node-lock-flag {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  z-index: 2;
+  width: 16px;
+  height: 16px;
+  transform: translateX(-50%);
+  border-radius: 4px;
+  background: rgba(28, 12, 10, 0.94);
+  border: 1px solid rgba(180, 120, 90, 0.55);
+}
+
+body.btt-redesign .map-screen-usable .node-lock-flag::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 6px;
+  height: 5px;
+  border: 1.5px solid #f0c8b0;
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+}
+
+body.btt-redesign .map-screen-usable .node-lock-flag::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 6px;
+  width: 8px;
+  height: 6px;
+  border-radius: 1px;
+  background: #c48a6a;
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium.distant-node {
+  opacity: 0.55;
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium.distant-node .node-sigil {
+  width: 14px;
+  height: 14px;
+  filter: grayscale(0.35);
+}
+
+body.btt-redesign .map-screen-usable .overworld-node-premium.distant-node .node-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  opacity: 0.75;
+  background: rgba(8, 10, 14, 0.55);
+}
+
+body.btt-redesign .map-you-chip {
+  font-size: 0.74rem;
+}
+
+body.btt-redesign .map-dock-head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+body.btt-redesign .map-status-stamp {
+  flex: 0 0 auto;
+  min-width: 52px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+body.btt-redesign .map-stamp-here {
+  border: 1px solid rgba(122, 214, 154, 0.7);
+  background: rgba(8, 22, 14, 0.94);
+  color: #d4f8e0;
+}
+
+body.btt-redesign .map-stamp-open {
+  border: 1px solid rgba(240, 204, 106, 0.75);
+  background: rgba(28, 20, 8, 0.94);
+  color: #ffe8b0;
+}
+
+body.btt-redesign .map-stamp-locked {
+  border: 1px solid rgba(180, 120, 90, 0.55);
+  background: rgba(28, 12, 10, 0.94);
+  color: #f0c8b0;
+}
+
+body.btt-redesign .map-stamp-far {
+  border: 1px solid rgba(140, 132, 118, 0.4);
+  background: rgba(12, 12, 14, 0.9);
+  color: #c8c0b4;
+}
+
+body.btt-redesign .map-dock-titles h2 {
+  margin: 2px 0 0;
+}
+
+body.btt-redesign .map-dock-desc {
+  margin: 8px 0 0;
+  color: var(--btt-muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+body.btt-redesign .map-dock-help {
+  font-size: 0.8rem;
+}
+
+body.btt-redesign .map-road-chip small {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.62rem;
+}
+
+@media (max-width: 720px) {
+  body.btt-redesign .map-key {
+    font-size: 0.64rem;
+    gap: 8px;
+    padding: 5px 9px;
+  }
+
+  body.btt-redesign .map-viewport-legend {
+    bottom: 6px;
+  }
+}

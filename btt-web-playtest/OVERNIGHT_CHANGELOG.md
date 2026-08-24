@@ -96,3 +96,9 @@ node scripts/test-combat-debug.mjs
 - Road chips list every connected town from where you stand
 - Pan/zoom the painted map and center on the player; Cinderhook cluster labels no longer sit on top of each other
 - Keep and Market Town now have return roads to the slums and Lower Ward
+
+## Pass 10 — Map visual clarity (v117)
+- You / Open road / Locked are color-coded on pins, with a key on the map
+- Locked towns show a lock mark; far towns fade; gold roads are the ones you can take now
+- Road-stop dots and roaming labels stay quiet until you are traveling
+- The side panel uses one Here / Open / Locked / Far stamp instead of stacked status text

@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.23-overnight-41",
-  "build": 41,
-  "cache": "v116",
-  "notes": "Usable overworld map: inspect places, listed roads, pan/zoom, and two-way routes from Cinderhook"
+  "version": "2026.08.24-overnight-42",
+  "build": 42,
+  "cache": "v117",
+  "notes": "Clearer world map: You / Open road / Locked colors, a visible key, quieter extras, and a simpler travel dock"
 }
