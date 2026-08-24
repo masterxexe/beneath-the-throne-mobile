@@ -1,5 +1,6 @@
 import { ABILITY_SLOT_COUNT, ADVANCED_CLASSES, CLASSES, CM_ALLOCATIONS, SPELL_SCHOOLS, WEAPON_TYPES, activeClassDefinition, activeClassId, activeWeaponType, classMasteryNodes, classPathOptions, cmNodeById, cmPointNeed, masteryOwnedByHero, normalizeAbilityLoadout, normalizeCMAllocation, pathMasteryNodes, save, spellSchoolMasteryBonus, spellMasteryNeed, state, syncMasteryPassives, weaponMasteryBonus, weaponMasteryNeed } from "./state.js";
 import { getLanguage, title, tx } from "./language.js";
+import { abilityBaseCost, abilityKindLabel, abilityName } from "./abilities.js";
 import { bar, byId, esc, modal } from "./ui.js";
 
 let tab = "classes";
@@ -425,8 +426,9 @@ function abilitySlotHTML(id,index){
     <div class="stat-card">
       <h3>${tx("slot")} ${index + 1}</h3>
       ${id ? `
-        <p><b>${title(id)}</b></p>
+        <p><b>${esc(abilityName(id))}</b></p>
         <span class="pill">${tx("abilityCost")} ${abilityCost(id)}</span>
+        <span class="pill">${esc(abilityKindLabel(id))}</span>
         <button onclick="FE.unequipAbility(${index})">${tx("unequip")}</button>
       ` : `<p>${tx("emptyAbilitySlot")}</p>`}
     </div>
@@ -438,8 +440,9 @@ function knownAbilityHTML(id){
   const activeIndex = slots.indexOf(id);
   return `
     <div class="stat-card">
-      <h3>${title(id)}</h3>
+      <h3>${esc(abilityName(id))}</h3>
       <span class="pill">${tx("abilityCost")} ${abilityCost(id)}</span>
+      <span class="pill">${esc(abilityKindLabel(id))}</span>
       ${activeIndex >= 0 ? `<span class="pill good">${tx("active")} ${activeIndex + 1}</span>` : ""}
       <div class="grid2" style="margin-top:8px">
         ${Array.from({length:ABILITY_SLOT_COUNT},(_,i)=>`
@@ -451,10 +454,7 @@ function knownAbilityHTML(id){
 }
 
 function abilityCost(id){
-  const low = id.toLowerCase();
-  if(/heal|mend|restore/.test(low))return 8;
-  if(/guard|shield|wall/.test(low))return 7;
-  return 9;
+  return abilityBaseCost(id);
 }
 
 export function showPendingAbilityChoice(){
@@ -466,8 +466,9 @@ export function showPendingAbilityChoice(){
     <div class="grid">
       ${pending.choices.map(id=>`
         <div class="stat-card">
-          <h3>${title(id)}</h3>
+          <h3>${esc(abilityName(id))}</h3>
           <span class="pill">${tx("abilityCost")} ${abilityCost(id)}</span>
+          <span class="pill">${esc(abilityKindLabel(id))}</span>
         </div>
       `).join("")}
     </div>

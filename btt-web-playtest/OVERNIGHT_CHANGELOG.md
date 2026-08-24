@@ -137,6 +137,12 @@ node scripts/test-combat-debug.mjs
 - A service-worker update no longer reloads the page during the title/tutorial, which was dumping players back to New Game after the skeleton
 - First Victory auto-continues into Kael's stand after a short beat
 
+## Pass 18 — After the fight, after the slums (v125)
+- An unlocked Lower Ward gate always offers Enter, including from the Cinderhook home board
+- Combat shows the current target, Next target, and skill mana/type; strike skills no longer spend mana with nobody to hit
+- Victory can equip the drop (marked when it is an upgrade); backpack lines show ATK/DEF vs what you wear; sell-all/worse ask first
+- Dock stays labeled Growth; running away from an alley fight records the loss
+
 ## Pass 17 — Class trees (v124)
 - Growth opens on a visual class tree: base class forks into two oaths, each with Path / Signature / Capstone ranks
 - Base mastery stays visible after you take a path, laid out from real requirement links (including merge capstones)

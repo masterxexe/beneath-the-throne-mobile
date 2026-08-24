@@ -1,4 +1,6 @@
 import { activeAbilities, activeClassDefinition, activeClassId, activeWeaponType, clamp, convertCM, grantCompanionBond, levelHero, makeLoot, normalizeCompanion, pct, region, rnd, save, setScreen, spellMasteryBonus, spellMasteryNeed, spellSchoolForAbility, state, weaponMasteryBonus, weaponMasteryNeed } from "./state.js";
+import { abilityBaseCost, abilityKind, abilityKindLabel, abilityName } from "./abilities.js";
+import { equip, itemUpgradeDelta } from "./gear.js";
 import { title, tx } from "./language.js";
 import { bar, byId, esc, modal, render, show } from "./ui.js";
 import { backdropHTML, combatBackdrop, companionPortrait, enemyPortrait, isMajorVisual, portraitHTML } from "./visuals.js";
@@ -211,6 +213,7 @@ export function renderCombat(){
         <div class="turn-order turn-order-cinematic" aria-label="${tx("turnOrder")}">
           ${battle.queue.slice(0,2).map((x,i)=>`<span class="pill ${x===a?'good':''}">${i===0?esc(x.name):tx("nextUp")}</span>`).join("")}
         </div>
+        ${targetBarHTML(playerTurn, live)}
       </div>
       <div class="combat-stage combat-battlefield ${composition.stageClass}" data-combat-viewport="stable" ${directorStageAttributes(composition)} style="${esc(composition.stageStyle)}">
         <div class="combat-atmosphere-layer" aria-hidden="true">
@@ -237,7 +240,7 @@ export function renderCombat(){
           ${potionButtonsHTML(playerTurn,h)}
           <button ${playerTurn?'onclick="FE.defend()"':'disabled'}>${tx("defend")}</button>
           <button class="danger" onclick="FE.runBattle()">${tx("run")}</button>
-          <button class="${autoFight?'good':'secondary'}" onclick="FE.toggleAuto()">${tx("auto")}: ${autoFight?'ON':'OFF'}</button>
+          <button class="${autoFight?'good':'secondary'}" onclick="FE.toggleAuto()">${tx("auto")}: ${autoFight?tx("audioOn"):tx("audioOff")}</button>
         </div>
         ${skillOpen?skillDrawerHTML(playerTurn):""}
         <details class="battle-log">
@@ -368,13 +371,14 @@ function enemyHTML(enemy,index,playerTurn,slotIndex = 0,presentation = null,dire
   const targetable = enemy.hp > 0 && index >= 0;
   const selected = targetable && index === targetIndex;
   return `
-    <div class="enemy combat-card combat-actor combat-actor-enemy combat-slot-${slotIndex} enemy-scale-${scaleTier} ${majorClass} ${selected?'target':''} ${effectClass(id)}" data-combat-actor="enemy" data-combat-slot="${slotIndex}" data-enemy-scale="${scaleTier}" data-enemy-state="${pose}"${attackMetaAttrs(id)} ${actorDirectorAttributes(directorActor)} ${playerTurn && targetable?`onclick="FE.setTarget(${index})" role="button"`:""}>
+    <div class="enemy combat-card combat-actor combat-actor-enemy combat-slot-${slotIndex} enemy-scale-${scaleTier} ${majorClass} ${selected?'target':''} ${effectClass(id)}" data-combat-actor="enemy" data-combat-slot="${slotIndex}" data-enemy-scale="${scaleTier}" data-enemy-state="${pose}"${attackMetaAttrs(id)} ${actorDirectorAttributes(directorActor)} ${playerTurn && targetable?`onclick="FE.setTarget(${index})" role="button" aria-pressed="${selected?"true":"false"}"`:""}>
       <div class="portrait-wrap">
         ${poseArt || portraitHTML(portrait)}
         ${effectHTML(id)}
       </div>
       <div class="combat-card-body">
         <div class="combat-name"><b>${esc(enemy.name)}</b><span>${enemy.hp}</span></div>
+        ${selected?`<span class="pill good combat-target-stamp">${tx("combatTarget")}</span>`:""}
         ${bar(enemy.hp,enemy.maxHp)}
       </div>
     </div>
@@ -780,6 +784,24 @@ export function setTarget(index){
   renderCombat();
 }
 
+export function cycleTarget(){
+  const live = liveEnemies();
+  if(!live.length)return;
+  targetIndex = (targetIndex + 1) % live.length;
+  renderCombat();
+}
+
+function targetBarHTML(playerTurn, live){
+  const current = liveTarget();
+  const canCycle = playerTurn && live.length > 1;
+  return `
+    <div class="combat-target-bar">
+      <span class="pill ${current?"good":"warn"}">${tx("combatTarget")}: ${esc(current?.name || tx("noTarget"))}</span>
+      ${live.length > 1 ? `<button ${canCycle?'onclick="FE.cycleTarget()"':'disabled'}>${tx("nextTarget")}</button>` : ""}
+    </div>
+  `;
+}
+
 function liveTarget(){
   const live = liveEnemies();
   targetIndex = clamp(targetIndex,0,Math.max(0,live.length-1));
@@ -805,10 +827,8 @@ function heroCritChance(){
 }
 
 function skillCost(id){
-  const low = id.toLowerCase();
-  const base = /heal|mend|restore/.test(low)?8:/guard|shield|wall/.test(low)?7:9;
   const discount = (hasPassive("mage_mana_efficiency") ? 2 : 0) + (activeClassDefinition(state.hero)?.bonus?.manaDiscount || 0);
-  return Math.max(1,base-discount);
+  return Math.max(1,abilityBaseCost(id)-discount);
 }
 
 function isMagicSkill(id){
@@ -946,9 +966,24 @@ function skillDrawerHTML(enabled){
   const h = state.hero;
   const active = activeAbilities(h);
   return `<div class="skill-drawer">${active.length
-    ? `<div class="grid">${active.map(id=>`<button ${enabled?`onclick="FE.useSkill('${id}')"`:"disabled"}>${title(id)}</button>`).join("")}</div>`
-    : `<p>${tx("noActiveAbilities")}</p>`}
+    ? `<div class="skill-drawer-grid">${active.map(id=>skillButtonHTML(id, enabled, h)).join("")}</div>`
+    : `<p>${tx("noActiveAbilities")}</p><p class="skill-drawer-hint">${esc(tx("equipInAbilityBook"))}</p>`}
   </div>`;
+}
+
+function skillButtonHTML(id, enabled, hero){
+  const cost = skillCost(id);
+  const kind = abilityKind(id);
+  const lacksTarget = kind === "strike" && !liveTarget();
+  const poorMana = hero.mana < cost;
+  const ready = enabled && !lacksTarget && !poorMana;
+  return `<button class="skill-drawer-btn" ${ready?`onclick="FE.useSkill('${id}')"`:"disabled"}>
+    <b>${esc(abilityName(id))}</b>
+    <span class="skill-drawer-meta">
+      <span class="pill">${tx("mana")} ${cost}</span>
+      <span class="pill">${esc(abilityKindLabel(id))}</span>
+    </span>
+  </button>`;
 }
 
 export function useSkill(id){
@@ -960,6 +995,11 @@ export function useSkill(id){
     return;
   }
   const cost = skillCost(id);
+  if(abilityKind(id) === "strike" && !liveTarget()){
+    battle.log.push(tx("noTarget"));
+    renderCombat();
+    return;
+  }
   if(h.mana<cost){
     battle.log.push(tx("notEnoughMana"));
     renderCombat();
@@ -1590,7 +1630,9 @@ function victory(){
   levelHero();
   convertCM();
   const cmPointsGained = h.mastery.cmPoints - cmPointsBefore;
-  const body = `<div class="result-state victory-state"><h3>${tx("victory")}</h3><span class="pill">Total XP ${xp}</span><span class="pill good">${tx("gold")} +${gold}</span><p>${tx("xpSplit")}: ${tx("normalXp")} +${normal} | ${tx("classMasteryXp")} +${cm}${cmPointsGained?` | ${tx("cmPoints")} +${cmPointsGained}`:""}</p><p>Loot: ${esc(loot.name)}</p>${comps.map(c=>`<p>${esc(c.name)}: +${each} XP</p>`).join("")}</div>`;
+  const delta = itemUpgradeDelta(loot);
+  const lootDelta = [delta.attack?`${delta.attack>0?"+":""}${delta.attack} ${tx("attackShort")}`:"", delta.defense?`${delta.defense>0?"+":""}${delta.defense} ${tx("defenseShort")}`:""].filter(Boolean).join(" · ");
+  const body = `<div class="result-state victory-state"><h3>${tx("victory")}</h3><span class="pill">${tx("totalXp")} ${xp}</span><span class="pill good">${tx("gold")} +${gold}</span><p>${tx("xpSplit")}: ${tx("normalXp")} +${normal} | ${tx("classMasteryXp")} +${cm}${cmPointsGained?` | ${tx("cmPoints")} +${cmPointsGained}`:""}</p><p>${tx("loot")}: ${esc(loot.name)}${lootDelta?` <span class="pill ${delta.better?"good":"warn"}">${esc(lootDelta)}</span>`:""}</p>${comps.map(c=>`<p>${esc(c.name)}: +${each} XP</p>`).join("")}</div>`;
   battle = null;
   autoFight = false;
   skillOpen = false;
@@ -1607,7 +1649,16 @@ function victory(){
     : meta.source === "hard-area" && meta.onVictory === "hardAreaWon"
     ? ()=>window.FE?.completeHardArea ? window.FE.completeHardArea(meta) : show("home")
     : ()=>show("home");
-  modal(tx("victory"), body, [{label:tx("continue"),fn:continueFn}]);
+  const victoryButtons = [];
+  if(loot){
+    victoryButtons.push({
+      label:delta.better?`${tx("equipLoot")} · ${tx("upgrade")}`:tx("equipLoot"),
+      cls:delta.better?"primary":"secondary",
+      fn:()=>{ equip(loot.id); continueFn(); }
+    });
+  }
+  victoryButtons.push({label:tx("continue"),cls:delta.better?"secondary":"primary",fn:continueFn});
+  modal(tx("victory"), body, victoryButtons);
 }
 
 function defeat(){
@@ -1640,6 +1691,10 @@ export function runBattle(){
   save();
   if(meta.source === "slum-prologue" && meta.onDefeat === "slumFightLost"){
     if(window.FE?.recordSlumFightDefeat)window.FE.recordSlumFightDefeat(meta);
+    else show("home");
+  }
+  else if(meta.source === "slum-prologue" && meta.onDefeat === "slumAlleyLost"){
+    if(window.FE?.recordSlumAlleyDefeat)window.FE.recordSlumAlleyDefeat(meta);
     else show("home");
   }
   else if(meta.source === "slum-prologue" && meta.onDefeat === "slumContractLost"){

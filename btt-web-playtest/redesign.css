@@ -2636,6 +2636,15 @@ body.btt-redesign .class-tree-card {
   box-shadow: var(--btt-frame);
 }
 
+body.btt-redesign .combat-target-bar {
+  padding-top: 4px;
+}
+
+body.btt-redesign .skill-drawer-btn {
+  border: 1px solid var(--btt-line);
+  box-shadow: var(--btt-frame-tight);
+}
+
 body.btt-redesign .v59-title-legal a {
   color: var(--btt-gold-bright);
   text-underline-offset: 3px;

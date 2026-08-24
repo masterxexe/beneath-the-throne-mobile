@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.24-overnight-49",
-  "build": 49,
-  "cache": "v124",
-  "notes": "Visual class trees: base oaths, path ranks, and mastery branches"
+  "version": "2026.08.24-overnight-50",
+  "build": 50,
+  "cache": "v125",
+  "notes": "Lower Ward enter CTA, combat targeting and skill costs, victory loot equip"
 }

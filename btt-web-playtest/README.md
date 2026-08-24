@@ -107,7 +107,8 @@ Highlights:
 - PWA cache sync, procedural combat audio, i18n combat strings
 - Ambient NPCs in slums and lower ward
 - Visual class trees in Growth (oaths, path ranks, and base mastery branches)
+- Lower Ward enter CTA, combat target/skill costs, and victory loot equip
 
 ## Cache version
 
-Current: **v124** (`index.html`, `service-worker.js`, `version.json`, `redesign.css`)
+Current: **v125** (`index.html`, `service-worker.js`, `version.json`, `redesign.css`)

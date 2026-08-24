@@ -518,16 +518,18 @@ function contractSummaryHTML(p, complete){
       <div class="slum-contract-summary">
         <div>
           <span class="pill ${complete ? "good" : "warn"}">Chapter 1</span>
-          <h2>${complete ? "Gate Open" : "No Open Contract"}</h2>
+          <h2>${complete ? tx("gateOpen") : tx("slumContractNoNew")}</h2>
           <p>${complete
-            ? "Cinderhook is behind you. The Lower Ward is open for trainers, writs, and harder districts."
+            ? tx("gateOpenBody")
             : p.companion.recruited
-              ? "Finish the gate requirements or check the Lower Ward gate."
-              : "Find and recruit Mira to unlock the Chapter 1 boss route."}</p>
+              ? tx("slumContractNoNewGate")
+              : tx("slumContractNoNewMira")}</p>
         </div>
         <div class="slum-summary-actions">
-          <span class="pill">${done}/${CHAPTER_ONE_CONTRACTS.length} done</span>
-          <button class="secondary" onclick="FE.slumOpenContractBoard()">Open Board</button>
+          <span class="pill">${done}/${CHAPTER_ONE_CONTRACTS.length} ${tx("contractDone")}</span>
+          ${complete
+            ? `<button class="primary" onclick="FE.enterLowerWard()">${tx("enterLowerWard")}</button>`
+            : `<button class="secondary" onclick="FE.slumOpenContractBoard()">${tx("slumChapterBoard")}</button>`}
         </div>
       </div>
     `;
@@ -579,8 +581,8 @@ export function renderSlumProloguePanel(){
         <button class="primary slum-group-button" onclick="FE.slumOpenContractBoard()" ${actionDisabled(complete ? "The prologue gate is already reached." : "")}>
           <span>${tx("slumContracts")}</span>
         </button>
-        <button class="${gateReady() ? "primary" : "secondary"} slum-group-button" onclick="FE.slumSeekGate()">
-          <span>${esc(gateLabel)}</span>
+        <button class="${complete || gateReady() ? "primary" : "secondary"} slum-group-button" onclick="${complete ? "FE.enterLowerWard()" : "FE.slumSeekGate()"}">
+          <span>${esc(complete ? tx("enterLowerWard") : gateLabel)}</span>
         </button>
         <button class="slum-group-button" onclick="FE.slumOpenActionGroup('town')">
           <span>${tx("slumTownWork")}</span>
@@ -958,7 +960,10 @@ export function slumSeekGate(){
   const p = prologue();
   p.lowerWardGate.visited = true;
   if(p.lowerWardGate.unlocked){
-    modal("Lower Ward Gate", `<p>The Lower Ward gate stands open now. Cleaner lamps burn above Cinderhook, and harder names wait beyond the bars.</p>`);
+    modal(tx("slumGateReady"), `<p>${esc(tx("gateOpenBody"))}</p>`, [
+      {label:tx("enterLowerWard"),cls:"primary",fn:()=>window.FE.enterLowerWard?.() || refresh()},
+      {label:tx("close"),cls:"secondary"}
+    ]);
     return;
   }
   if(!gateReady()){
@@ -978,9 +983,9 @@ export function slumSeekGate(){
   p.status += 2;
   p.safety = clamp(p.safety + 1,0,10);
   addLog("Your name reaches the iron wicket. The Lower Ward gate opens for the first time.");
-  modal("Slum Prologue Complete", `<p>The iron wicket opens. Cinderhook is no longer the whole world; it is the first rung below the castle road.</p>`, [
-    {label:"Enter the Lower Ward",cls:"primary",fn:()=>window.FE.enterLowerWard?.() || refresh()},
-    {label:"Court Ledger",cls:"secondary",fn:()=>window.FE.show("support")}
+  modal(tx("slumPrologueComplete"), `<p>${esc(tx("gateUnlockedBody"))}</p>`, [
+    {label:tx("enterLowerWard"),cls:"primary",fn:()=>window.FE.enterLowerWard?.() || refresh()},
+    {label:tx("courtLedger"),cls:"secondary",fn:()=>window.FE.show("support")}
   ]);
   refresh(true);
 }

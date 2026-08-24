@@ -17769,3 +17769,46 @@ body.cinematic-combat-active .combat-shell.combat-impact{
   }
 }
 
+/* v125: combat target bar, skill drawer, gear empties */
+.combat-target-bar{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+}
+.combat-target-stamp{
+  margin-top:4px;
+}
+.skill-drawer-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:8px;
+}
+.skill-drawer-btn{
+  display:grid;
+  gap:6px;
+  text-align:left;
+  min-height:52px;
+}
+.skill-drawer-btn b{
+  color:#ffe7b8;
+}
+.skill-drawer-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px;
+}
+.skill-drawer-hint{
+  margin:8px 0 0;
+  color:#cbb892;
+  font-size:12px;
+}
+.gear-slot-card.is-empty{
+  padding:8px 10px;
+  min-height:0;
+}
+.gear-slot-card.is-empty p{
+  margin:0;
+  color:#9a8b6c;
+}
+

@@ -1,6 +1,6 @@
 import { WEAPON_TYPES, makeLoot, save, state, weaponTypeForItem } from "./state.js";
 import { title, tx } from "./language.js";
-import { byId, esc, updateTop } from "./ui.js";
+import { byId, esc, modal, toast, updateTop } from "./ui.js";
 import { VISUAL_GEAR_SLOTS, applyGearVisuals } from "./gearVisuals.js";
 import { resolvePlayerCombatPresentation } from "./characterRenderController.js";
 import { characterOverlayForVisual, itemIconHTML, itemQuality, paperDollLayerDebug, playerPoseAssetDebug, playerVisualDebug, renderPlayerPaperDoll, resolvePlayerAttackPose } from "./portraitRenderer.js";
@@ -19,8 +19,8 @@ export function renderGear(){
           <span class="pill">${tx("backpack")} ${h.inv.length}</span>
           <div class="grid3 gear-action-row">
             <button class="primary" onclick="FE.equipBest()">${tx("equipBest")}</button>
-            <button onclick="FE.sellWorse()">${tx("sellWorse")}</button>
-            <button class="danger" onclick="FE.sellAll()">${tx("sellAllUnequipped")}</button>
+            <button ${h.inv.length?`onclick="FE.sellWorse()"`:"disabled"}>${tx("sellWorse")}</button>
+            <button class="danger" ${h.inv.length?`onclick="FE.sellAll()"`:"disabled"}>${tx("sellAllUnequipped")}</button>
           </div>
         </div>
         <div class="gear-doll-wrap">
@@ -44,7 +44,7 @@ function itemScore(item){return (item?.attack||0)*2 + (item?.defense||0) + (item
 
 function gearSlotHTML(slot,item){
   const content = item ? `${itemLine(item)}<button onclick="FE.unequip('${slot}')">${tx("unequip")}</button>` : `<p>${tx("empty")}.</p>`;
-  return `<div class="card gear-slot-card"><h3>${title(slot)}</h3>${content}</div>`;
+  return `<div class="card gear-slot-card ${item?"":"is-empty"}"><h3>${title(slot)}</h3>${content}</div>`;
 }
 
 function itemHTML(item){
@@ -67,9 +67,27 @@ function itemLine(item){
         ${item.slot==="weapon" ? `<span class="pill">${tx("weaponType")}: ${esc(WEAPON_TYPES[weaponTypeForItem(item)]?.name || title(weaponTypeForItem(item)))}</span>` : ""}
         <span class="pill">${tx("attackShort")} ${item.attack||0}</span>
         <span class="pill">${tx("defenseShort")} ${item.defense||0}</span>
+        ${itemDeltaPills(item)}
       </div>
     </div>
   `;
+}
+
+function itemDeltaPills(item){
+  const delta = itemUpgradeDelta(item);
+  const pills = [];
+  if(delta.attack)pills.push(`<span class="pill ${delta.attack>0?"good":"warn"}">${delta.attack>0?"+":""}${delta.attack} ${tx("attackShort")}</span>`);
+  if(delta.defense)pills.push(`<span class="pill ${delta.defense>0?"good":"warn"}">${delta.defense>0?"+":""}${delta.defense} ${tx("defenseShort")}</span>`);
+  return pills.join("");
+}
+
+export function itemUpgradeDelta(item){
+  const equipped = state.hero?.gear?.[item.slot];
+  return {
+    attack:(item.attack||0)-(equipped?.attack||0),
+    defense:(item.defense||0)-(equipped?.defense||0),
+    better:itemScore(item)>itemScore(equipped)
+  };
 }
 
 function qualityText(quality){
@@ -116,23 +134,44 @@ export function sellItem(id){
 
 export function sellWorse(){
   const h = state.hero;
-  h.inv = h.inv.filter(item=>{
-    if(itemScore(item)<=itemScore(h.gear[item.slot])){
-      h.gold += item.value;
-      return false;
-    }
-    return true;
-  });
-  save();
-  refreshGear();
+  const worse = h.inv.filter(item=>itemScore(item)<=itemScore(h.gear[item.slot]));
+  if(!worse.length){
+    toast(tx("nothingToSell"));
+    return;
+  }
+  const gold = worse.reduce((sum,item)=>sum+item.value,0);
+  modal(tx("sellWorse"), `<p>${esc(tx("sellWorseConfirm"))}</p><p>${worse.length} · ${gold}g</p>`, [
+    {label:tx("sellWorse"),cls:"danger",fn:()=>{
+      h.inv = h.inv.filter(item=>{
+        if(itemScore(item)<=itemScore(h.gear[item.slot])){
+          h.gold += item.value;
+          return false;
+        }
+        return true;
+      });
+      save();
+      refreshGear();
+    }},
+    {label:tx("close"),cls:"secondary"}
+  ]);
 }
 
 export function sellAll(){
   const h = state.hero;
-  h.gold += h.inv.reduce((sum,item)=>sum+item.value,0);
-  h.inv = [];
-  save();
-  refreshGear();
+  if(!h.inv.length){
+    toast(tx("nothingToSell"));
+    return;
+  }
+  const gold = h.inv.reduce((sum,item)=>sum+item.value,0);
+  modal(tx("sellAllUnequipped"), `<p>${esc(tx("sellAllConfirm"))}</p><p>${h.inv.length} · ${gold}g</p>`, [
+    {label:tx("sellAllUnequipped"),cls:"danger",fn:()=>{
+      h.gold += h.inv.reduce((sum,item)=>sum+item.value,0);
+      h.inv = [];
+      save();
+      refreshGear();
+    }},
+    {label:tx("close"),cls:"secondary"}
+  ]);
 }
 
 export function debugPaperDollLayers(forceLayered = false){

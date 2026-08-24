@@ -14,7 +14,7 @@ export function bar(value,max,cls=""){return `<div class="bar ${cls}"><div style
 
 export function show(id){
   if(battle && id !== "combat"){
-    toast("You are in combat. Use Run to escape.");
+    toast(tx("combatInProgress"));
     return;
   }
   document.body.classList.toggle("cinematic-combat-active", id === "combat");
@@ -145,7 +145,7 @@ function applyUiTheme(hero){
 }
 
 function updateNavLabels(){
-  const labels = {home:tx("home"),gear:tx("gear"),party:tx("party"),progression:tx("progression"),map:tx("map"),kingdoms:tx("kingdoms")};
+  const labels = {home:tx("home"),gear:tx("gear"),party:tx("party"),progression:tx("growth"),map:tx("map"),kingdoms:tx("kingdoms")};
   document.querySelectorAll(".topline button[data-screen]").forEach(btn=>{
     const label = labels[btn.dataset.screen] || btn.getAttribute("aria-label") || "";
     btn.setAttribute("aria-label", label);
