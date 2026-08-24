@@ -31,6 +31,24 @@ export const NPC_ACTOR_ASSETS = {
   companionMage:NPC_ROOT+"companion_mage-v80.png"
 };
 
+const COMPANION_ACTOR_ROOT = "assets/actors/generated/v80/";
+
+export const COMPANION_ACTOR_ASSETS = {
+  fighter:COMPANION_ACTOR_ROOT+"companion-armored-idle-v80.png",
+  guard:COMPANION_ACTOR_ROOT+"companion-armored-idle-v80.png",
+  scout:COMPANION_ACTOR_ROOT+"companion-scout-idle-v80.png",
+  healer:COMPANION_ACTOR_ROOT+"companion-healer-idle-v80.png",
+  mystic:COMPANION_ACTOR_ROOT+"companion-mage-idle-v80.png"
+};
+
+export function companionActorPath(kind = "fighter"){
+  const key = String(kind || "fighter").toLowerCase();
+  if(/scout|ranger|hunter|rogue/.test(key))return COMPANION_ACTOR_ASSETS.scout;
+  if(/healer|cleric/.test(key))return COMPANION_ACTOR_ASSETS.healer;
+  if(/mage|caster|mystic/.test(key))return COMPANION_ACTOR_ASSETS.mystic;
+  return COMPANION_ACTOR_ASSETS.fighter;
+}
+
 export const SERVICE_NPCS = {
   market:{
     name:"Seda Vell",

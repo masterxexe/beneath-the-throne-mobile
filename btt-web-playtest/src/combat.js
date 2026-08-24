@@ -9,6 +9,7 @@ import { applyGearVisuals } from "./gearVisuals.js";
 import { playAudioHook } from "./audioHooks.js";
 import { debugEnemyVisualRegistry, enemyVisualHTML, resolveEnemyPoseAsset, stampEnemyVisualClass } from "./enemyVisuals.js";
 import { actorDirectorAttributes, createBattlefieldComposition, directorStageAttributes } from "./combatSceneDirector.js";
+import { companionActorPath } from "./npcRegistry.js";
 
 export let battle = null;
 let targetIndex = 0;
@@ -354,12 +355,7 @@ function companionSceneArtHTML(unit, portrait){
 }
 
 function companionSceneArtPath(kind = "fighter"){
-  const key = String(kind || "fighter").toLowerCase();
-  if(/scout|ranger|hunter|rogue/.test(key))return "assets/actors/generated/v80/companion-scout-idle-v80.png";
-  if(/healer|cleric/.test(key))return "assets/actors/generated/v80/companion-healer-idle-v80.png";
-  if(/mage|caster|mystic/.test(key))return "assets/actors/generated/v80/companion-mage-idle-v80.png";
-  if(/knight|guard|soldier|fighter|warrior/.test(key))return "assets/actors/generated/v80/companion-armored-idle-v80.png";
-  return "assets/actors/generated/v80/companion-armored-idle-v80.png";
+  return companionActorPath(kind);
 }
 
 function enemyHTML(enemy,index,playerTurn,slotIndex = 0,presentation = null,directorActor = null){
@@ -687,6 +683,7 @@ function effectClass(target){
   if(attack?.style)classes.push(attackStyleClass(attack.style));
   if(attack?.weapon)classes.push(attackWeaponClass(attack.weapon));
   if(attack?.combo)classes.push(`combat-combo-${attack.combo}`);
+  if(!classes.some(cls=>cls.startsWith("combat-motion-")))classes.push("combat-motion-idle");
   return classes.join(" ");
 }
 

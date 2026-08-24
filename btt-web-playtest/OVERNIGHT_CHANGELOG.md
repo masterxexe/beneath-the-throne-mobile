@@ -125,3 +125,10 @@ node scripts/test-combat-debug.mjs
 - Double gold frames, inner rims, and corner ticks on panels, cards, modals, and HUD
 - Stronger button/meter/input metal edges and keyboard focus rings
 - Combat target outline and dock/tab chrome match the Ash Court line
+
+## Pass 15 — Tutorial actors (v122)
+- Opening fight uses the paper-doll combat poses (slash, block, hurt) against the skeleton actor kit
+- Lesson help is a modal, Skip asks first, Potion starts you wounded so healing is visible, Barrier is labeled Barrier
+- Guidance sits above the field instead of covering the fighters
+- World, interior, slum, and Lower Ward NPCs idle on full-body sprites; party roster shows companion actors
+- Kael and the dragon breathe and flinch on each showcase beat

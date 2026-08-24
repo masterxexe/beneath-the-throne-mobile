@@ -3981,6 +3981,7 @@ body.start-lock #app{
 }
 
 .opening-combat-shell{
+  position:relative;
   width:min(1240px,100%);
   margin:0 auto;
   border-radius:12px;
@@ -4033,6 +4034,16 @@ body.start-lock #app{
   color:#e8d0a6;
   box-shadow:0 12px 30px rgba(0,0,0,.36);
   backdrop-filter:blur(3px);
+}
+
+.opening-guidance-card.opening-guidance-dock{
+  position:relative;
+  left:auto;
+  top:auto;
+  z-index:5;
+  width:min(720px,calc(100% - 24px));
+  transform:none;
+  margin:0 auto 8px;
 }
 
 .opening-guidance-card span{
@@ -15470,11 +15481,14 @@ body.cinematic-combat-active .combat-shell.combat-impact{
 .world-npc-figure{
   position:absolute;
   inset:0;
-  background-image:var(--npc-art);
-  background-size:contain;
-  background-position:center bottom;
-  background-repeat:no-repeat;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  object-position:center bottom;
   filter:saturate(.9) contrast(1.06) brightness(.82);
+  transform-origin:50% 100%;
+  animation:btt-npc-idle 2.8s ease-in-out infinite;
+  animation-delay:var(--npc-idle-delay,0ms);
 }
 
 .world-npc-shadow{
@@ -16495,10 +16509,19 @@ body.cinematic-combat-active .combat-shell.combat-impact{
 }
 
 .companion-card-head{
-  display:flex;
-  justify-content:space-between;
-  gap:8px;
-  align-items:flex-start;
+  display:grid;
+  grid-template-columns:76px minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+}
+
+.companion-card-actor{
+  width:76px;
+  height:104px;
+  object-fit:contain;
+  object-position:center bottom;
+  filter:drop-shadow(0 10px 8px rgba(0,0,0,.7));
+  transform-origin:50% 100%;
 }
 
 .companion-card-head h2{
@@ -17417,3 +17440,149 @@ body.cinematic-combat-active .combat-shell.combat-impact{
     font-size:9px;
   }
 }
+
+/* v122: posed tutorial actors, idle NPCs, Kael/dragon motion, party sprites */
+@keyframes btt-npc-idle{
+  0%,100%{transform:translateY(0) rotate(0deg)}
+  50%{transform:translateY(-3px) rotate(-1.2deg)}
+}
+@keyframes btt-npc-idle-centered{
+  0%,100%{transform:translateX(-50%) translateY(0) rotate(0deg)}
+  50%{transform:translateX(-50%) translateY(-3px) rotate(-1.1deg)}
+}
+@keyframes btt-kael-idle{
+  0%,100%{transform:translateX(-50%) translateY(0) rotate(0deg)}
+  50%{transform:translateX(-50%) translateY(-5px) rotate(-0.8deg)}
+}
+@keyframes btt-dragon-idle{
+  0%,100%{transform:translateY(0) rotate(0deg)}
+  50%{transform:translateY(-6px) rotate(0.4deg)}
+}
+@keyframes btt-actor-idle{
+  0%,100%{transform:translateY(0) rotate(0deg)}
+  50%{transform:translateY(-4px) rotate(-0.9deg)}
+}
+@keyframes btt-actor-hit{
+  0%{transform:translateX(0)}
+  25%{transform:translateX(7px) rotate(1.4deg)}
+  50%{transform:translateX(-6px)}
+  75%{transform:translateX(3px)}
+  100%{transform:translateX(0)}
+}
+@keyframes btt-kael-hit{
+  0%{transform:translateX(-50%)}
+  25%{transform:translateX(calc(-50% + 8px)) rotate(1.6deg)}
+  50%{transform:translateX(calc(-50% - 7px))}
+  75%{transform:translateX(calc(-50% + 3px))}
+  100%{transform:translateX(-50%)}
+}
+
+.btt-npc-idle{
+  transform-origin:50% 100%;
+  animation:btt-npc-idle 2.8s ease-in-out infinite;
+  animation-delay:var(--npc-idle-delay,0ms);
+}
+
+.opening-hidden-card .paper-doll-frame,
+.opening-hidden-card .paper-doll-frame-compact,
+.opening-hidden-card .paper-doll-frame-combat{
+  width:100%;
+  max-width:none;
+  height:100%;
+  background:transparent;
+  border:0;
+  box-shadow:none;
+  overflow:visible;
+}
+.opening-hidden-card .paper-doll-scene{
+  min-height:220px;
+  height:100%;
+}
+.v59-prologue-figure .opening-hidden-card,
+.opening-protected-survivor .opening-hidden-card{
+  height:clamp(250px,42vh,430px);
+}
+.opening-hidden-card .paper-doll-generated,
+.opening-hidden-card .paper-doll-avatar{
+  filter:drop-shadow(0 18px 14px rgba(0,0,0,.78));
+}
+
+.opening-kael-actor.is-idle img,
+.opening-kael-actor:not(.is-hit) img{
+  animation:btt-kael-idle 3.4s ease-in-out infinite;
+  transform-origin:50% 88%;
+}
+.opening-dragon-actor.is-idle img,
+.opening-dragon-actor:not(.is-hit) img{
+  animation:btt-dragon-idle 4.2s ease-in-out infinite;
+  transform-origin:70% 86%;
+}
+.opening-kael-actor.is-hit img{
+  animation:btt-kael-hit .46s cubic-bezier(.2,.7,.2,1) both;
+  filter:drop-shadow(0 24px 16px rgba(0,0,0,.74)) saturate(1.12) brightness(1.18);
+}
+.opening-dragon-actor.is-hit img{
+  animation:btt-actor-hit .48s cubic-bezier(.2,.7,.2,1) both;
+  filter:drop-shadow(0 30px 24px rgba(0,0,0,.82)) saturate(1.1) brightness(1.14);
+}
+
+.opening-survivor-plate{
+  left:6%;
+  right:6%;
+  bottom:-6px;
+  z-index:9;
+}
+
+.scene-anchor-figure{
+  object-fit:contain !important;
+  object-position:center bottom !important;
+  background-image:none !important;
+  background-color:transparent !important;
+}
+.scene-anchor[data-anchor-visual="npc"][data-anchor-has-model="true"] .scene-anchor-figure.btt-npc-idle{
+  animation-name:btt-npc-idle-centered;
+  animation-duration:2.9s;
+}
+
+.slum-npc-card img,
+.lower-ward-npc img{
+  transform-origin:50% 100%;
+}
+
+@media(max-width:700px){
+  .companion-card-head{
+    grid-template-columns:64px minmax(0,1fr) auto;
+  }
+  .companion-card-actor{
+    width:64px;
+    height:88px;
+  }
+}
+
+@media(max-width:700px) and (orientation:portrait){
+  .opening-guidance-card.opening-guidance-dock{
+    position:relative !important;
+    left:auto !important;
+    top:auto !important;
+    transform:none !important;
+    width:calc(100% - 16px) !important;
+    margin:0 auto 6px !important;
+  }
+  .opening-combat-stage,
+  .v59-tutorial-screen .opening-combat-stage.combat-battlefield[data-combat-viewport="stable"]{
+    padding-top:8px !important;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .btt-npc-idle,
+  .world-npc-figure,
+  .opening-kael-actor img,
+  .opening-dragon-actor img,
+  .scene-anchor-figure,
+  .companion-card-actor,
+  .opening-tutorial-action-grid button.is-lesson{
+    animation:none !important;
+  }
+}
+

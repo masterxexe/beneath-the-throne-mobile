@@ -413,7 +413,7 @@ function actionDisabled(reason){
 function slumNpcCard({name,role,asset,action,label,disabled = false}){
   return `
     <button class="slum-npc-card" onclick="${esc(action)}" ${disabled ? "disabled" : ""}>
-      <img src="${esc(asset)}" alt="" loading="lazy" decoding="async" draggable="false">
+      <img class="btt-npc-idle" src="${esc(asset)}" alt="" loading="lazy" decoding="async" draggable="false">
       <span>${esc(role)}</span>
       <b>${esc(name)}</b>
       <small>${esc(label)}</small>

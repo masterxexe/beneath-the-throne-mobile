@@ -536,13 +536,14 @@ function worldSceneEffectHTML(effect){
 }
 
 function worldSceneNPCHTML(npc){
+  const delay = [...String(npc.id || npc.name || "npc")].reduce((n,c)=>n + c.charCodeAt(0), 0) % 2400;
   return `
     <div class="world-npc world-npc-${esc(npc.service)} world-npc-tone-${esc(npc.tone || "stone")}"
-      style="--npc-x:${npc.x}%;--npc-y:${npc.y}%;--npc-scale:${npc.scale || .7};--npc-z:${npc.z || 10};--npc-art:url('${esc(npc.asset)}')"
+      style="--npc-x:${npc.x}%;--npc-y:${npc.y}%;--npc-scale:${npc.scale || .7};--npc-z:${npc.z || 10};--npc-idle-delay:${delay}ms"
       data-service="${esc(npc.service)}" data-npc-id="${esc(npc.id)}"
       aria-label="${esc(npc.label || npc.name || "Village NPC")}" title="${esc(npc.line || npc.role || npc.name || "")}">
       <span class="world-npc-shadow" aria-hidden="true"></span>
-      <span class="world-npc-figure" aria-hidden="true"></span>
+      <img class="world-npc-figure btt-npc-idle" src="${esc(npc.asset)}" alt="" loading="lazy" decoding="async" draggable="false">
       <span class="world-npc-name">${esc(npc.name || "")}</span>
     </div>
   `;

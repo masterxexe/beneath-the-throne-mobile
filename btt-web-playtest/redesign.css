@@ -430,6 +430,7 @@ body.btt-redesign button.world-hotspot,
 body.btt-redesign button.travel-stop-premium {
   transform: none;
   border-radius: inherit;
+  box-shadow: none;
 }
 
 body.btt-redesign .primary,
@@ -2411,6 +2412,15 @@ body.btt-redesign .opening-guidance-card {
   background:
     var(--btt-corners),
     linear-gradient(180deg, rgba(4, 6, 7, 0.72), rgba(2, 3, 4, 0.88));
+}
+
+body.btt-redesign .opening-guidance-card.opening-guidance-dock {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform: none;
+  width: min(720px, calc(100% - 24px));
+  margin: 0 auto 8px;
 }
 
 body.btt-redesign .opening-lesson-pips {

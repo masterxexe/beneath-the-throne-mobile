@@ -1,10 +1,11 @@
 import { CLASSES, createNewState, save, setState, state } from "./state.js";
 import { dictionary, getLanguage, setLanguage, statExplanation, statName, title, tx } from "./language.js";
 import { bar, byId, esc, modal, showSaveSlots, startGame } from "./ui.js";
-import { backdropHTML, enemyPortrait, heroPortrait, portraitHTML, uniquePortrait } from "./visuals.js";
+import { backdropHTML, heroPortrait, portraitHTML, uniquePortrait } from "./visuals.js";
 import { enemyVisualHTML } from "./enemyVisuals.js";
 import { playAudioHook } from "./audioHooks.js";
 import { audioMuted, getAudioPrefs, setMusicEnabled, setSfxEnabled, toggleMasterMute } from "./audioEngine.js";
+import { preloadPlayerPoseAsset, renderPlayerCombatPortraitHook } from "./portraitRenderer.js";
 
 let heroName = "Xexe";
 let skeleton = null;
@@ -12,6 +13,7 @@ let dragon = null;
 let openingSettingsOpen = false;
 let openingTransitionTimer = null;
 let skeletonTimer = 0;
+let dragonTimer = 0;
 
 function localizedClassName(id, fallback){
   return dictionary().classNames?.[id] || fallback || title(id);
@@ -40,7 +42,7 @@ function openingCopy(){
       skillLocked:"La sangre aun no sabe que camino tomara. Las habilidades despiertan despues de Ser Kael.",
       potionHint:"Una pocion compra tiempo, no seguridad.",
       defendHint:"La guardia baja el impacto y te ensena a sobrevivir.",
-      kaelShowcase:"Showcase Battle",
+      kaelShowcase:"El duelo de Kael",
       classKicker:"Elige que arde dentro de ti",
       classSub:"La barrera de Kael se rompe, pero deja un camino vivo en tu sangre.",
       titleSettings:"Idioma",
@@ -63,7 +65,7 @@ function openingCopy(){
     skillLocked:"Your blood has not chosen its path. Class skills awaken after Ser Kael.",
     potionHint:"A potion buys time, not safety.",
     defendHint:"Guarding turns a killing rhythm into something survivable.",
-    kaelShowcase:"Showcase Battle",
+      kaelShowcase:"Kael's Stand",
     classKicker:"Choose what burns inside you",
     classSub:"Kael's barrier breaks, but it leaves a living path in your blood.",
     titleSettings:"Language",
@@ -84,16 +86,22 @@ function openingAtmosphereHTML(){
   `;
 }
 
+function tutorialHero(){
+  return {name:heroName, class:"", gear:{}};
+}
+
 function hiddenTravelerHTML(name, detail = {}){
   const hp = detail.hp ?? 100;
   const maxHp = detail.maxHp ?? 100;
-  const mana = detail.mana ?? 18;
-  const maxMana = detail.maxMana ?? 18;
-  const survivorArt = "assets/tutorial/generated/v80/opening-survivor-v80.webp";
+  const resource = detail.resource ?? detail.mana ?? 18;
+  const maxResource = detail.maxResource ?? detail.maxMana ?? 18;
+  const resourceLabel = detail.resourceLabel || tx("mana");
+  const pose = detail.pose || "combatIdle";
+  const motion = detail.motion || "";
   return `
-    <div class="unit combat-card combat-actor combat-actor-hero opening-hidden-card" data-combat-actor="hero">
+    <div class="unit combat-card combat-actor combat-actor-hero opening-hidden-card ${esc(motion)}" data-combat-actor="hero">
       <div class="portrait-wrap">
-        <img class="opening-survivor-art" src="${survivorArt}" alt="${esc(name)} survivor" loading="eager" decoding="async" draggable="false">
+        ${renderPlayerCombatPortraitHook(tutorialHero(), {visualState:pose, combat:true, label:`${name} ${tx("survivor")}`})}
         <span class="opening-survivor-ground" aria-hidden="true"></span>
       </div>
       <div class="combat-card-body">
@@ -101,16 +109,17 @@ function hiddenTravelerHTML(name, detail = {}){
         <span class="pill">${tx("unchosenSurvivor")}</span>
         <div class="meter-line"><span>${tx("hp")}</span><span>${hp}/${maxHp}</span></div>
         ${bar(hp,maxHp)}
-        <div class="meter-line"><span>${tx("mana")}</span><span>${mana}/${maxMana}</span></div>
-        ${bar(mana,maxMana,"mana")}
+        <div class="meter-line"><span>${esc(resourceLabel)}</span><span>${resource}/${maxResource}</span></div>
+        ${bar(resource,maxResource, detail.resourceClass || "mana")}
       </div>
     </div>
   `;
 }
 
-function enemyTutorialCardHTML(enemy, pose = "idle"){
+function enemyTutorialCardHTML(enemy, pose = "idle", motion = ""){
+  const resolvedMotion = motion || (pose === "idle" ? "combat-motion-idle" : pose === "attack" ? "combat-motion-attack" : pose === "hurt" ? "combat-motion-hurt" : "");
   return `
-    <div class="enemy combat-card combat-actor combat-actor-enemy combat-slot-0 enemy-scale-small target" data-combat-actor="enemy" data-combat-slot="0" data-enemy-scale="small" data-enemy-state="${esc(pose)}">
+    <div class="enemy combat-card combat-actor combat-actor-enemy combat-slot-0 enemy-scale-small ${esc(resolvedMotion)}" data-combat-actor="enemy" data-combat-slot="0" data-enemy-scale="small" data-enemy-state="${esc(pose)}">
       <div class="portrait-wrap">
         ${enemyVisualHTML({name:enemy.name,role:enemy.role || tx("tutorialEnemy"),enemyVisualClass:"skeleton"}, pose) || portraitHTML(uniquePortrait("tutorial_skeleton"))}
       </div>
@@ -260,7 +269,7 @@ export function renderOpeningName(){
           </div>
         </div>
         <div class="v59-prologue-figure">
-          ${hiddenTravelerHTML(heroName, {hp:100,maxHp:100,mana:18,maxMana:18})}
+          ${hiddenTravelerHTML(heroName, {hp:100,maxHp:100,mana:18,maxMana:18,pose:"idle",motion:"combat-motion-idle"})}
         </div>
       </div>
     </div>
@@ -275,16 +284,20 @@ export function startOpeningSkeleton(){
     turn:1,
     lesson:"attack",
     busy:false,
-    hero:{hp:100,maxHp:100,mana:18,maxMana:18,potions:2},
+    hero:{hp:68,maxHp:100,mana:18,maxMana:18,potions:2},
     enemy:{name:tx("roadSkeleton"),role:tx("tutorialEnemy"),enemyVisualClass:"skeleton",hp:34,maxHp:34},
     defending:false,
     pose:"idle",
+    enemyMotion:"",
+    heroPose:"combatIdle",
+    heroMotion:"",
     tip:tx("lessonAttackBody"),
     log:[
       getLanguage()==="es" ? "Despiertas bajo Ashen Keep con una espada oxidada en la mano." : "You wake below Ashen Keep with a rusted sword in your hand.",
       getLanguage()==="es" ? "Los huesos raspan el camino. Un esqueleto se levanta entre las cenizas." : "Bones scrape the road. A skeleton rises from the ash."
     ]
   };
+  ["idle","combatIdle","meleeSlash","block","hurt"].forEach(pose=>preloadPlayerPoseAsset(tutorialHero(), pose));
   playAudioHook("battle-music-start");
   renderSkeleton();
 }
@@ -301,6 +314,11 @@ export function renderSkeleton(){
           <h1>${esc(t.roadSkeleton)}</h1>
           <p>${esc(t.tutorialSub)}</p>
         </div>
+        <div class="opening-guidance-card opening-guidance-dock">
+          <span>${esc(tutorialLessonTitle())}</span>
+          ${tutorialLessonPips()}
+          <p>${esc(skeleton.tip || tx("lessonAttackBody"))}</p>
+        </div>
         <div class="combat-stage combat-battlefield opening-combat-stage" data-combat-viewport="stable">
           ${cinematicBackDropHTML("skeleton")}
           <div class="combat-atmosphere-layer" aria-hidden="true">
@@ -308,21 +326,20 @@ export function renderSkeleton(){
             <span class="combat-embers"></span>
             <span class="combat-light-sweep"></span>
           </div>
-          <div class="opening-guidance-card">
-            <span>${esc(tutorialLessonTitle())}</span>
-            ${tutorialLessonPips()}
-            <p>${esc(skeleton.tip || tx("lessonAttackBody"))}</p>
-          </div>
           <div class="combat-area party-area">
             <h2>${esc(heroName)} ${esc(t.yourTurn)}</h2>
             <div class="combat-party-grid">
-              ${hiddenTravelerHTML(heroName, skeleton.hero)}
+              ${hiddenTravelerHTML(heroName, {
+                ...skeleton.hero,
+                pose:skeleton.heroPose || "combatIdle",
+                motion:skeleton.heroMotion || ""
+              })}
             </div>
           </div>
           <div class="combat-area enemy-area">
             <h2>${esc(t.round)} ${skeleton.turn}</h2>
             <div class="combat-enemy-grid">
-              ${enemyTutorialCardHTML(skeleton.enemy, enemyPose)}
+              ${enemyTutorialCardHTML(skeleton.enemy, enemyPose, skeleton.enemyMotion || "")}
             </div>
           </div>
         </div>
@@ -331,8 +348,8 @@ export function renderSkeleton(){
             <button class="${lessonClass("attack")}" onclick="FE.tutorialAttack()" ${lessonDisabled("attack")}>${t.attack}</button>
             <button class="${lessonClass("defend")}" onclick="FE.tutorialDefend()" ${lessonDisabled("defend")}>${t.defend}</button>
             <button class="${lessonClass("potion")}" onclick="FE.tutorialPotion()" ${lessonDisabled("potion")}>${t.potion} (${skeleton.hero.potions})</button>
-            <button class="secondary" onclick="FE.tutorialExplain()">${t.help}</button>
-            <button class="secondary" onclick="FE.startDragonIntro()">${t.skip}</button>
+            <button class="secondary" onclick="FE.tutorialExplain()" ${skeleton.busy?"disabled":""}>${t.help}</button>
+            <button class="secondary opening-skip" onclick="FE.skipOpeningFight()" ${skeleton.busy?"disabled":""}>${t.skip}</button>
           </div>
           ${skeleton.lesson === "finish" ? "" : `<p class="opening-lesson-lock">${esc(tx("lessonLocked"))}</p>`}
         </div>
@@ -375,21 +392,59 @@ function lessonClass(action){
 function lessonDisabled(action){
   if(skeleton?.busy)return "disabled";
   const lesson = skeleton?.lesson || "attack";
-  if(lesson === "finish")return "";
+  if(lesson === "finish")return action === "attack" ? "" : "disabled";
   return lesson === action ? "" : "disabled";
 }
 
-function queueEnemyTurn(defending){
-  skeleton.busy = true;
-  renderSkeleton();
+function afterSkeleton(ms, fn){
   clearTimeout(skeletonTimer);
   skeletonTimer = setTimeout(() => {
     if(!skeleton)return;
-    skeletonEnemyTurn(defending);
-    advanceTutorialLesson();
-    skeleton.busy = false;
+    fn();
+  }, ms);
+}
+
+function settleTutorialField(){
+  if(!skeleton)return;
+  if(skeleton.enemy.hp <= 0){
+    tutorialVictory();
+    return;
+  }
+  skeleton.heroPose = "combatIdle";
+  skeleton.heroMotion = "";
+  skeleton.pose = "idle";
+  skeleton.enemyMotion = "";
+  skeleton.busy = false;
+  renderSkeleton();
+}
+
+function applyEnemyDamage(defending){
+  let dmg = 8 + Math.floor(Math.random()*8);
+  if(defending)dmg = Math.max(1, Math.floor(dmg * 0.45));
+  skeleton.hero.hp = Math.max(1, skeleton.hero.hp - dmg);
+  playAudioHook(defending ? "block" : "hero-hurt");
+  skeleton.log.push(`${tx("skeletonHit")} ${heroName} for ${dmg}.`);
+  skeleton.turn++;
+}
+
+function runEnemyAnswer(defending){
+  if(!skeleton)return;
+  skeleton.pose = "attack";
+  skeleton.enemyMotion = "combat-motion-attack";
+  skeleton.heroPose = defending ? "block" : "combatIdle";
+  skeleton.heroMotion = "";
+  playAudioHook("enemy-swing");
+  renderSkeleton();
+  afterSkeleton(300, () => {
+    applyEnemyDamage(defending);
+    skeleton.heroPose = defending ? "block" : "hurt";
+    skeleton.heroMotion = defending ? "" : "combat-motion-hurt";
     renderSkeleton();
-  }, 420);
+    afterSkeleton(420, () => {
+      advanceTutorialLesson();
+      settleTutorialField();
+    });
+  });
 }
 
 function advanceTutorialLesson(){
@@ -410,63 +465,80 @@ function advanceTutorialLesson(){
 export function tutorialAttack(){
   if(skeleton?.busy)return;
   if(skeleton.lesson !== "attack" && skeleton.lesson !== "finish")return;
+  skeleton.busy = true;
+  skeleton.heroPose = "meleeSlash";
+  skeleton.heroMotion = "combat-motion-attack combat-style-slash";
+  skeleton.pose = "idle";
+  skeleton.enemyMotion = "";
   playAudioHook("hero-swing");
-  const dmg = 14 + Math.floor(Math.random()*6);
-  skeleton.enemy.hp = Math.max(0,skeleton.enemy.hp-dmg);
-  skeleton.pose = "hurt";
-  playAudioHook("hero-hit");
-  skeleton.log.push(`${heroName} ${tx("heroHits")} ${dmg}.`);
-  if(skeleton.enemy.hp<=0)return tutorialVictory();
-  queueEnemyTurn(false);
+  renderSkeleton();
+  afterSkeleton(280, () => {
+    const dmg = 14 + Math.floor(Math.random()*6);
+    skeleton.enemy.hp = Math.max(0, skeleton.enemy.hp - dmg);
+    skeleton.pose = "hurt";
+    skeleton.enemyMotion = "combat-motion-hurt";
+    playAudioHook("hero-hit");
+    skeleton.log.push(`${heroName} ${tx("heroHits")} ${dmg}.`);
+    renderSkeleton();
+    if(skeleton.enemy.hp <= 0){
+      afterSkeleton(420, tutorialVictory);
+      return;
+    }
+    afterSkeleton(380, () => runEnemyAnswer(false));
+  });
 }
 
 export function tutorialSkill(){
-  skeleton.tip = tx("noClass");
-  skeleton.log.push(tx("noClass"));
-  renderSkeleton();
+  modal(tx("combatBasics"), `<p>${esc(tx("noClass"))}</p>`, [{label:tx("close"),cls:"secondary"}]);
 }
 
 export function tutorialPotion(){
   if(skeleton?.busy)return;
   if(skeleton.lesson !== "potion" && skeleton.lesson !== "finish")return;
   if(skeleton.hero.potions<=0){
-    skeleton.tip = tx("noPotions");
     skeleton.log.push(tx("noPotions"));
     renderSkeleton();
     return;
   }
+  skeleton.busy = true;
   playAudioHook("potion");
   skeleton.hero.potions--;
-  skeleton.hero.hp = Math.min(skeleton.hero.maxHp,skeleton.hero.hp+35);
+  skeleton.hero.hp = Math.min(skeleton.hero.maxHp, skeleton.hero.hp + 35);
+  skeleton.heroPose = "combatIdle";
+  skeleton.heroMotion = "";
   skeleton.pose = "idle";
+  skeleton.enemyMotion = "";
   skeleton.log.push(`${heroName} ${tx("heroPotion")}`);
-  queueEnemyTurn(false);
+  renderSkeleton();
+  afterSkeleton(360, () => runEnemyAnswer(false));
 }
 
 export function tutorialDefend(){
   if(skeleton?.busy)return;
   if(skeleton.lesson !== "defend" && skeleton.lesson !== "finish")return;
+  skeleton.busy = true;
   playAudioHook("block");
-  skeleton.pose = "attack";
+  skeleton.heroPose = "block";
+  skeleton.heroMotion = "";
+  skeleton.pose = "idle";
+  skeleton.enemyMotion = "";
   skeleton.log.push(`${heroName} ${tx("heroDefend")}`);
-  queueEnemyTurn(true);
+  renderSkeleton();
+  afterSkeleton(320, () => runEnemyAnswer(true));
 }
 
 export function tutorialExplain(){
-  skeleton.tip = tx("combatBasicsBody");
+  if(skeleton?.busy)return;
   playAudioHook("ui-click");
-  renderSkeleton();
+  modal(tx("combatBasics"), `<p>${esc(tx("combatBasicsBody"))}</p>`, [{label:tx("close"),cls:"secondary"}]);
 }
 
-function skeletonEnemyTurn(defending){
-  playAudioHook("enemy-swing");
-  let dmg = 8 + Math.floor(Math.random()*8);
-  if(defending)dmg = Math.max(1,Math.floor(dmg*.45));
-  skeleton.hero.hp = Math.max(1,skeleton.hero.hp-dmg);
-  skeleton.pose = "attack";
-  playAudioHook(defending ? "block" : "hero-hurt");
-  skeleton.log.push(`${tx("skeletonHit")} ${heroName} for ${dmg}.`);
-  skeleton.turn++;
+export function skipOpeningFight(){
+  playAudioHook("ui-click");
+  modal(tx("skipFightTitle"), `<p>${esc(tx("skipFightBody"))}</p>`, [
+    {label:tx("skip"), cls:"danger", fn:()=>startDragonIntro()},
+    {label:tx("close"), cls:"secondary"}
+  ]);
 }
 
 function tutorialVictory(){
@@ -489,9 +561,10 @@ function tutorialVictory(){
 export function startDragonIntro(){
   const t = dictionary();
   clearTimeout(skeletonTimer);
+  clearTimeout(dragonTimer);
   skeleton = null;
   playAudioHook("dragon-music");
-  dragon = {moment:0,hero:{barrier:999},knight:{hp:2600,maxHp:2600},dragon:{hp:9999,maxHp:9999},log:[...t.dragonStart]};
+  dragon = {moment:0,hero:{barrier:100},knight:{hp:2600,maxHp:2600},dragon:{hp:9999,maxHp:9999},kaelHit:false,dragonHit:false,log:[...t.dragonStart]};
   renderDragon();
 }
 
@@ -518,7 +591,7 @@ export function renderDragon(){
             <span class="combat-embers"></span>
             <span class="combat-light-sweep"></span>
           </div>
-          <div class="opening-dragon-actor" data-showcase-actor="dragon">
+          <div class="opening-dragon-actor ${dragon.dragonHit ? "is-hit" : "is-idle"}" data-showcase-actor="dragon">
             <img src="${esc(dragonArt)}" alt="" loading="eager" decoding="async" draggable="false">
             <span class="opening-dragon-shadow"></span>
             <div class="opening-legend-plate">
@@ -527,7 +600,7 @@ export function renderDragon(){
               ${bar(dragon.dragon.hp,dragon.dragon.maxHp)}
             </div>
           </div>
-          <div class="opening-kael-actor" data-showcase-actor="kael">
+          <div class="opening-kael-actor ${dragon.kaelHit ? "is-hit" : "is-idle"}" data-showcase-actor="kael">
             <img src="${esc(kaelArt)}" alt="" loading="eager" decoding="async" draggable="false">
             <span class="opening-kael-radiance"></span>
             <div class="opening-legend-plate">
@@ -537,8 +610,21 @@ export function renderDragon(){
             </div>
           </div>
           <div class="opening-protected-survivor">
-            ${hiddenTravelerHTML(heroName, {hp:100,maxHp:100,mana:survivorBarrier,maxMana:999})}
+            ${hiddenTravelerHTML(heroName, {
+              pose:"combatIdle",
+              motion:"combat-motion-idle",
+              resourceLabel:tx("barrier"),
+              hp:100,
+              maxHp:100,
+              mana:survivorBarrier,
+              maxMana:100
+            })}
             <span class="opening-barrier-ring"></span>
+            <div class="opening-legend-plate opening-survivor-plate">
+              <b>${esc(heroName)} — ${esc(t.protectedSurvivor)}</b>
+              <span>${esc(tx("barrier"))} ${survivorBarrier}/100</span>
+              ${bar(survivorBarrier,100,"mana")}
+            </div>
           </div>
           <div class="opening-guidance-card opening-dragon-moment">
             <span>${esc(moment[0])}</span>
@@ -559,14 +645,19 @@ export function renderDragon(){
 export function nextDragonMoment(){
   const t = dictionary();
   const moment = t.dragonMoments[dragon.moment];
+  dragon.kaelHit = false;
+  dragon.dragonHit = false;
   if(moment){
     dragon.knight.hp = Math.max(0,dragon.knight.hp-moment[2]);
     dragon.dragon.hp = Math.max(0,dragon.dragon.hp-moment[3]);
     if(moment[3]){
+      dragon.dragonHit = true;
       playAudioHook("kael-hit");
       dragon.log.push(`${t.kaelDamage} ${moment[3]}.`);
     }
     if(moment[2]){
+      dragon.kaelHit = true;
+      dragon.hero.barrier = Math.max(8, dragon.hero.barrier - 14);
       playAudioHook("dragon-hit");
       dragon.log.push(`${t.dragonDamage} ${moment[2]}.`);
     }
@@ -591,6 +682,15 @@ export function nextDragonMoment(){
     return;
   }
   renderDragon();
+  clearTimeout(dragonTimer);
+  if(dragon.kaelHit || dragon.dragonHit){
+    dragonTimer = setTimeout(() => {
+      if(!dragon)return;
+      dragon.kaelHit = false;
+      dragon.dragonHit = false;
+      renderDragon();
+    }, 560);
+  }
 }
 
 export function classChoice(name){

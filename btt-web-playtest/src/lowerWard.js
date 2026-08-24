@@ -248,7 +248,7 @@ function grantWardCompanionTraining(companion,xp){
 function lowerWardContactHTML(contact){
   return `
     <button class="lower-ward-npc lower-ward-npc-${esc(contact.id)}" style="--npc-x:${esc(contact.x)}%;--npc-y:${esc(contact.y)}%;" onclick="FE.lowerWardTalk('${esc(contact.id)}')">
-      <img src="${esc(contact.asset)}" alt="" loading="lazy" decoding="async" draggable="false">
+      <img class="btt-npc-idle" src="${esc(contact.asset)}" alt="" loading="lazy" decoding="async" draggable="false">
       <span>${esc(contact.role)}</span>
       <b>${esc(contact.name)}</b>
       <small>${esc(contact.label)}</small>

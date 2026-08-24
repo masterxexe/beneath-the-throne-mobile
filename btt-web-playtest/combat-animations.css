@@ -543,3 +543,28 @@
 .combat-battlefield .paper-doll-scene::after{
   display:none !important;
 }
+
+.combat-battlefield .combat-actor-enemy.combat-motion-idle .portrait-wrap,
+.combat-battlefield .combat-actor-companion.combat-motion-idle .portrait-wrap{
+  animation:btt-actor-idle 3.05s ease-in-out infinite;
+  transform-origin:50% 88%;
+}
+.combat-battlefield .combat-actor.combat-motion-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-motion-enemy-attack .portrait-wrap,
+.combat-battlefield .combat-actor.combat-motion-hurt .portrait-wrap,
+.combat-battlefield .combat-actor.combat-motion-enemy-hurt .portrait-wrap,
+.combat-battlefield .combat-actor.combat-motion-cast .portrait-wrap{
+  animation-fill-mode:both;
+}
+
+@keyframes btt-actor-idle{
+  0%,100%{transform:translateY(0) rotate(0deg)}
+  50%{transform:translateY(-4px) rotate(-0.8deg)}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .combat-battlefield .combat-actor-enemy.combat-motion-idle .portrait-wrap,
+  .combat-battlefield .combat-actor-companion.combat-motion-idle .portrait-wrap{
+    animation:none !important;
+  }
+}

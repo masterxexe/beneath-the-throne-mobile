@@ -24,7 +24,9 @@ export function sceneAnchorHTML(anchor){
       data-interaction-type="${esc(interaction)}" data-idle-motion="${esc(idleMotion)}" data-hover-animation="${esc(hoverAnimation)}"
       onclick="FE.selectSceneAnchor('${esc(anchor.id)}')" title="${esc(hoverLabel)}">
       ${shadow}
-      <span class="scene-anchor-presence" aria-hidden="true"></span>
+      ${model
+        ? `<img class="scene-anchor-presence scene-anchor-figure btt-npc-idle" src="${esc(model)}" alt="" loading="lazy" decoding="async" draggable="false">`
+        : `<span class="scene-anchor-presence" aria-hidden="true"></span>`}
       <span>${esc(anchor.name)}</span>
     </button>
   `;

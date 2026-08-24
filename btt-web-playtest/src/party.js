@@ -1,6 +1,7 @@
 import { COMPANION_ROLES, COMPANION_TACTICS, companionBondNeed, companionRoleDefinition, companionTacticDefinition, companionTrainingCost, companionTrainingNeed, normalizeCompanion, partyFoodCost, partyLimit, partyWageCost, rnd, save, state, xpNeed } from "./state.js";
 import { title, tx } from "./language.js";
 import { bar, byId, esc, modal, toast, updateTop } from "./ui.js";
+import { companionActorPath } from "./npcRegistry.js";
 
 const RARITY_MULT = {
   common:1,
@@ -52,6 +53,7 @@ function compHTML(c){
   return `
     <div class="card companion-card companion-role-${esc(c.role)} ${c.active ? "is-active" : "is-benched"}">
       <div class="companion-card-head">
+        <img class="companion-card-actor btt-npc-idle" src="${esc(companionActorPath(c.role || c.class))}" alt="" loading="lazy" decoding="async" draggable="false">
         <div>
           <span class="pill ${c.active ? "good" : ""}">${c.active ? tx("active") : tx("benched")}</span>
           <h2>${esc(c.name)}</h2>
