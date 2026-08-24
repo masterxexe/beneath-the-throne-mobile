@@ -124,7 +124,7 @@ function classTreePathColumnHTML(id, path){
         </div>
         ${(path.abilities || []).length ? `<p><span class="class-tree-label">${tx("learnAbility")}:</span> ${esc(path.abilities.map(title).join(" | "))}</p>` : ""}
         ${classHistoryLine(id)}
-        ${status.reasons.length && !status.unlocked ? `<p class="class-tree-req">${tx("cmRequires")}: ${status.reasons.map(esc).join(" | ")}</p>` : ""}
+        ${status.reasons.length && !status.unlocked ? `<p class="class-tree-req">${status.reasons.map(esc).join(" | ")}</p>` : ""}
         ${status.active
           ? `<button disabled>${tx("activeClass")}</button>`
           : status.unlocked
@@ -157,7 +157,7 @@ function classTreeRankHTML(node, pathStatus, index){
         <span class="pill ${rank.bought?"good":(lockedByPath||rank.locked)?"warn":""}">${rank.bought?tx("cmPurchased"):(lockedByPath||rank.locked)?tx("cmLocked"):tx("cmAvailable")}</span>
       </div>
       ${spendHint ? `<p class="class-tree-req">${esc(spendHint)}</p>` : ""}
-      ${!lockedByPath && rank.reasons.length ? `<p class="class-tree-req">${tx("cmRequires")}: ${rank.reasons.map(esc).join(" | ")}</p>` : ""}
+      ${!lockedByPath && rank.reasons.length ? `<p class="class-tree-req">${rank.reasons.map(esc).join(" | ")}</p>` : ""}
       <button ${canBuy?`class="primary" onclick="FE.buyCM('${esc(node.id)}')"`:"disabled"}>${rank.bought?tx("boughtStatus"):tx("buy")}</button>
     </li>
   `;
@@ -240,7 +240,7 @@ function masteryNodeHTML(node, layout=null){
         <span class="pill">${tx("cmRequiresLevel")} ${node.level}</span>
         <span class="pill ${rank.bought?"good":rank.locked?"warn":""}">${rank.bought?tx("cmPurchased"):rank.locked?tx("cmLocked"):tx("cmAvailable")}</span>
       </div>
-      ${rank.reasons.length ? `<p class="class-tree-req">${tx("cmRequires")}: ${rank.reasons.map(esc).join(" | ")}</p>` : ""}
+      ${rank.reasons.length ? `<p class="class-tree-req">${rank.reasons.map(esc).join(" | ")}</p>` : ""}
       <button ${canBuy?`class="primary" onclick="FE.buyCM('${esc(node.id)}')"`:"disabled"}>${rank.bought?tx("boughtStatus"):tx("buy")}</button>
     </article>
   `;
