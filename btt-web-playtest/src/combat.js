@@ -115,6 +115,7 @@ export function startBattle(enemies,text,options = {}){
   buildQueue();
   setScreen("combat");
   playAudioHook("combat-enter", {source:options.source || "encounter", enemies:battle.enemies.length});
+  playAudioHook("battle-music-start");
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   byId("combat").classList.add("active");
   renderCombat();
@@ -503,8 +504,21 @@ function clearCombatNumbers(){
   cleanupNumericPopupDOM();
 }
 
+function playCombatSfx(type){
+  if(type === "attack")playAudioHook("hero-swing");
+  else if(type === "enemyAttack")playAudioHook("enemy-swing");
+  else if(["slash","cleave","thrust","stab","crush","shot","strike"].includes(type))playAudioHook("hero-hit");
+  else if(["arcane","spellFire","spellFrost","spellStorm","spellHoly","spellShadow","spellWard"].includes(type))playAudioHook("magic");
+  else if(type === "hurt")playAudioHook("hero-hurt");
+  else if(type === "brace")playAudioHook("block");
+  else if(type === "spellHeal")playAudioHook("potion");
+  else if(type === "spellMana")playAudioHook("potion-mana");
+  else if(type === "miss")playAudioHook("miss");
+}
+
 function pushEffect(target,type,text = "", detail = {}){
   if(!battle)return;
+  playCombatSfx(type);
   if(text && isNumberEffectType(type)){
     return pushCombatNumber(target,type,text,detail);
   }
@@ -1640,6 +1654,7 @@ export function runBattle(){
     else show("home");
   }
   else show("home");
+  playAudioHook("town-ambience");
 }
 
 export function toggleAuto(){

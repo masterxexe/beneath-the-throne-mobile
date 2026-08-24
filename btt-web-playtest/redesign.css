@@ -2326,8 +2326,90 @@ body.btt-redesign .paper-doll-frame.supporter-cloak-ember {
   gap: 8px;
 }
 
-.court-crier-card h2 {
-  margin: 0;
-  font-family: var(--btt-font-display, Georgia, serif);
-  color: #f0cc6a;
+body.btt-redesign .hud-icon-btn.is-muted,
+body.btt-redesign .v59-title-audio.is-muted {
+  opacity: 0.72;
+  filter: grayscale(0.35);
 }
+
+body.btt-redesign .v59-title-audio {
+  min-height: 42px;
+}
+
+body.btt-redesign .opening-guidance-card {
+  border-color: rgba(240, 204, 106, 0.48);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(240, 204, 106, 0.12);
+}
+
+body.btt-redesign .opening-lesson-pips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 6px;
+  padding: 0;
+  list-style: none;
+}
+
+body.btt-redesign .opening-lesson-pips li {
+  padding: 2px 8px;
+  border: 1px solid rgba(200, 168, 104, 0.22);
+  border-radius: 999px;
+  color: #b9a27a;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+body.btt-redesign .opening-lesson-pips li.is-now {
+  border-color: rgba(240, 204, 106, 0.7);
+  background: rgba(120, 78, 18, 0.45);
+  color: #ffe4aa;
+}
+
+body.btt-redesign .opening-lesson-pips li.is-done {
+  border-color: rgba(110, 168, 108, 0.45);
+  color: #c8e0b4;
+}
+
+body.btt-redesign .opening-tutorial-action-grid button.is-lesson {
+  box-shadow: 0 0 0 2px rgba(240, 204, 106, 0.55), 0 0 16px rgba(212, 168, 75, 0.35);
+  animation: btt-lesson-pulse 1.25s ease-in-out infinite;
+}
+
+body.btt-redesign .opening-tutorial-action-grid button:disabled {
+  opacity: 0.38;
+  filter: grayscale(0.35);
+  cursor: not-allowed;
+}
+
+body.btt-redesign .opening-lesson-lock {
+  margin: 8px 2px 0;
+  color: #cbb892;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+body.btt-redesign .slum-tutorial-steps {
+  margin: 10px 0 0;
+  padding-left: 1.15rem;
+  display: grid;
+  gap: 8px;
+  color: var(--btt-muted, #dbc4a0);
+}
+
+body.btt-redesign .slum-tutorial-steps li {
+  padding-left: 4px;
+}
+
+@keyframes btt-lesson-pulse {
+  0%, 100% { transform: translateY(0); filter: brightness(1); }
+  50% { transform: translateY(-1px); filter: brightness(1.12); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.btt-redesign .opening-tutorial-action-grid button.is-lesson {
+    animation: none;
+  }
+}
+

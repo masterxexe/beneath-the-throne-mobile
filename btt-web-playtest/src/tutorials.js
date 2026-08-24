@@ -3,12 +3,15 @@ import { dictionary, getLanguage, setLanguage, statExplanation, statName, title,
 import { bar, byId, esc, modal, showSaveSlots, startGame } from "./ui.js";
 import { backdropHTML, enemyPortrait, heroPortrait, portraitHTML, uniquePortrait } from "./visuals.js";
 import { enemyVisualHTML } from "./enemyVisuals.js";
+import { playAudioHook } from "./audioHooks.js";
+import { audioMuted, getAudioPrefs, setMusicEnabled, setSfxEnabled, toggleMasterMute } from "./audioEngine.js";
 
 let heroName = "Xexe";
 let skeleton = null;
 let dragon = null;
 let openingSettingsOpen = false;
 let openingTransitionTimer = null;
+let skeletonTimer = 0;
 
 function localizedClassName(id, fallback){
   return dictionary().classNames?.[id] || fallback || title(id);
@@ -171,6 +174,7 @@ export function renderStart(){
         <button class="primary v59-title-command" onclick="FE.startOpeningJourney()">${esc(copy.newGame)}</button>
         <button class="secondary v59-title-command" onclick="FE.showSaveSlots('load')">${esc(copy.loadGame)}</button>
         <button class="secondary v59-title-command" onclick="FE.toggleOpeningSettings()">${esc(copy.settings)}</button>
+        <button class="secondary v59-title-audio ${audioMuted()?"is-muted":""}" onclick="FE.toggleOpeningMute()">${audioMuted()?"🔇":"♪"} ${esc(audioMuted()?tx("unmute"):tx("mute"))}</button>
         <p class="v59-title-legal"><a href="./privacy.html">${esc(copy.privacy)}</a> · <a href="./terms.html">${esc(copy.terms)}</a></p>
         ${openingSettingsOpen ? `
           <div class="v59-settings-panel">
@@ -179,24 +183,57 @@ export function renderStart(){
               <button class="fantasy-nav-tab ${l==="en"?"lang-active":"secondary"}" onclick="FE.setOpeningLanguage('en')">${tx("english")}</button>
               <button class="fantasy-nav-tab ${l==="es"?"lang-active":"secondary"}" onclick="FE.setOpeningLanguage('es')">${tx("spanish")}</button>
             </div>
+            <span>${esc(tx("music"))}</span>
+            <div class="lang-row fantasy-language-row">
+              <button class="fantasy-nav-tab ${getAudioPrefs().music?"lang-active":"secondary"}" onclick="FE.setOpeningMusic(true)">${tx("audioOn")}</button>
+              <button class="fantasy-nav-tab ${getAudioPrefs().music?"secondary":"lang-active"}" onclick="FE.setOpeningMusic(false)">${tx("audioOff")}</button>
+            </div>
+            <span>${esc(tx("soundFx"))}</span>
+            <div class="lang-row fantasy-language-row">
+              <button class="fantasy-nav-tab ${getAudioPrefs().sfx?"lang-active":"secondary"}" onclick="FE.setOpeningSfx(true)">${tx("audioOn")}</button>
+              <button class="fantasy-nav-tab ${getAudioPrefs().sfx?"secondary":"lang-active"}" onclick="FE.setOpeningSfx(false)">${tx("audioOff")}</button>
+            </div>
           </div>
         ` : ""}
       </div>
     </div>
   `;
+  playAudioHook("title-music");
 }
 
 export function setOpeningLanguage(lang){
   setLanguage(lang);
+  playAudioHook("ui-click");
+  renderStart();
+}
+
+export function setOpeningMusic(on){
+  setMusicEnabled(on);
+  playAudioHook("ui-click");
+  renderStart();
+}
+
+export function setOpeningSfx(on){
+  setSfxEnabled(on);
+  playAudioHook("ui-click");
   renderStart();
 }
 
 export function toggleOpeningSettings(){
   openingSettingsOpen = !openingSettingsOpen;
+  playAudioHook("ui-click");
+  renderStart();
+}
+
+export function toggleOpeningMute(){
+  toggleMasterMute();
+  playAudioHook("ui-click");
   renderStart();
 }
 
 export function startOpeningJourney(){
+  playAudioHook("ui-click");
+  playAudioHook("title-music");
   const root = byId("setup");
   root?.classList.add("v59-transition-active");
   clearTimeout(openingTransitionTimer);
@@ -232,25 +269,28 @@ export function renderOpeningName(){
 
 export function startOpeningSkeleton(){
   heroName = byId("heroName")?.value?.trim() || "Xexe";
-  const copy = openingCopy();
+  playAudioHook("ui-click");
+  clearTimeout(skeletonTimer);
   skeleton = {
     turn:1,
+    lesson:"attack",
+    busy:false,
     hero:{hp:100,maxHp:100,mana:18,maxMana:18,potions:2},
-    enemy:{name:tx("roadSkeleton"),role:tx("tutorialEnemy"),enemyVisualClass:"skeleton",hp:52,maxHp:52},
+    enemy:{name:tx("roadSkeleton"),role:tx("tutorialEnemy"),enemyVisualClass:"skeleton",hp:34,maxHp:34},
     defending:false,
     pose:"idle",
-    tip:copy.tutorialHint,
+    tip:tx("lessonAttackBody"),
     log:[
       getLanguage()==="es" ? "Despiertas bajo Ashen Keep con una espada oxidada en la mano." : "You wake below Ashen Keep with a rusted sword in your hand.",
       getLanguage()==="es" ? "Los huesos raspan el camino. Un esqueleto se levanta entre las cenizas." : "Bones scrape the road. A skeleton rises from the ash."
     ]
   };
+  playAudioHook("battle-music-start");
   renderSkeleton();
 }
 
 export function renderSkeleton(){
   const t = dictionary();
-  const copy = openingCopy();
   const enemyPose = skeleton.pose || "idle";
   byId("setup").innerHTML = `
     <div class="v59-tutorial-screen opening-scene opening-scene-skeleton">
@@ -269,8 +309,9 @@ export function renderSkeleton(){
             <span class="combat-light-sweep"></span>
           </div>
           <div class="opening-guidance-card">
-            <span>${esc(t.goal)}</span>
-            <p>${esc(skeleton.tip || copy.skeletonHint)}</p>
+            <span>${esc(tutorialLessonTitle())}</span>
+            ${tutorialLessonPips()}
+            <p>${esc(skeleton.tip || tx("lessonAttackBody"))}</p>
           </div>
           <div class="combat-area party-area">
             <h2>${esc(heroName)} ${esc(t.yourTurn)}</h2>
@@ -287,12 +328,13 @@ export function renderSkeleton(){
         </div>
         <div class="actions combat-actions opening-actions">
           <div class="grid3 opening-tutorial-action-grid">
-            <button class="primary" onclick="FE.tutorialAttack()">${t.attack}</button>
-            <button onclick="FE.tutorialDefend()">${t.defend}</button>
-            <button onclick="FE.tutorialPotion()">${t.potion} (${skeleton.hero.potions})</button>
+            <button class="${lessonClass("attack")}" onclick="FE.tutorialAttack()" ${lessonDisabled("attack")}>${t.attack}</button>
+            <button class="${lessonClass("defend")}" onclick="FE.tutorialDefend()" ${lessonDisabled("defend")}>${t.defend}</button>
+            <button class="${lessonClass("potion")}" onclick="FE.tutorialPotion()" ${lessonDisabled("potion")}>${t.potion} (${skeleton.hero.potions})</button>
             <button class="secondary" onclick="FE.tutorialExplain()">${t.help}</button>
-            <button class="danger" onclick="FE.startDragonIntro()">${t.skip}</button>
+            <button class="secondary" onclick="FE.startDragonIntro()">${t.skip}</button>
           </div>
+          ${skeleton.lesson === "finish" ? "" : `<p class="opening-lesson-lock">${esc(tx("lessonLocked"))}</p>`}
         </div>
         <div class="opening-combat-log">${skeleton.log.slice(-6).map(line=>`<span>${esc(line)}</span>`).join("")}</div>
       </div>
@@ -300,64 +342,137 @@ export function renderSkeleton(){
   `;
 }
 
+function tutorialLessonTitle(){
+  if(skeleton?.busy)return tx("lessonWait");
+  if(skeleton?.lesson === "defend")return tx("lessonDefend");
+  if(skeleton?.lesson === "potion")return tx("lessonPotion");
+  if(skeleton?.lesson === "finish")return tx("lessonFinish");
+  return tx("lessonAttack");
+}
+
+function tutorialLessonPips(){
+  const lesson = skeleton?.lesson || "attack";
+  const order = ["attack", "defend", "potion", "finish"];
+  const idx = Math.max(0, order.indexOf(lesson));
+  const steps = [
+    {id:"attack", label:tx("attack")},
+    {id:"defend", label:tx("defend")},
+    {id:"potion", label:tx("potion")}
+  ];
+  return `<ol class="opening-lesson-pips">${steps.map((step, i) => {
+    const cls = lesson === "finish" || i < idx ? "is-done" : (step.id === lesson ? "is-now" : "");
+    return `<li class="${cls}">${esc(i + 1)}. ${esc(step.label)}</li>`;
+  }).join("")}</ol>`;
+}
+
+function lessonClass(action){
+  const lesson = skeleton?.lesson || "attack";
+  if(skeleton?.busy)return "secondary";
+  if(lesson === "finish")return action === "attack" ? "primary is-lesson" : "secondary";
+  return lesson === action ? "primary is-lesson" : "secondary";
+}
+
+function lessonDisabled(action){
+  if(skeleton?.busy)return "disabled";
+  const lesson = skeleton?.lesson || "attack";
+  if(lesson === "finish")return "";
+  return lesson === action ? "" : "disabled";
+}
+
+function queueEnemyTurn(defending){
+  skeleton.busy = true;
+  renderSkeleton();
+  clearTimeout(skeletonTimer);
+  skeletonTimer = setTimeout(() => {
+    if(!skeleton)return;
+    skeletonEnemyTurn(defending);
+    advanceTutorialLesson();
+    skeleton.busy = false;
+    renderSkeleton();
+  }, 420);
+}
+
+function advanceTutorialLesson(){
+  if(skeleton.lesson === "attack"){
+    skeleton.lesson = "defend";
+    skeleton.tip = tx("lessonDefendBody");
+    return;
+  }
+  if(skeleton.lesson === "defend"){
+    skeleton.lesson = "potion";
+    skeleton.tip = tx("lessonPotionBody");
+    return;
+  }
+  skeleton.lesson = "finish";
+  skeleton.tip = tx("lessonFinishBody");
+}
+
 export function tutorialAttack(){
-  const copy = openingCopy();
-  const dmg = 12 + Math.floor(Math.random()*9);
+  if(skeleton?.busy)return;
+  if(skeleton.lesson !== "attack" && skeleton.lesson !== "finish")return;
+  playAudioHook("hero-swing");
+  const dmg = 14 + Math.floor(Math.random()*6);
   skeleton.enemy.hp = Math.max(0,skeleton.enemy.hp-dmg);
   skeleton.pose = "hurt";
-  skeleton.tip = copy.skeletonHint;
+  playAudioHook("hero-hit");
   skeleton.log.push(`${heroName} ${tx("heroHits")} ${dmg}.`);
   if(skeleton.enemy.hp<=0)return tutorialVictory();
-  skeletonEnemyTurn(false);
-  renderSkeleton();
+  queueEnemyTurn(false);
 }
 
 export function tutorialSkill(){
-  skeleton.tip = openingCopy().skillLocked;
+  skeleton.tip = tx("noClass");
   skeleton.log.push(tx("noClass"));
   renderSkeleton();
 }
 
 export function tutorialPotion(){
-  const copy = openingCopy();
+  if(skeleton?.busy)return;
+  if(skeleton.lesson !== "potion" && skeleton.lesson !== "finish")return;
   if(skeleton.hero.potions<=0){
     skeleton.tip = tx("noPotions");
     skeleton.log.push(tx("noPotions"));
     renderSkeleton();
     return;
   }
+  playAudioHook("potion");
   skeleton.hero.potions--;
   skeleton.hero.hp = Math.min(skeleton.hero.maxHp,skeleton.hero.hp+35);
   skeleton.pose = "idle";
-  skeleton.tip = copy.potionHint;
   skeleton.log.push(`${heroName} ${tx("heroPotion")}`);
-  skeletonEnemyTurn(false);
-  renderSkeleton();
+  queueEnemyTurn(false);
 }
 
 export function tutorialDefend(){
+  if(skeleton?.busy)return;
+  if(skeleton.lesson !== "defend" && skeleton.lesson !== "finish")return;
+  playAudioHook("block");
   skeleton.pose = "attack";
-  skeleton.tip = openingCopy().defendHint;
   skeleton.log.push(`${heroName} ${tx("heroDefend")}`);
-  skeletonEnemyTurn(true);
-  renderSkeleton();
+  queueEnemyTurn(true);
 }
 
 export function tutorialExplain(){
   skeleton.tip = tx("combatBasicsBody");
+  playAudioHook("ui-click");
   renderSkeleton();
 }
 
 function skeletonEnemyTurn(defending){
+  playAudioHook("enemy-swing");
   let dmg = 8 + Math.floor(Math.random()*8);
   if(defending)dmg = Math.max(1,Math.floor(dmg*.45));
   skeleton.hero.hp = Math.max(1,skeleton.hero.hp-dmg);
   skeleton.pose = "attack";
+  playAudioHook(defending ? "block" : "hero-hurt");
   skeleton.log.push(`${tx("skeletonHit")} ${heroName} for ${dmg}.`);
   skeleton.turn++;
 }
 
 function tutorialVictory(){
+  clearTimeout(skeletonTimer);
+  if(skeleton)skeleton.busy = false;
+  playAudioHook("combat-victory");
   byId("setup").innerHTML = `
     <div class="v59-victory-screen opening-scene opening-scene-skeleton">
       ${openingAtmosphereHTML()}
@@ -373,6 +488,9 @@ function tutorialVictory(){
 
 export function startDragonIntro(){
   const t = dictionary();
+  clearTimeout(skeletonTimer);
+  skeleton = null;
+  playAudioHook("dragon-music");
   dragon = {moment:0,hero:{barrier:999},knight:{hp:2600,maxHp:2600},dragon:{hp:9999,maxHp:9999},log:[...t.dragonStart]};
   renderDragon();
 }
@@ -444,11 +562,18 @@ export function nextDragonMoment(){
   if(moment){
     dragon.knight.hp = Math.max(0,dragon.knight.hp-moment[2]);
     dragon.dragon.hp = Math.max(0,dragon.dragon.hp-moment[3]);
-    if(moment[3])dragon.log.push(`${t.kaelDamage} ${moment[3]}.`);
-    if(moment[2])dragon.log.push(`${t.dragonDamage} ${moment[2]}.`);
+    if(moment[3]){
+      playAudioHook("kael-hit");
+      dragon.log.push(`${t.kaelDamage} ${moment[3]}.`);
+    }
+    if(moment[2]){
+      playAudioHook("dragon-hit");
+      dragon.log.push(`${t.dragonDamage} ${moment[2]}.`);
+    }
   }
   dragon.moment++;
   if(dragon.moment >= t.dragonMoments.length){
+    playAudioHook("town-ambience");
     byId("setup").innerHTML = `
       <div class="v59-keep-wake-screen opening-scene opening-scene-keep">
         ${openingAtmosphereHTML()}
@@ -541,6 +666,7 @@ export function startActualGame(name,classId){
   setState(next);
   save(1);
   startGame();
+  playAudioHook("town-ambience");
   showMainTutorial(false);
 }
 
@@ -550,5 +676,15 @@ export function showMainTutorial(force=true){
   if(!force && state.tutorialsSeen[key])return;
   state.tutorialsSeen[key] = true;
   save();
-  setTimeout(()=>modal(tx("mainTutorialTitle"), `<p>${tx("mainTutorialBody")}</p>`, [{label:tx("close"),cls:"secondary"}]),250);
+  setTimeout(()=>modal(tx("mainTutorialTitle"), `
+    <p>${esc(tx("mainTutorialLead"))}</p>
+    <ol class="slum-tutorial-steps">
+      <li>${esc(tx("mainTutorialStep1"))}</li>
+      <li>${esc(tx("mainTutorialStep2"))}</li>
+      <li>${esc(tx("mainTutorialStep3"))}</li>
+      <li>${esc(tx("mainTutorialStep4"))}</li>
+      <li>${esc(tx("mainTutorialStep5"))}</li>
+      <li>${esc(tx("mainTutorialStep6"))}</li>
+    </ol>
+  `, [{label:tx("close"),cls:"secondary"}]),250);
 }

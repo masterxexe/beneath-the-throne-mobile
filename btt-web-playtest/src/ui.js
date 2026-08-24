@@ -162,6 +162,14 @@ function updateNavLabels(){
     ledgerBtn.setAttribute("aria-label", tx("courtLedger"));
     ledgerBtn.title = tx("courtLedger");
   }
+  const audioBtn = document.querySelector("[data-action='audio-toggle']");
+  if(audioBtn){
+    const muted = window.FE?.audioMuted?.() ?? false;
+    audioBtn.textContent = muted ? "🔇" : "♪";
+    audioBtn.classList.toggle("is-muted", muted);
+    audioBtn.setAttribute("aria-label", muted ? tx("unmute") : tx("mute"));
+    audioBtn.title = muted ? tx("unmute") : tx("mute");
+  }
 }
 
 function saveSlotCount(){

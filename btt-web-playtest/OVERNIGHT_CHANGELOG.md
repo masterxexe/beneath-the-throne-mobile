@@ -114,3 +114,9 @@ node scripts/test-combat-debug.mjs
 - Debug cheats stay off `window.FE` unless `?debug` is in the URL
 - PWA icons are real 192 and 512 assets, with a separate maskable 512
 - Privacy Policy and Terms of Use pages, linked from the title screen
+
+## Pass 13 — Tutorial and audio (v120)
+- Opening fight is a 3-step lesson: Attack, then Defend, then Potion, with only the current button unlocked
+- Cinderhook briefing is a numbered list that matches the real button names
+- Procedural fight SFX (swings, hits, block, potions, magic) and looping beds for title, combat, road, and the dragon scene
+- Mute on the title screen, Settings music/SFX toggles, and a HUD speaker that remembers the choice

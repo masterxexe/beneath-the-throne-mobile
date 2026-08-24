@@ -16,6 +16,7 @@ import * as lowerWard from "./lowerWard.js";
 import * as pwa from "./pwa.js";
 import * as supporterStore from "./supporterStore.js";
 import { initAudioEngine } from "./audioEngine.js";
+import * as audio from "./audioEngine.js";
 
 setLanguage(getLanguage());
 
@@ -35,6 +36,7 @@ window.FE = {
   ...lowerWard,
   ...pwa,
   ...supporterStore,
+  ...audio,
   show,
   showSaveSlots
 };
@@ -80,7 +82,16 @@ document.addEventListener("click", event => {
   if(ledgerButton)show("support");
   const appUpdateButton = event.target.closest("[data-action='app-update']");
   if(appUpdateButton)window.FE.showAppUpdatePanel?.();
+  const audioButton = event.target.closest("[data-action='audio-toggle']");
+  if(audioButton){
+    window.FE.toggleMasterMute?.();
+    playUiClick();
+  }
 });
+
+function playUiClick(){
+  window.dispatchEvent(new CustomEvent("fallen-empire-audio", {detail:{intent:"ui-click"}}));
+}
 
 renderStart();
 if(debugMode)installDebugBootControls();
