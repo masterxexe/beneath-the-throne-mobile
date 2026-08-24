@@ -14,6 +14,7 @@ let openingSettingsOpen = false;
 let openingTransitionTimer = null;
 let skeletonTimer = 0;
 let dragonTimer = 0;
+let victoryTimer = 0;
 
 function localizedClassName(id, fallback){
   return dictionary().classNames?.[id] || fallback || title(id);
@@ -543,6 +544,7 @@ export function skipOpeningFight(){
 
 function tutorialVictory(){
   clearTimeout(skeletonTimer);
+  clearTimeout(victoryTimer);
   if(skeleton)skeleton.busy = false;
   playAudioHook("combat-victory");
   byId("setup").innerHTML = `
@@ -556,12 +558,17 @@ function tutorialVictory(){
       </div>
     </div>
   `;
+  victoryTimer = setTimeout(() => {
+    if(!document.querySelector(".v59-victory-screen"))return;
+    startDragonIntro();
+  }, 1800);
 }
 
 export function startDragonIntro(){
   const t = dictionary();
   clearTimeout(skeletonTimer);
   clearTimeout(dragonTimer);
+  clearTimeout(victoryTimer);
   skeleton = null;
   playAudioHook("dragon-music");
   dragon = {moment:0,hero:{barrier:100},knight:{hp:2600,maxHp:2600},dragon:{hp:9999,maxHp:9999},kaelHit:false,dragonHit:false,log:[...t.dragonStart]};

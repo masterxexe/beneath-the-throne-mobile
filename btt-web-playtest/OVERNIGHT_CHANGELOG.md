@@ -132,3 +132,7 @@ node scripts/test-combat-debug.mjs
 - Guidance sits above the field instead of covering the fighters
 - World, interior, slum, and Lower Ward NPCs idle on full-body sprites; party roster shows companion actors
 - Kael and the dragon breathe and flinch on each showcase beat
+
+## Pass 16 — Opening flow (v123)
+- A service-worker update no longer reloads the page during the title/tutorial, which was dumping players back to New Game after the skeleton
+- First Victory auto-continues into Kael's stand after a short beat

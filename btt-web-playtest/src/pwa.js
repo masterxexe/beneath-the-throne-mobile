@@ -1,6 +1,6 @@
 import { modal, toast } from "./ui.js";
 
-const BUILD_VERSION = "2026.08.24-overnight-47";
+const BUILD_VERSION = "2026.08.24-overnight-48";
 const VERSION_URL = "./version.json";
 const WORKER_URL = "./service-worker.js";
 const WORKER_SCOPE = "./";
@@ -43,6 +43,10 @@ async function registerServiceWorker(){
 
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if(refreshing)return;
+    if(document.body.classList.contains("start-lock")){
+      updateReady = true;
+      return;
+    }
     refreshing = true;
     window.location.reload();
   });

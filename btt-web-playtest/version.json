@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.24-overnight-47",
-  "build": 47,
-  "cache": "v122",
-  "notes": "Tutorial posed actors, idle NPCs, Kael/dragon hits, party companion sprites"
+  "version": "2026.08.24-overnight-48",
+  "build": 48,
+  "cache": "v123",
+  "notes": "Keep the opening tutorial from reloading to title; auto-advance First Victory into Kael's stand"
 }
