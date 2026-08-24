@@ -120,3 +120,8 @@ node scripts/test-combat-debug.mjs
 - Cinderhook briefing is a numbered list that matches the real button names
 - Procedural fight SFX (swings, hits, block, potions, magic) and looping beds for title, combat, road, and the dragon scene
 - Mute on the title screen, Settings music/SFX toggles, and a HUD speaker that remembers the choice
+
+## Pass 14 — UI chrome (v121)
+- Double gold frames, inner rims, and corner ticks on panels, cards, modals, and HUD
+- Stronger button/meter/input metal edges and keyboard focus rings
+- Combat target outline and dock/tab chrome match the Ash Court line

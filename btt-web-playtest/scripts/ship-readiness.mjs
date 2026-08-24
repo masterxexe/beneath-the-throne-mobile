@@ -105,7 +105,7 @@ async function staticChecks() {
       note("warn", "pwa", `${name} is ${w}x${h}, not 192x192.`);
     }
   }
-  if (!index.includes("v=120") || !sw.includes("v=120")) {
+  if (!index.includes("v=121") || !sw.includes("v=121")) {
     note("warn", "pwa", "Cache query strings may be out of sync.");
   }
   if (!pwa.includes(version.version)) {

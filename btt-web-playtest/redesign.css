@@ -9,18 +9,39 @@
   --btt-panel-strong: rgba(10, 12, 20, 0.94);
   --btt-gold: #d4a84b;
   --btt-gold-bright: #f0cc6a;
+  --btt-gold-edge: #e8c878;
   --btt-ember: #c45c3a;
   --btt-ash: #8a96a8;
   --btt-mist: #5f7f8f;
   --btt-text: #f3e8d4;
   --btt-muted: #b7aa94;
-  --btt-line: rgba(212, 168, 75, 0.28);
-  --btt-line-strong: rgba(212, 168, 75, 0.5);
+  --btt-line: rgba(212, 168, 75, 0.42);
+  --btt-line-strong: rgba(232, 196, 120, 0.72);
+  --btt-line-inner: rgba(255, 232, 170, 0.14);
   --btt-good: #6ecf8a;
   --btt-danger: #e06a5a;
   --btt-radius: 14px;
   --btt-radius-sm: 10px;
   --btt-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  --btt-frame:
+    0 0 0 1px rgba(6, 7, 10, 0.92),
+    0 0 0 2px rgba(168, 124, 58, 0.38),
+    inset 0 0 0 1px var(--btt-line-inner),
+    inset 0 1px 0 rgba(255, 244, 214, 0.16),
+    0 22px 48px rgba(0, 0, 0, 0.52);
+  --btt-frame-tight:
+    0 0 0 1px rgba(6, 7, 10, 0.88),
+    inset 0 0 0 1px rgba(255, 232, 170, 0.1),
+    inset 0 1px 0 rgba(255, 244, 214, 0.14);
+  --btt-corners:
+    linear-gradient(var(--btt-gold-edge), var(--btt-gold-edge)) top left / 13px 2px no-repeat,
+    linear-gradient(var(--btt-gold-edge), var(--btt-gold-edge)) top left / 2px 13px no-repeat,
+    linear-gradient(var(--btt-gold-edge), var(--btt-gold-edge)) top right / 13px 2px no-repeat,
+    linear-gradient(var(--btt-gold-edge), var(--btt-gold-edge)) top right / 2px 13px no-repeat,
+    linear-gradient(var(--btt-gold-edge), var(--btt-gold-edge)) bottom left / 13px 2px no-repeat,
+    linear-gradient(var(--btt-gold-edge), var(--btt-gold-edge)) bottom left / 2px 13px no-repeat,
+    linear-gradient(var(--btt-gold-edge), var(--btt-gold-edge)) bottom right / 13px 2px no-repeat,
+    linear-gradient(var(--btt-gold-edge), var(--btt-gold-edge)) bottom right / 2px 13px no-repeat;
   --btt-font-display: "Cinzel", Georgia, serif;
   --btt-font-body: "DM Sans", system-ui, sans-serif;
   --btt-font-story: "Instrument Serif", Georgia, serif;
@@ -84,8 +105,10 @@ body.btt-redesign .boot-fallback {
 body.btt-redesign .boot-fallback-card {
   border: 1px solid var(--btt-line-strong);
   border-radius: var(--btt-radius);
-  background: linear-gradient(180deg, rgba(18, 22, 34, 0.92), rgba(8, 10, 16, 0.96));
-  box-shadow: var(--btt-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  background:
+    var(--btt-corners),
+    linear-gradient(180deg, rgba(18, 22, 34, 0.92), rgba(8, 10, 16, 0.96));
+  box-shadow: var(--btt-frame);
   backdrop-filter: blur(12px);
 }
 
@@ -108,11 +131,13 @@ body.btt-redesign .topbar {
   margin: 0;
   padding: 10px 12px 8px;
   border: 0;
-  border-bottom: 1px solid var(--btt-line);
+  border-bottom: 1px solid var(--btt-line-strong);
   border-radius: 0;
   background: linear-gradient(180deg, rgba(8, 10, 16, 0.96), rgba(8, 10, 16, 0.82));
   backdrop-filter: blur(16px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  box-shadow:
+    0 1px 0 rgba(255, 232, 170, 0.08),
+    0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
 body.btt-redesign .topbar::before,
@@ -222,22 +247,26 @@ body.btt-redesign .top-status-portrait {
   min-width: 58px;
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid var(--btt-line);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--btt-line-strong);
+  box-shadow:
+    var(--btt-frame-tight),
+    0 8px 20px rgba(0, 0, 0, 0.4);
 }
 
 body.btt-redesign .pill,
 body.btt-redesign .hud-token,
 body.btt-redesign .stat-pill {
   border-radius: 999px;
-  border: 1px solid rgba(138, 150, 168, 0.35);
-  background: rgba(12, 16, 24, 0.88);
+  border: 1px solid rgba(196, 148, 70, 0.42);
+  background:
+    linear-gradient(180deg, rgba(36, 30, 22, 0.96), rgba(12, 16, 24, 0.94));
   color: #e8dcc8;
   font-family: var(--btt-font-body);
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   padding: 4px 9px;
+  box-shadow: inset 0 1px 0 rgba(255, 232, 170, 0.12), 0 0 0 1px rgba(6, 7, 10, 0.55);
 }
 
 body.btt-redesign .pill.good,
@@ -269,8 +298,10 @@ body.btt-redesign .hud-icon-btn {
   min-height: 32px;
   padding: 0;
   border-radius: 10px;
+  border: 1px solid var(--btt-line);
   font-size: 0.95rem;
   line-height: 1;
+  box-shadow: var(--btt-frame-tight);
 }
 
 /* Bottom dock navigation */
@@ -287,10 +318,12 @@ body.btt-redesign .game-dock {
   padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
   margin: 0;
   overflow: visible;
-  border-top: 1px solid var(--btt-line);
+  border-top: 1px solid var(--btt-line-strong);
   background: linear-gradient(180deg, rgba(10, 12, 18, 0.72), rgba(6, 8, 12, 0.96));
   backdrop-filter: blur(18px);
-  box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.45);
+  box-shadow:
+    0 -1px 0 rgba(255, 232, 170, 0.1),
+    0 -16px 40px rgba(0, 0, 0, 0.45);
 }
 
 body.btt-redesign .game-dock::before,
@@ -306,9 +339,9 @@ body.btt-redesign .game-dock button {
   min-width: 0;
   min-height: 48px;
   padding: 6px 4px;
-  border: 1px solid transparent;
+  border: 1px solid rgba(212, 168, 75, 0.16);
   border-radius: 12px;
-  background: transparent;
+  background: rgba(8, 10, 14, 0.28);
   color: var(--btt-ash);
   font-family: var(--btt-font-body);
   font-size: 0;
@@ -333,9 +366,9 @@ body.btt-redesign .game-dock button::before {
 
 body.btt-redesign .game-dock button.active {
   color: var(--btt-gold-bright);
-  border-color: var(--btt-line);
-  background: linear-gradient(180deg, rgba(212, 168, 75, 0.16), rgba(212, 168, 75, 0.04));
-  box-shadow: 0 0 24px rgba(212, 168, 75, 0.12);
+  border-color: var(--btt-line-strong);
+  background: linear-gradient(180deg, rgba(212, 168, 75, 0.22), rgba(212, 168, 75, 0.06));
+  box-shadow: var(--btt-frame-tight), 0 0 24px rgba(212, 168, 75, 0.16);
 }
 
 /* Cards & panels */
@@ -346,12 +379,20 @@ body.btt-redesign .choice-card,
 body.btt-redesign .hero-shell,
 body.btt-redesign .tutorial-frame,
 body.btt-redesign .lower-ward-hero,
-body.btt-redesign .modal {
-  border: 1px solid var(--btt-line);
+body.btt-redesign .modal,
+body.btt-redesign .companion-card,
+body.btt-redesign .supporter-card,
+body.btt-redesign .slum-contract-card,
+body.btt-redesign .v59-cinematic-card,
+body.btt-redesign .v59-settings-panel,
+body.btt-redesign .map-screen-location-card,
+body.btt-redesign .court-crier-card {
+  border: 1px solid var(--btt-line-strong);
   border-radius: var(--btt-radius);
   background:
-    linear-gradient(180deg, rgba(20, 24, 36, 0.9), rgba(8, 10, 16, 0.95));
-  box-shadow: var(--btt-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    var(--btt-corners),
+    linear-gradient(180deg, rgba(22, 26, 38, 0.94), rgba(8, 10, 16, 0.97));
+  box-shadow: var(--btt-frame);
   backdrop-filter: blur(8px);
 }
 
@@ -367,49 +408,57 @@ body.btt-redesign .story-box {
 }
 
 /* Buttons */
-body.btt-redesign button {
+body.btt-redesign button:not(.overworld-node):not(.building-hotspot):not(.scene-hotspot):not(.world-hotspot):not(.travel-stop-premium) {
   border-radius: var(--btt-radius-sm);
-  border: 1px solid rgba(138, 150, 168, 0.35);
-  background: linear-gradient(180deg, rgba(24, 30, 42, 0.95), rgba(12, 16, 24, 0.98));
+  border: 1px solid rgba(196, 148, 70, 0.48);
+  background: linear-gradient(180deg, rgba(38, 32, 24, 0.98), rgba(12, 14, 20, 0.98));
   color: var(--btt-text);
   font-family: var(--btt-font-body);
   font-weight: 700;
+  box-shadow: var(--btt-frame-tight);
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-body.btt-redesign button:active {
+body.btt-redesign button:not(.overworld-node):not(.building-hotspot):not(.scene-hotspot):not(.world-hotspot):not(.travel-stop-premium):active {
   transform: scale(0.98);
 }
 
 body.btt-redesign .primary,
 body.btt-redesign button.primary {
-  border-color: rgba(212, 168, 75, 0.65);
-  background: linear-gradient(180deg, #c9983f, #8a5f1e);
+  border-color: #f0d48a;
+  background: linear-gradient(180deg, #e0b45a, #8a5f1e);
   color: #1a1208;
-  box-shadow: 0 10px 24px rgba(212, 168, 75, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 220, 0.45),
+    0 0 0 1px rgba(70, 42, 10, 0.55),
+    0 10px 24px rgba(212, 168, 75, 0.28);
 }
 
 body.btt-redesign .good {
-  border-color: rgba(110, 207, 138, 0.55);
-  background: linear-gradient(180deg, #3d8f58, #245a36);
+  border-color: rgba(168, 232, 184, 0.7);
+  background: linear-gradient(180deg, #4aa86a, #245a36);
+  box-shadow: inset 0 1px 0 rgba(220, 255, 230, 0.28), 0 0 0 1px rgba(8, 24, 12, 0.5);
 }
 
 body.btt-redesign .danger {
-  border-color: rgba(224, 106, 90, 0.55);
-  background: linear-gradient(180deg, #a83f34, #6d241d);
+  border-color: rgba(255, 176, 164, 0.65);
+  background: linear-gradient(180deg, #c24c40, #6d241d);
+  box-shadow: inset 0 1px 0 rgba(255, 220, 210, 0.28), 0 0 0 1px rgba(40, 10, 8, 0.5);
 }
 
 body.btt-redesign .secondary {
-  background: rgba(16, 20, 30, 0.9);
+  background: linear-gradient(180deg, rgba(28, 32, 42, 0.96), rgba(12, 14, 20, 0.98));
   color: var(--btt-muted);
+  border-color: rgba(196, 148, 70, 0.38);
 }
 
 /* Meters */
 body.btt-redesign .bar {
   height: 10px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(212, 168, 75, 0.28);
   background: rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(6, 7, 10, 0.65);
 }
 
 body.btt-redesign .bar > div {
@@ -981,20 +1030,25 @@ body.btt-redesign .building-hotspot {
 body.btt-redesign .combat-shell,
 body.btt-redesign .combat-stage {
   border-radius: calc(var(--btt-radius) + 4px);
-  border-color: var(--btt-line-strong);
+  border: 1px solid var(--btt-line-strong);
+  box-shadow: var(--btt-frame);
   overflow: hidden;
 }
 
 body.btt-redesign .actions {
   border-radius: var(--btt-radius) var(--btt-radius) 0 0;
-  border-color: var(--btt-line);
+  border: 1px solid var(--btt-line-strong);
+  border-bottom: 0;
   background: linear-gradient(180deg, rgba(10, 12, 18, 0.94), rgba(6, 8, 12, 0.98));
   backdrop-filter: blur(14px);
+  box-shadow: 0 -1px 0 rgba(255, 232, 170, 0.1), inset 0 1px 0 rgba(255, 232, 170, 0.08);
 }
 
 body.btt-redesign .enemy.target,
 body.btt-redesign .combat-actor.target {
-  box-shadow: 0 0 28px rgba(212, 168, 75, 0.28) !important;
+  outline: 2px solid var(--btt-gold-bright);
+  outline-offset: 2px;
+  box-shadow: 0 0 28px rgba(212, 168, 75, 0.4) !important;
 }
 
 /* Opening / title flow */
@@ -1018,9 +1072,10 @@ body.btt-redesign .toast {
   top: auto;
   bottom: calc(92px + env(safe-area-inset-bottom));
   border-radius: var(--btt-radius-sm);
-  border-color: rgba(212, 168, 75, 0.45);
+  border: 1px solid var(--btt-line-strong);
   background: rgba(18, 14, 10, 0.94);
   backdrop-filter: blur(10px);
+  box-shadow: var(--btt-frame);
 }
 
 body.btt-redesign .modal-back {
@@ -1030,9 +1085,11 @@ body.btt-redesign .modal-back {
 body.btt-redesign input,
 body.btt-redesign select {
   border-radius: var(--btt-radius-sm);
-  border-color: rgba(138, 150, 168, 0.35);
+  border: 1px solid var(--btt-line);
   background: rgba(8, 10, 16, 0.92);
   font-family: var(--btt-font-body);
+  box-shadow: var(--btt-frame-tight);
+  color: var(--btt-text);
 }
 
 /* Lower ward & district panels */
@@ -2318,12 +2375,15 @@ body.btt-redesign .paper-doll-frame.supporter-cloak-ember {
 .court-crier-card {
   width: min(360px, 100%);
   padding: 16px;
-  border: 1px solid rgba(212, 168, 75, 0.4);
+  border: 1px solid var(--btt-line-strong);
   border-radius: 14px;
-  background: linear-gradient(180deg, rgba(18, 16, 14, 0.96), rgba(8, 8, 10, 0.98));
+  background:
+    var(--btt-corners),
+    linear-gradient(180deg, rgba(18, 16, 14, 0.96), rgba(8, 8, 10, 0.98));
   color: #f3e8d4;
   display: grid;
   gap: 8px;
+  box-shadow: var(--btt-frame);
 }
 
 body.btt-redesign .hud-icon-btn.is-muted,
@@ -2337,8 +2397,11 @@ body.btt-redesign .v59-title-audio {
 }
 
 body.btt-redesign .opening-guidance-card {
-  border-color: rgba(240, 204, 106, 0.48);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(240, 204, 106, 0.12);
+  border: 1px solid var(--btt-line-strong);
+  box-shadow: var(--btt-frame);
+  background:
+    var(--btt-corners),
+    linear-gradient(180deg, rgba(4, 6, 7, 0.72), rgba(2, 3, 4, 0.88));
 }
 
 body.btt-redesign .opening-lesson-pips {
@@ -2412,4 +2475,121 @@ body.btt-redesign .slum-tutorial-steps li {
     animation: none;
   }
 }
+
+/* Ash Court chrome — frames, rims, focus */
+body.btt-redesign :focus-visible {
+  outline: 2px solid var(--btt-gold-bright);
+  outline-offset: 2px;
+}
+
+body.btt-redesign button:focus:not(:focus-visible),
+body.btt-redesign input:focus:not(:focus-visible),
+body.btt-redesign select:focus:not(:focus-visible) {
+  outline: none;
+}
+
+body.btt-redesign .v59-title-command,
+body.btt-redesign .fantasy-action-button,
+body.btt-redesign .fantasy-nav-tab {
+  border: 1px solid var(--btt-line-strong);
+  box-shadow: var(--btt-frame-tight);
+}
+
+body.btt-redesign .fantasy-nav-tab.lang-active {
+  border-color: var(--btt-gold-bright);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 244, 214, 0.28),
+    0 0 0 1px rgba(70, 42, 10, 0.45),
+    0 0 16px rgba(212, 168, 75, 0.2);
+}
+
+body.btt-redesign .v59-cinematic-card,
+body.btt-redesign .v59-prologue-copy,
+body.btt-redesign .v59-class-copy,
+body.btt-redesign .v59-settings-panel {
+  border: 1px solid var(--btt-line);
+  border-radius: var(--btt-radius);
+  box-shadow: var(--btt-frame-tight);
+}
+
+body.btt-redesign .combat-card,
+body.btt-redesign .unit.combat-card,
+body.btt-redesign .enemy.combat-card {
+  border: 1px solid var(--btt-line);
+  border-radius: 12px;
+  box-shadow: var(--btt-frame-tight);
+}
+
+body.btt-redesign .enemy.combat-card {
+  border-color: rgba(224, 106, 90, 0.55);
+}
+
+body.btt-redesign .combat-header-cinematic,
+body.btt-redesign .combat-round-pill {
+  border: 1px solid var(--btt-line);
+  box-shadow: var(--btt-frame-tight);
+}
+
+body.btt-redesign .paper-doll-frame,
+body.btt-redesign .top-status-portrait,
+body.btt-redesign .opening-hidden-card .portrait-wrap {
+  border: 1px solid var(--btt-line-strong);
+  border-radius: 12px;
+  box-shadow: var(--btt-frame-tight);
+}
+
+body.btt-redesign .slum-group-button,
+body.btt-redesign .town-hub-button,
+body.btt-redesign .lower-ward-command,
+body.btt-redesign .map-route-card,
+body.btt-redesign .map-road-chip {
+  border: 1px solid var(--btt-line);
+  box-shadow: var(--btt-frame-tight);
+}
+
+body.btt-redesign .location-panel,
+body.btt-redesign .road-stop-home-panel,
+body.btt-redesign .populated-scene-head,
+body.btt-redesign .world-narration-card,
+body.btt-redesign .service-entry-panel {
+  border: 1px solid var(--btt-line-strong);
+  box-shadow: var(--btt-frame);
+}
+
+body.btt-redesign .battle-log {
+  border: 1px solid var(--btt-line);
+  border-radius: 12px;
+  box-shadow: var(--btt-frame-tight);
+}
+
+body.btt-redesign .opening-combat-log {
+  border-top: 1px solid var(--btt-line);
+}
+
+body.btt-redesign .modal h2,
+body.btt-redesign .panel h1,
+body.btt-redesign .panel h2 {
+  border-bottom: 1px solid rgba(212, 168, 75, 0.22);
+  padding-bottom: 6px;
+}
+
+body.btt-redesign .fantasy-name-input:focus-visible,
+body.btt-redesign input:focus-visible,
+body.btt-redesign select:focus-visible {
+  border-color: var(--btt-gold-bright);
+  box-shadow:
+    var(--btt-frame-tight),
+    0 0 0 3px rgba(240, 204, 106, 0.22);
+}
+
+body.btt-redesign .map-canvas-frame {
+  border: 2px solid var(--btt-line-strong);
+  box-shadow: var(--btt-frame);
+}
+
+body.btt-redesign .v59-title-legal a {
+  color: var(--btt-gold-bright);
+  text-underline-offset: 3px;
+}
+
 

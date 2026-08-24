@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.24-overnight-45",
-  "build": 45,
-  "cache": "v120",
-  "notes": "Guided opening fight, procedural combat SFX, looping beds, mute on title and HUD"
+  "version": "2026.08.24-overnight-46",
+  "build": 46,
+  "cache": "v121",
+  "notes": "Ash Court chrome: double gold frames, corner ticks, inner rims, and focus rings"
 }
