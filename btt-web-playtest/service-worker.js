@@ -7,7 +7,7 @@ const OFFLINE_SHELL = new URL("./index.html", self.location.href).href;
 const APP_SHELL = [
   "./index.html",
   "./styles.css?v=117",
-  "./redesign.css?v=10",
+  "./redesign.css?v=11",
   "./combat-animations.css?v=117",
   "./manifest.webmanifest",
   "./icons/icon-192.png",

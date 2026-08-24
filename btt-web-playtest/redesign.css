@@ -1837,6 +1837,10 @@ body.btt-redesign .map-road-chip small {
 }
 
 @media (min-width: 900px) {
+  body.btt-redesign:has(#map.active) #app {
+    max-width: 980px;
+  }
+
   body.btt-redesign .map-screen-usable {
     grid-template-columns: minmax(0, 1fr) min(320px, 34vw);
     align-items: start;
@@ -2042,21 +2046,21 @@ body.btt-redesign .map-screen-usable .overworld-node-premium.current-node .node-
   color: #e8fff0;
 }
 
-body.btt-redesign .map-screen-usable .overworld-node-premium.connected-node:not(.current-node) .node-sigil {
+body.btt-redesign .map-screen-usable .overworld-node-premium.connected-node:not(.current-node):not(.locked-node) .node-sigil {
   width: 24px;
   height: 24px;
 }
 
-body.btt-redesign .map-screen-usable .overworld-node-premium.connected-node:not(.current-node) .node-sigil-core {
+body.btt-redesign .map-screen-usable .overworld-node-premium.connected-node:not(.current-node):not(.locked-node) .node-sigil-core {
   background: radial-gradient(circle, #fff8e0 0 28%, #b07a28 100%);
 }
 
-body.btt-redesign .map-screen-usable .overworld-node-premium.connected-node:not(.current-node) .node-sigil-ring {
+body.btt-redesign .map-screen-usable .overworld-node-premium.connected-node:not(.current-node):not(.locked-node) .node-sigil-ring {
   border-color: rgba(240, 204, 106, 0.95);
   box-shadow: 0 0 0 2px rgba(212, 168, 75, 0.2);
 }
 
-body.btt-redesign .map-screen-usable .overworld-node-premium.connected-node:not(.current-node) .node-label {
+body.btt-redesign .map-screen-usable .overworld-node-premium.connected-node:not(.current-node):not(.locked-node) .node-label {
   font-size: 0.72rem;
   border-color: rgba(201, 164, 90, 0.45);
   color: #fff4d8;
@@ -2067,12 +2071,12 @@ body.btt-redesign .map-screen-usable .overworld-node-premium.selected-node:not(.
   box-shadow: 0 0 0 3px rgba(255, 236, 186, 0.28);
 }
 
-body.btt-redesign .map-screen-usable .overworld-node-premium.locked-node .node-sigil {
+body.btt-redesign .map-screen-usable .overworld-node-premium.locked-node:not(.current-node) .node-sigil {
   width: 18px;
   height: 18px;
 }
 
-body.btt-redesign .map-screen-usable .overworld-node-premium.locked-node .node-sigil-core {
+body.btt-redesign .map-screen-usable .overworld-node-premium.locked-node:not(.current-node) .node-sigil-core {
   background: radial-gradient(circle, #8a7060 0 28%, #2a1814 100%);
   filter: grayscale(0.15);
 }
@@ -2148,7 +2152,11 @@ body.btt-redesign .map-you-chip {
 body.btt-redesign .map-dock-head {
   display: flex;
   gap: 10px;
-  align-items: flex-start;
+  align-items: center;
+}
+
+body.btt-redesign .map-dock-head h2 {
+  margin: 0;
 }
 
 body.btt-redesign .map-status-stamp {

@@ -1867,10 +1867,7 @@ function mapDockHTML(current, selectedId, traveling){
       <div class="map-dock-card">
         <div class="map-dock-head">
           <span class="map-status-stamp ${stampClass}">${stamp}</span>
-          <div class="map-dock-titles">
-            <span class="map-dock-kicker">${isHere ? tx("youAreHere") : tx("selectedPlace")}</span>
-            <h2>${esc(locationText(selected,"name"))}</h2>
-          </div>
+          <h2>${esc(locationText(selected,"name"))}</h2>
         </div>
         <span class="pill ${danger >= 3 ? "warn" : "good"}">${tx("danger")} ${danger}</span>
         <p class="map-dock-desc">${esc(locationText(selected,"desc"))}</p>
