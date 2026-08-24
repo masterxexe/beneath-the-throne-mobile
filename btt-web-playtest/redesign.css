@@ -408,7 +408,7 @@ body.btt-redesign .story-box {
 }
 
 /* Buttons */
-body.btt-redesign button:not(.overworld-node):not(.building-hotspot):not(.scene-hotspot):not(.world-hotspot):not(.travel-stop-premium) {
+body.btt-redesign button {
   border-radius: var(--btt-radius-sm);
   border: 1px solid rgba(196, 148, 70, 0.48);
   background: linear-gradient(180deg, rgba(38, 32, 24, 0.98), rgba(12, 14, 20, 0.98));
@@ -419,8 +419,17 @@ body.btt-redesign button:not(.overworld-node):not(.building-hotspot):not(.scene-
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-body.btt-redesign button:not(.overworld-node):not(.building-hotspot):not(.scene-hotspot):not(.world-hotspot):not(.travel-stop-premium):active {
+body.btt-redesign button:active {
   transform: scale(0.98);
+}
+
+body.btt-redesign button.overworld-node,
+body.btt-redesign button.building-hotspot,
+body.btt-redesign button.scene-hotspot,
+body.btt-redesign button.world-hotspot,
+body.btt-redesign button.travel-stop-premium {
+  transform: none;
+  border-radius: inherit;
 }
 
 body.btt-redesign .primary,
@@ -2488,11 +2497,25 @@ body.btt-redesign select:focus:not(:focus-visible) {
   outline: none;
 }
 
+body.btt-redesign .v59-title-menu {
+  border: 1px solid var(--btt-line-strong);
+  background:
+    var(--btt-corners),
+    linear-gradient(180deg, rgba(8, 10, 14, 0.62), rgba(4, 5, 8, 0.86));
+  box-shadow: var(--btt-frame);
+}
+
 body.btt-redesign .v59-title-command,
 body.btt-redesign .fantasy-action-button,
 body.btt-redesign .fantasy-nav-tab {
   border: 1px solid var(--btt-line-strong);
   box-shadow: var(--btt-frame-tight);
+}
+
+body.btt-redesign .v59-title-command.primary {
+  border-color: #f0d48a;
+  background: linear-gradient(180deg, #e0b45a, #8a5f1e);
+  color: #1a1208;
 }
 
 body.btt-redesign .fantasy-nav-tab.lang-active {
