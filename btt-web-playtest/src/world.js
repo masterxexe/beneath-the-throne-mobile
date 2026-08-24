@@ -1510,6 +1510,7 @@ export function debugBattleTransition(){
 export function debugBootSlumScene(name = "Xexe", classId = "warrior"){
   if(!state?.hero?.name)startActualGame(name, classId);
   state.world.locationId = START_LOCATION;
+  state.world.previousLocationId = null;
   state.world.routeHistory.push(START_LOCATION);
   save(1);
   showWorldHome();
@@ -1847,8 +1848,9 @@ function mapDockHTML(current, selectedId, traveling){
   }else{
     action = `<p class="map-dock-lock">${tx("distantPlaceHint")}</p>`;
   }
-  const returnBtn = !traveling && state.world.previousLocationId && WORLD_LOCATIONS[state.world.previousLocationId]
-    ? `<button class="secondary" onclick="FE.returnToPreviousLocation()">${tx("returnTo")} ${esc(locationText(state.world.previousLocationId,"name"))}</button>`
+  const previousId = state.world.previousLocationId;
+  const returnBtn = !traveling && isHere && previousId && previousId !== current.id && WORLD_LOCATIONS[previousId]
+    ? `<button class="secondary" onclick="FE.returnToPreviousLocation()">${tx("returnTo")} ${esc(locationText(previousId,"name"))}</button>`
     : "";
   return `
     <aside class="map-dock">
