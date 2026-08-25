@@ -8,7 +8,8 @@
     "dev": "npx --yes serve -l 43123 .",
     "start": "npm run dev",
     "qa:ship": "node scripts/ship-readiness.mjs",
-    "qa:combat": "node scripts/test-combat-debug.mjs"
+    "qa:combat": "node scripts/test-combat-debug.mjs",
+    "qa:webmcp": "node scripts/test-webmcp.mjs"
   },
   "devDependencies": {
     "ansi-regex": "^6.3.0",

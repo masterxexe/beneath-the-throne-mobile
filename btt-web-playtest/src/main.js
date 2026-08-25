@@ -1,8 +1,10 @@
 import { getLanguage, setLanguage } from "./language.js";
-import { debugGrantCMXp, debugLevelTo, debugSetHeroHp, grantHeroLevel } from "./state.js";
+import { currentScreen, debugGrantCMXp, debugLevelTo, debugSetHeroHp, grantHeroLevel, state, weaponTypeForItem } from "./state.js";
 import { presentLevelUp } from "./levelUp.js";
 import { renderStart } from "./tutorials-v19d.js";
 import { show, showSaveSlots } from "./ui.js";
+import { VISUAL_GEAR_SLOTS } from "./gearVisuals.js";
+import { initWebMcp } from "./webmcp.js";
 import * as tutorials from "./tutorials-v19d.js";
 import * as combat from "./combat.js";
 import * as town from "./town.js";
@@ -95,6 +97,18 @@ document.addEventListener("click", event => {
     playUiClick();
   }
 });
+
+void initWebMcp({
+  getState:()=>state,
+  getCurrentScreen:()=>currentScreen,
+  getTotalAttack:()=>combat.totalAttack(),
+  getTotalDefense:()=>combat.totalDefense(),
+  getWeaponType:item=>weaponTypeForItem(item),
+  getCurrentPlaceContext:()=>world.getCurrentPlaceContext({repairWorld:false}),
+  gearSlots:VISUAL_GEAR_SLOTS
+}).then(result=>{
+  if(result.failed.length)console.warn("[WebMCP] Some tools could not be registered.",result.failed);
+}).catch(error=>console.warn("[WebMCP] Tool registration skipped.",error));
 
 function playUiClick(){
   window.dispatchEvent(new CustomEvent("fallen-empire-audio", {detail:{intent:"ui-click"}}));

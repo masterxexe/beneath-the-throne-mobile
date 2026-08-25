@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.25-overnight-52",
-  "build": 52,
-  "cache": "v127",
-  "notes": "Chapter 1 rails, HUD vitals, skill identity, ward commissions, camps, defeat inn"
+  "version": "2026.08.25-webmcp-53",
+  "build": 53,
+  "cache": "v128",
+  "notes": "Read-only WebMCP player status, inventory, equipment, and location tools"
 }

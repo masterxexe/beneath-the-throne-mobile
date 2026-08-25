@@ -526,8 +526,8 @@ export function locationSupportsService(service, id = state?.world?.locationId){
   return locationServices(id).includes(service);
 }
 
-export function getCurrentPlaceContext(){
-  const major = ensureWorld();
+export function getCurrentPlaceContext(options = {}){
+  const major = options?.repairWorld === false ? currentLocation() : ensureWorld();
   if(activeTravel){
     const allNodes = getMapNodes(WORLD_LOCATIONS);
     const currentNode = allNodes[activeTravel.currentRoadNodeId] || allNodes[activeTravel.originLocationId] || major;
