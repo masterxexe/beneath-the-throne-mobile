@@ -377,7 +377,7 @@ export function createNewState(name, classId){
   return {
     settings:{language:getLanguage()},
     hero:{
-      name:name || "Xexe", level:1, xp:0, nextXp:100, points:0, class:classId, advancedClass:null, unlockedClasses:[classId], classHistory:{[classId]:{unlockedAt:1}},
+      name:name || "Xexe", level:1, xp:0, nextXp:80, points:0, class:classId, advancedClass:null, unlockedClasses:[classId], classHistory:{[classId]:{unlockedAt:1}},
       stats:{...c.stats}, hp:120, maxHp:120, mana:45, maxMana:45, attack:10, defense:5, speed:5,
       accuracy:5, dodge:0, crit:3, resistance:0, resists:{fire:0,frost:0,poison:0,shadow:0,lightning:0},
       gold:18, food:5, ore:0, potions:2, manaPotions:1, inv:[], gear:{weapon:null,offhand:null,helmet:null,shoulders:null,chest:null,gloves:null,belt:null,legs:null,boots:null,cloak:null,ring:null},
@@ -521,6 +521,7 @@ export function createLowerWard(){
     recruitedCompanions:[],
     companionReports:0,
     commissions:0,
+    commissionDone:[],
     log:[
       "The Lower Ward waits beyond the iron wicket.",
       "Class trainers, tax ledgers, and guarded alleys decide who climbs next."
@@ -545,6 +546,7 @@ export function ensureLowerWardState(numFn=null){
   state.world.lowerWard.recruitedCompanions = Array.isArray(state.world.lowerWard.recruitedCompanions) ? [...new Set(state.world.lowerWard.recruitedCompanions.filter(Boolean))] : [];
   state.world.lowerWard.companionReports = Math.max(0,Math.floor(num(state.world.lowerWard.companionReports,base.companionReports)));
   state.world.lowerWard.commissions = Math.max(0,Math.floor(num(state.world.lowerWard.commissions,base.commissions)));
+  state.world.lowerWard.commissionDone = Array.isArray(state.world.lowerWard.commissionDone) ? [...new Set(state.world.lowerWard.commissionDone.filter(Boolean))] : [];
   state.world.lowerWard.log = Array.isArray(state.world.lowerWard.log) && state.world.lowerWard.log.length ? state.world.lowerWard.log.slice(-12) : [...base.log];
   return state.world.lowerWard;
 }
@@ -904,6 +906,13 @@ export function levelHero(){
   }
   if(h.level <= from)return null;
   return {from, to:h.level, levels:h.level - from, hp, mana, attack, defense, points, milestone, pathUnlock};
+}
+
+export function grantHeroXp(amount){
+  const h = state.hero;
+  if(!h)return null;
+  h.xp = Math.max(0, (h.xp || 0) + Math.floor(Number(amount) || 0));
+  return levelHero();
 }
 
 export function grantHeroLevel(){

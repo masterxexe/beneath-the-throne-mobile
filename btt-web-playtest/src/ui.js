@@ -3,7 +3,7 @@ import { getLanguage, setLanguage, title, tx } from "./language.js";
 import { renderTown } from "./town.js";
 import { renderGear } from "./gear.js";
 import { renderParty } from "./party.js";
-import { renderProgression, showPendingAbilityChoice } from "./progression.js";
+import { renderProgression, showPendingAbilityChoice, showPendingGrowthHint } from "./progression.js";
 import { renderCombat, battle } from "./combat.js";
 import { renderWorldHome, renderWorldKingdoms, renderWorldMap } from "./world.js";
 import { renderPlayerHudPortrait } from "./portraitRenderer.js";
@@ -64,7 +64,10 @@ export function render(){
   updateTop();
   if(currentScreen==="home"){
     renderWorldHome();
-    setTimeout(()=>showPendingAbilityChoice(),0);
+    setTimeout(()=>{
+      if(showPendingAbilityChoice())return;
+      showPendingGrowthHint();
+    },0);
   }
   if(currentScreen==="town")renderTown();
   if(currentScreen==="gear")renderGear();

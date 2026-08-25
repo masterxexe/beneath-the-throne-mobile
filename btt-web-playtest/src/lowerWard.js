@@ -1,8 +1,9 @@
 import { ADVANCED_CLASSES, CLASSES, advanceDays, clamp, companionTrainingNeed, ensureLowerWardState, grantCompanionBond, normalizeCompanion, rnd, save, state } from "./state.js";
-import { title } from "./language.js";
+import { title, tx } from "./language.js";
 import { closeModals, esc, modal, toast, updateTop } from "./ui.js";
 import { learnClassPathAbilities } from "./progression.js";
 import { NPC_ACTOR_ASSETS } from "./npcRegistry.js";
+import { startBattle } from "./combat.js";
 
 const TRAINER_NPCS = {
   vanguard:{name:"Captain Rusk",place:"Shield Yard"},
@@ -74,6 +75,13 @@ const LOWER_WARD_QUESTS = [
     actionLabel:"Review Ledger",
     reward:{influence:3,gold:12}
   }
+];
+
+const WARD_COMMISSIONS = [
+  {id:"stamp_run", nameKey:"commissionStampRun", descKey:"commissionStampRunDesc", kind:"work", gold:[5,8], influence:1},
+  {id:"alley_writ", nameKey:"commissionAlleyWrit", descKey:"commissionAlleyWritDesc", kind:"combat", enemy:{name:"Tax Knife",role:"ward",enemyVisualClass:"bandit",level:3,hp:88,maxHp:88,attack:13,defense:4,speed:5,xp:48,gold:8}},
+  {id:"bell_watch", nameKey:"commissionBellWatch", descKey:"commissionBellWatchDesc", kind:"combat", enemy:{name:"Ward Bailiff",role:"ward",enemyVisualClass:"bandit",level:4,hp:102,maxHp:102,attack:14,defense:6,speed:4,xp:54,gold:9}},
+  {id:"candle_errand", nameKey:"commissionCandleErrand", descKey:"commissionCandleErrandDesc", kind:"work", gold:[6,10], influence:1, writ:true}
 ];
 
 const LOWER_WARD_CONTACTS = [
@@ -199,7 +207,7 @@ function lowerWardQuestChainHTML(){
   const nextOpen = LOWER_WARD_QUESTS.find(quest=>!claimed.includes(quest.id));
   return `
     <details class="lower-ward-drawer lower-ward-quest-drawer" ${completeCount < LOWER_WARD_QUESTS.length ? "open" : ""}>
-      <summary>Lower Ward Quest Chain ${completeCount}/${LOWER_WARD_QUESTS.length}</summary>
+      <summary>${esc(tx("wardQuestChain"))} ${completeCount}/${LOWER_WARD_QUESTS.length}</summary>
       <div class="lower-ward-quest-list">
         ${LOWER_WARD_QUESTS.map(quest=>{
           const done = questComplete(quest);
@@ -335,6 +343,25 @@ function trainerSummaryHTML(){
   `;
 }
 
+function nextOpenQuest(){
+  const claimed = ward().quests?.claimed || [];
+  return LOWER_WARD_QUESTS.find(quest => !claimed.includes(quest.id));
+}
+
+function lowerWardNowHTML(){
+  const quest = nextOpenQuest();
+  if(!quest)return "";
+  const ready = questComplete(quest);
+  return `
+    <div class="ward-now-banner">
+      <span class="pill good">${esc(tx("wardNowKicker"))}</span>
+      <h2>${esc(quest.name)}</h2>
+      <p>${esc(quest.desc)}</p>
+      <button class="${ready ? "primary" : "secondary"}" onclick="${ready ? `FE.lowerWardClaimQuest('${esc(quest.id)}')` : quest.action}">${esc(ready ? tx("continue") : quest.actionLabel)}</button>
+    </div>
+  `;
+}
+
 export function renderLowerWardPanel(){
   const w = ward();
   const pathIds = activePathIds();
@@ -344,8 +371,8 @@ export function renderLowerWardPanel(){
       <div class="lower-ward-hero">
         <div>
           <span class="pill good">Lower Ward</span>
-          <h1>First Rung Above Cinderhook</h1>
-          <p>Train into a class path, earn ward influence, and break harder districts to climb toward noble streets.</p>
+          <h1>${esc(tx("wardTitle"))}</h1>
+          <p>${esc(tx("wardLead"))}</p>
         </div>
         <div class="lower-ward-status">
           <span class="pill good">Class ${esc(activeClass)}</span>
@@ -353,23 +380,24 @@ export function renderLowerWardPanel(){
           <span class="pill">Writs ${esc(w.writs)}</span>
         </div>
       </div>
+      ${lowerWardNowHTML()}
       ${lowerWardSceneHTML()}
       <div class="lower-ward-command-grid">
         <button class="primary lower-ward-command" onclick="FE.lowerWardOpenTrainers()">
-          <span>Class Trainers</span>
+          <span>${esc(tx("wardClassTrainers"))}</span>
           <small>${pathIds.map(className).join(" | ")}</small>
         </button>
         <button class="lower-ward-command" onclick="FE.lowerWardCommission()">
-          <span>Ward Commission</span>
-          <small>Earn coin and influence without leaving town</small>
+          <span>${esc(tx("wardCommission"))}</span>
+          <small>${esc(tx("wardCommissionHint"))}</small>
         </button>
         <button class="danger lower-ward-command" onclick="FE.lowerWardFocusHardAreas()">
-          <span>Hard Districts</span>
-          <small>Tax vault, bell tower, candle court</small>
+          <span>${esc(tx("wardHardDistricts"))}</span>
+          <small>${esc(tx("wardHardHint"))}</small>
         </button>
         <button class="secondary lower-ward-command" onclick="FE.show('map')">
-          <span>Road Map</span>
-          <small>Return, travel, or scout routes</small>
+          <span>${esc(tx("wardRoadMap"))}</span>
+          <small>${esc(tx("wardRoadHint"))}</small>
         </button>
       </div>
       ${trainerSummaryHTML()}
@@ -389,19 +417,19 @@ export function renderLowerWardPanel(){
 }
 
 export function lowerWardTalk(id){
-  if(!lowerWardOpen())return toast("Open the Lower Ward gate first.");
+  if(!lowerWardOpen())return toast(tx("wardOpenGateFirst"));
   const w = ward();
   if(id === "clerk"){
-    modal("Orlen Voss, Writ Clerk", `
-      <p>"Coin buys a meal. Influence buys a line in the ledger. Writs buy doors that pretend they were always open."</p>
+    modal(tx("wardClerkTitle"), `
+      <p>"${esc(tx("wardClerkBody"))}"</p>
       <div class="lower-ward-dialogue-stats">
         <span class="pill">Influence ${esc(w.influence)}</span>
         <span class="pill">Writs ${esc(w.writs)}</span>
         <span class="pill">Commissions ${esc(w.commissions)}</span>
       </div>
     `, [
-      {label:"Take Commission",cls:"primary",fn:()=>lowerWardCommission()},
-      {label:"Close",cls:"secondary"}
+      {label:tx("wardTakeCommission"),cls:"primary",fn:()=>lowerWardCommission()},
+      {label:tx("close"),cls:"secondary"}
     ]);
     return;
   }
@@ -413,8 +441,8 @@ export function lowerWardTalk(id){
       <p>"Cinderhook teaches survival. The ward teaches names. Pick a path and carry it properly."</p>
       <p>Available for your ${esc(className(state.hero.class))}: ${pathIds.map(className).map(esc).join(" | ")}.</p>
     `, [
-      {label:"Open Trainers",cls:"primary",fn:()=>setTimeout(()=>lowerWardOpenTrainers(),0)},
-      {label:"Close",cls:"secondary"}
+      {label:tx("wardOpenTrainers"),cls:"primary",fn:()=>setTimeout(()=>lowerWardOpenTrainers(),0)},
+      {label:tx("close"),cls:"secondary"}
     ]);
     return;
   }
@@ -423,8 +451,8 @@ export function lowerWardTalk(id){
     const recruited = hasLowerWardCompanion();
     modal("Old Garran Bellrow", `
       <p>${recruited
-        ? `"You have my shield. Now teach the rest of your people the ward signs before they get boxed in."`
-        : `"I know the bailiff routes, the bell times, and which doors stick. Eight gold buys a shield that has already survived this ward."`}</p>
+        ? `"${esc(tx("wardGarranJoined"))}"`
+        : `"${esc(tx("wardGarranWait"))}"`}</p>
       ${active.length ? `<p>Active companions: ${active.map(c=>esc(c.name)).join(" | ")}</p>` : "<p>No active companion is ready for signal drills.</p>"}
       <div class="lower-ward-dialogue-stats">
         <span class="pill">${recruited ? "Recruited" : "Cost 8g"}</span>
@@ -432,19 +460,19 @@ export function lowerWardTalk(id){
         <span class="pill">Guardian tactic</span>
       </div>
     `, [
-      {label:recruited ? "Drill Signals" : "Recruit Garran",cls:"primary",fn:()=>recruited ? lowerWardCompanionBriefing() : lowerWardRecruitCompanion()},
-      {label:"Drill Signals",cls:"secondary",fn:()=>lowerWardCompanionBriefing()},
-      {label:"Close",cls:"secondary"}
+      {label:recruited ? tx("wardDrillSignals") : tx("wardRecruitGarran"),cls:"primary",fn:()=>recruited ? lowerWardCompanionBriefing() : lowerWardRecruitCompanion()},
+      {label:tx("wardDrillSignals"),cls:"secondary",fn:()=>lowerWardCompanionBriefing()},
+      {label:tx("close"),cls:"secondary"}
     ]);
     return;
   }
   if(id === "bailiff"){
-    modal("Bell Bailiff", `
-      <p>"Tax vault, bell tower, candle court. Three places where the ward proves whether you are a climber or another name under a stamp."</p>
+    modal(tx("wardBailiffTitle"), `
+      <p>"${esc(tx("wardBailiffBody"))}"</p>
       <p>Hard districts now reward influence, writs, and companion field growth on first clear.</p>
     `, [
-      {label:"Show Hard Districts",cls:"danger",fn:()=>lowerWardFocusHardAreas()},
-      {label:"Close",cls:"secondary"}
+      {label:tx("wardShowHard"),cls:"danger",fn:()=>lowerWardFocusHardAreas()},
+      {label:tx("close"),cls:"secondary"}
     ]);
   }
 }
@@ -493,7 +521,7 @@ export function lowerWardTrainerDialogue(id){
 
 export function enterLowerWard(){
   if(!lowerWardOpen()){
-    toast("The Lower Ward gate is still locked.");
+    toast(tx("wardOpenGateFirst"));
     return false;
   }
   const w = ward();
@@ -516,29 +544,73 @@ export function enterLowerWard(){
 }
 
 export function lowerWardCommission(){
-  if(!lowerWardOpen())return toast("Open the Lower Ward gate first.");
+  if(!lowerWardOpen())return toast(tx("wardOpenGateFirst"));
   const w = ward();
-  const pay = rnd(4,7);
-  const influence = 1;
+  w.commissionDone ||= [];
+  const cards = WARD_COMMISSIONS.map(job=>{
+    const done = w.commissionDone.includes(job.id);
+    return `
+      <div class="slum-contract-card ${done ? "is-claimed" : ""}">
+        <h3>${esc(tx(job.nameKey))}</h3>
+        <p>${esc(tx(job.descKey))}</p>
+        <button class="${done ? "secondary" : "primary"}" ${done ? "disabled" : `onclick="FE.lowerWardRunCommission('${job.id}')"`}>${esc(done ? tx("continue") : tx("wardTakeCommission"))}</button>
+      </div>
+    `;
+  }).join("");
+  modal(tx("wardBoardTitle"), `<div class="ward-commission-board">${cards}</div>`, [{label:tx("close"),cls:"secondary"}]);
+}
+
+export function lowerWardRunCommission(id){
+  if(!lowerWardOpen())return toast(tx("wardOpenGateFirst"));
+  const job = WARD_COMMISSIONS.find(item=>item.id === id);
+  if(!job)return toast("Quest not found.");
+  const w = ward();
+  w.commissionDone ||= [];
+  if(job.kind === "combat"){
+    closeModals();
+    startBattle([{...job.enemy}], tx(job.descKey), {
+      source:"lower-ward",
+      onVictory:"wardCommissionWon",
+      onDefeat:"home",
+      commissionId:job.id,
+      locationId:"lower_ward"
+    });
+    return;
+  }
+  finishWardCommission(job);
+}
+
+function finishWardCommission(job){
+  const w = ward();
+  w.commissionDone ||= [];
+  const pay = Array.isArray(job.gold) ? rnd(job.gold[0], job.gold[1]) : (job.gold || 5);
   state.hero.gold += pay;
-  w.influence = clamp(w.influence + influence,0,100);
+  w.influence = clamp(w.influence + (job.influence || 1),0,100);
   w.commissions++;
-  if(w.commissions % 4 === 0)w.writs++;
+  if(job.writ || w.commissions % 4 === 0)w.writs++;
+  if(!w.commissionDone.includes(job.id))w.commissionDone.push(job.id);
   advanceDays(1);
-  const line = `You complete a ward commission: +${pay} gold, +${influence} influence${w.commissions % 4 === 0 ? ", +1 writ" : ""}.`;
+  const line = `${tx(job.nameKey)}: +${pay} gold, +${job.influence || 1} influence${job.writ || w.commissions % 4 === 0 ? ", +1 writ" : ""}.`;
   w.log.push(line);
   w.log = w.log.slice(-12);
   state.world.story.push(line);
   save();
   updateTop();
+  closeModals();
   window.FE?.show?.("home");
 }
 
+export function completeWardCommissionFight(meta = {}){
+  const job = WARD_COMMISSIONS.find(item=>item.id === (meta.commissionId || ""));
+  if(job)finishWardCommission(job);
+  else window.FE?.show?.("home");
+}
+
 export function lowerWardRecruitCompanion(){
-  if(!lowerWardOpen())return toast("Open the Lower Ward gate first.");
+  if(!lowerWardOpen())return toast(tx("wardOpenGateFirst"));
   if(hasLowerWardCompanion())return toast("Garran is already in your party.");
   const cost = 8;
-  if(state.hero.gold < cost)return toast("Need 8 gold.");
+  if(state.hero.gold < cost)return toast(tx("wardNeedGold8"));
   const w = ward();
   state.hero.gold -= cost;
   const garran = makeGarran();
@@ -555,12 +627,12 @@ export function lowerWardRecruitCompanion(){
   save();
   updateTop();
   closeModals();
-  toast("Garran joined the party.");
+  toast(tx("wardGarranJoinedToast"));
   window.FE?.show?.("home");
 }
 
 export function lowerWardCompanionBriefing(){
-  if(!lowerWardOpen())return toast("Open the Lower Ward gate first.");
+  if(!lowerWardOpen())return toast(tx("wardOpenGateFirst"));
   const active = activeCompanions();
   if(!active.length)return toast("No active companion to brief.");
   const cost = 5;
@@ -589,7 +661,7 @@ export function lowerWardCompanionBriefing(){
 }
 
 export function lowerWardOpenTrainers(){
-  if(!lowerWardOpen())return toast("Open the Lower Ward gate first.");
+  if(!lowerWardOpen())return toast(tx("wardOpenGateFirst"));
   const pathIds = activePathIds();
   modal("Lower Ward Trainers", `
     <div class="lower-ward-trainer-modal">
@@ -607,7 +679,7 @@ export function lowerWardOpenTrainers(){
 export function lowerWardTrainClass(id){
   const path = ADVANCED_CLASSES[id];
   if(!path)return toast("Trainer not found.");
-  if(!lowerWardOpen())return toast("Open the Lower Ward gate first.");
+  if(!lowerWardOpen())return toast(tx("wardOpenGateFirst"));
   if(path.baseClass !== state.hero.class)return toast("That trainer does not match your base class.");
   if((state.hero.level || 1) < (path.level || 1))return toast(`Need level ${path.level}.`);
   const w = ward();

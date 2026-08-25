@@ -18076,3 +18076,47 @@ body.level-up-open{
   }
 }
 
+/* v127: chapter rails, ward now, enemy kits */
+.ward-now-banner{
+  margin:10px 0 12px;
+  padding:12px 14px;
+  border:1px solid rgba(212,168,75,.55);
+  border-radius:12px;
+  background:linear-gradient(180deg,rgba(36,26,12,.92),rgba(8,9,12,.96));
+  box-shadow:0 12px 28px rgba(0,0,0,.35);
+}
+.ward-now-banner h2{
+  margin:6px 0 4px;
+  font-size:1.15rem;
+  color:#ffe7b8;
+}
+.ward-now-banner p{
+  margin:0 0 10px;
+  color:#cbb892;
+  font-size:13px;
+}
+.ward-now-banner button{
+  width:100%;
+  min-height:42px;
+}
+.ward-commission-board{
+  display:grid;
+  gap:10px;
+}
+.enemy-kit-rat .enemy-pose-art{
+  filter:hue-rotate(-18deg) saturate(1.18) contrast(1.05);
+}
+.enemy-kit-bailiff .enemy-pose-art{
+  filter:hue-rotate(195deg) saturate(.72) brightness(1.06);
+}
+.enemy-kit-knife .enemy-pose-art{
+  filter:saturate(1.35) contrast(1.12);
+}
+.enemy-kit-captain .enemy-pose-art{
+  filter:sepia(.38) contrast(1.14) brightness(.96);
+}
+.enemy-kit-court .enemy-pose-art{
+  filter:hue-rotate(268deg) saturate(.8) brightness(1.04);
+}
+
+

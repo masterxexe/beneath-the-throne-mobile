@@ -1481,10 +1481,34 @@ body.btt-redesign .slum-contract-card.is-boss {
   border-color: rgba(224, 106, 90, 0.45);
 }
 
-/* Compact cinematic HUD */
-body.cinematic-world-home-active.btt-redesign .top-status-hero,
+/* Compact cinematic HUD — keep vitals visible */
+body.cinematic-world-home-active.btt-redesign .top-status-hero {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
 body.cinematic-world-home-active.btt-redesign .top-vital-readout {
-  display: none;
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+body.cinematic-world-home-active.btt-redesign .top-status-portrait {
+  width: 44px;
+  min-width: 44px;
+  min-height: 52px;
+}
+
+body.cinematic-world-home-active.btt-redesign .top-vital-line .bar {
+  height: 5px;
+}
+
+body.cinematic-world-home-active.btt-redesign .top-vital-value {
+  min-width: 36px;
+  font-size: 0.55rem;
 }
 
 body.cinematic-world-home-active.btt-redesign #topStats {

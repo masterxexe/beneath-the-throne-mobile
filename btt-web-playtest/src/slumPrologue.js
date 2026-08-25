@@ -1,5 +1,6 @@
-import { advanceDays, clamp, companionTrainingNeed, grantCompanionBond, normalizeCompanion, rnd, save, state } from "./state.js";
+import { advanceDays, clamp, companionTrainingNeed, grantCompanionBond, grantHeroXp, normalizeCompanion, rnd, save, state } from "./state.js";
 import { startBattle } from "./combat.js";
+import { presentLevelUp } from "./levelUp.js";
 import { modal, toast, updateTop } from "./ui.js";
 import { tx } from "./language.js";
 import { NPC_ACTOR_ASSETS } from "./npcRegistry.js";
@@ -275,6 +276,11 @@ function completeContract(contractId,{fromBattle = false} = {}){
   }
   addLog(contractText(contract, "log"));
   if(fromBattle)save();
+  if(contract.kind === "work" || contract.kind === "scavenge"){
+    const leveled = grantHeroXp(28);
+    save();
+    if(leveled)presentLevelUp(leveled, {continueLabel:tx("levelUpRise")});
+  }
   return true;
 }
 
@@ -318,7 +324,7 @@ function contractEnemies(contract){
     ];
   }
   if(contract.id === "dock_rat_ledger"){
-    return [makeGangEnemy(), {...makeAlleyEnemy(),name:"Ledger Guard",hp:66,maxHp:66,attack:11,defense:4,gold:6,xp:32}];
+    return [makeGangEnemy(), {...makeAlleyEnemy(),name:"Ledger Guard",hp:66,maxHp:66,attack:11,defense:4,gold:6,xp:40}];
   }
   return [makeAlleyEnemy()];
 }
@@ -366,7 +372,7 @@ function makeGangEnemy(){
     attack:9 + pressure,
     defense:2,
     speed:5,
-    xp:32,
+    xp:50,
     gold:8 + Math.min(6,pressure * 2)
   };
 }
@@ -387,7 +393,7 @@ function makeAlleyEnemy(){
     attack:8 + pressure,
     defense:2 + Math.floor(pressure / 3),
     speed:5,
-    xp:28 + pressure * 3,
+    xp:42 + pressure * 3,
     gold:7 + Math.min(8,pressure * 2)
   };
 }
@@ -426,7 +432,7 @@ function slumNpcRailHTML(p, complete){
   return `
     <div class="slum-loop-strip">
       <span class="pill good">Play Loop</span>
-      <p>Earn coin, clear an alley, buy or repair gear, rest, recruit Mira, then force the Lower Ward gate.</p>
+      <p>${esc(tx("slumPlayLoop"))}</p>
     </div>
     <div class="slum-npc-rail" aria-label="Cinderhook contacts">
       ${slumNpcCard({name:"Seda Vell",role:"Merchant",asset:NPC_ACTOR_ASSETS.marketMerchant,action:"FE.openTownService('market')",label:"Supplies"})}
@@ -614,46 +620,46 @@ export function slumOpenActionGroup(groupId){
   const p = prologue();
   const complete = p.phase === "gateUnlocked" || p.lowerWardGate.unlocked;
   if(groupId === "town"){
-    modal("Town & Work", `<p>Pick one useful stop. Keep the main Cinderhook screen clean and come here when you need money, services, or a local fight.</p>`, [
-      {label:"Work Stalls",cls:"primary",fn:()=>slumWork()},
-      {label:"Scavenge Drains",cls:"secondary",fn:()=>slumScavenge()},
-      {label:"Clear Alley",cls:"secondary",fn:()=>slumClearAlley()},
-      {label:p.gang.defeated ? "Gang Broken" : "Gang Pressure",cls:p.gang.state === "demand" ? "danger" : "secondary",fn:()=>setTimeout(()=>slumOpenActionGroup("gang"),0)},
-      {label:"Market",cls:"secondary",fn:()=>window.FE.openTownService("market")},
-      {label:"Blacksmith",cls:"secondary",fn:()=>window.FE.openTownService("blacksmith")},
-      {label:"Inn",cls:"secondary",fn:()=>window.FE.openTownService("inn")},
-      {label:"Tavern",cls:"secondary",fn:()=>window.FE.openTownService("tavern")},
-      {label:"Close",cls:"secondary"}
+    modal(tx("slumTownWorkTitle"), `<p>${esc(tx("slumTownWorkBody"))}</p>`, [
+      {label:tx("slumWorkStalls"),cls:"primary",fn:()=>slumWork()},
+      {label:tx("slumScavengeDrains"),cls:"secondary",fn:()=>slumScavenge()},
+      {label:tx("slumClearAlley"),cls:"secondary",fn:()=>slumClearAlley()},
+      {label:p.gang.defeated ? tx("slumGangBroken") : tx("slumGangPressure"),cls:p.gang.state === "demand" ? "danger" : "secondary",fn:()=>setTimeout(()=>slumOpenActionGroup("gang"),0)},
+      {label:tx("market"),cls:"secondary",fn:()=>window.FE.openTownService("market")},
+      {label:tx("blacksmith"),cls:"secondary",fn:()=>window.FE.openTownService("blacksmith")},
+      {label:tx("inn"),cls:"secondary",fn:()=>window.FE.openTownService("inn")},
+      {label:tx("tavern"),cls:"secondary",fn:()=>window.FE.openTownService("tavern")},
+      {label:tx("close"),cls:"secondary"}
     ]);
     return;
   }
   if(groupId === "earn"){
-    if(complete)return toast("The gate is already reached.");
-    modal("Earn Coin", `<p>Choose how you want to make progress today. Stalls are steadier; drains are riskier but can turn up food.</p>`, [
-      {label:"Work Stalls",cls:"primary",fn:()=>slumWork()},
-      {label:"Scavenge Drains",cls:"secondary",fn:()=>slumScavenge()},
-      {label:"Close",cls:"secondary"}
+    if(complete)return toast(tx("slumGateAlready"));
+    modal(tx("slumEarnCoin"), `<p>${esc(tx("slumEarnCoinBody"))}</p>`, [
+      {label:tx("slumWorkStalls"),cls:"primary",fn:()=>slumWork()},
+      {label:tx("slumScavengeDrains"),cls:"secondary",fn:()=>slumScavenge()},
+      {label:tx("close"),cls:"secondary"}
     ]);
     return;
   }
   if(groupId === "shelter"){
     const companionReady = p.companion.recruited;
     const canRecruit = p.companion.met && !p.companion.recruited;
-    modal("Shelter & Ally", `<p>Use the shelter to recover or handle Mira, the first slum companion hook.</p>`, [
-      {label:"Rest at Shelter",cls:"primary",fn:()=>slumRest()},
-      {label:companionReady ? "Mira Recruited" : canRecruit ? "Speak with Mira" : "Find Companion",cls:"secondary",fn:()=>slumMeetCompanion()},
-      {label:"Companion Drill",cls:"secondary",fn:()=>slumCompanionDrill()},
-      {label:"Close",cls:"secondary"}
+    modal(tx("slumShelterAlly"), `<p>${esc(tx("slumShelterBody"))}</p>`, [
+      {label:tx("slumRestShelter"),cls:"primary",fn:()=>slumRest()},
+      {label:companionReady ? tx("slumMiraRecruited") : canRecruit ? tx("slumSpeakMira") : tx("slumFindCompanion"),cls:"secondary",fn:()=>slumMeetCompanion()},
+      {label:tx("slumCompanionDrill"),cls:"secondary",fn:()=>slumCompanionDrill()},
+      {label:tx("close"),cls:"secondary"}
     ]);
     return;
   }
   if(groupId === "gang"){
-    if(p.gang.defeated)return toast("The Dock Rats are already broken here.");
-    if(complete)return toast("The gate is already reached.");
-    modal("Gang Pressure", `<p>The Dock Rats can be paid off for temporary safety, or challenged directly when you are ready for a fight.</p>`, [
-      {label:"Pay 12 Gold",cls:"primary",fn:()=>slumPayGang()},
-      {label:"Refuse Enforcer",cls:"danger",fn:()=>slumFightGang()},
-      {label:"Close",cls:"secondary"}
+    if(p.gang.defeated)return toast(tx("slumGangAlready"));
+    if(complete)return toast(tx("slumGateAlready"));
+    modal(tx("slumGangPressure"), `<p>${esc(tx("slumGangBody"))}</p>`, [
+      {label:tx("slumPayGang"),cls:"primary",fn:()=>slumPayGang()},
+      {label:tx("slumRefuseEnforcer"),cls:"danger",fn:()=>slumFightGang()},
+      {label:tx("close"),cls:"secondary"}
     ]);
   }
 }

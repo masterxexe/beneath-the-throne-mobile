@@ -480,6 +480,23 @@ export function showPendingAbilityChoice(){
   return true;
 }
 
+export function showPendingGrowthHint(){
+  if(!state?.tutorialsSeen?.growthHintPending)return false;
+  if(document.querySelector(".modal-back") || document.querySelector(".level-up-back"))return false;
+  if((state.hero?.points || 0) < 1){
+    state.tutorialsSeen.growthHintPending = false;
+    return false;
+  }
+  state.tutorialsSeen.growthHintPending = false;
+  state.tutorialsSeen.growthHintSeen = true;
+  save();
+  modal(tx("growthHintTitle"), `<p>${esc(tx("growthHintBody"))}</p>`, [
+    {label:tx("growthHintGo"),cls:"primary",fn:()=>window.FE?.show?.("progression")},
+    {label:tx("close"),cls:"secondary"}
+  ]);
+  return true;
+}
+
 export function chooseMilestoneAbility(level,id){
   const h = state.hero;
   h.abilityMilestones ||= {claimed:{},pending:[]};

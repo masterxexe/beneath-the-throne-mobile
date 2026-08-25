@@ -103,9 +103,10 @@ export function startBattle(enemies,text,options = {}){
   battle = {
     enemies:enemies.map((e,i)=>stampEnemyVisualClass({...e,id:"e"+i,hp:e.hp||e.maxHp,maxHp:e.maxHp||e.hp})),
     queue:[], index:0, round:1, defending:false, resolving:false, heroOffenseUsed:false,
-    lastStandUsed:false, guardianPrayerUsed:false, steadyAim:false, heroActionLocked:false, companionGuard:null, effects:[], numberEvents:[], nextNumberEventId:1, recentNumberEventKeys:{},
+    lastStandUsed:false, guardianPrayerUsed:false, steadyAim:false, heroActionLocked:false,     companionGuard:null, effects:[], numberEvents:[], nextNumberEventId:1, recentNumberEventKeys:{},
     numberPhaseId:0, visibleNumberRegistry:{}, defeatedEnemyIds:{},
     heroCombo:0, enemyCombo:{}, lastHeroAttack:null, lastEnemyAttack:{},
+    heroEvasion:0, ironWard:false, taunt:false, heroRegen:0,
     sceneText:text || "", log:[text || "Battle begins."],
     meta: options || {}
   };
@@ -829,7 +830,13 @@ function heroCritChance(){
 
 function skillCost(id){
   const discount = (hasPassive("mage_mana_efficiency") ? 2 : 0) + (activeClassDefinition(state.hero)?.bonus?.manaDiscount || 0);
-  return Math.max(1,abilityBaseCost(id)-discount);
+  const low = String(id || "").toLowerCase();
+  let cost = abilityBaseCost(id);
+  if(/quick_strike/.test(low))cost = 6;
+  if(/smoke_step|vanish/.test(low))cost = 6;
+  if(/aimed_shot|power_strike|cleave|execute/.test(low))cost = 11;
+  if(/second_wind/.test(low))cost = 8;
+  return Math.max(1,cost-discount);
 }
 
 function isMagicSkill(id){
@@ -996,7 +1003,9 @@ export function useSkill(id){
     return;
   }
   const cost = skillCost(id);
-  if(abilityKind(id) === "strike" && !liveTarget()){
+  const kind = abilityKind(id);
+  const cleave = /cleave|arcane_burst/.test(low);
+  if(kind === "strike" && !cleave && !liveTarget()){
     battle.log.push(tx("noTarget"));
     renderCombat();
     return;
@@ -1010,42 +1019,75 @@ export function useSkill(id){
   beginNumberPhase();
   h.mana -= cost;
   const school = spellSchoolForAbility(id);
-  if(/heal|mend|restore/.test(low)){
+  if(kind === "heal"){
     setCombatPlayerVisualState("castAttack", COMBAT_TIMING.poseSkill);
     pushEffect("hero","cast");
     pushEffect("hero",spellImpactForAbility(id,"spellHeal"));
     const spellBonus = spellMasteryBonus(id,h);
     const classHeal = (activeClassDefinition(h)?.bonus?.healingPct || 0) + classPathCombatBonus("heal", {school:spellBonus.school});
-    const heal = Math.floor((20+h.level*4+(h.stats.wisdom||0)*9)*((h.passives.healer_training||hasPassive("cleric_healing_focus"))?1.25:1)*spellBonus.healingMultiplier*(1+classHeal));
+    let heal = Math.floor((20+h.level*4+(h.stats.wisdom||0)*9)*((h.passives.healer_training||hasPassive("cleric_healing_focus"))?1.25:1)*spellBonus.healingMultiplier*(1+classHeal));
+    if(/field_mend/.test(low))heal = Math.floor(heal * .72);
+    if(/second_wind/.test(low))heal = Math.floor(h.maxHp * (0.18 + (h.stats.endurance || 0) * 0.01));
+    if(/renew/.test(low)){
+      heal = Math.floor(heal * .55);
+      battle.heroRegen = Math.max(battle.heroRegen || 0, Math.max(6, Math.floor(heal * .5)));
+    }
     h.hp = Math.min(h.maxHp,h.hp+Math.floor(heal));
     pushEffect("hero","heal",`+${Math.floor(heal)}`,{source:`skill:${id}`,actor:"hero"});
     battle.log.push(`${h.name} uses ${title(id)} and heals ${Math.floor(heal)}.`);
     addSpellXp(id,5);
-  }else if(/guard|shield|wall/.test(low)){
+  }else if(kind === "ward"){
     battle.defending = true;
     battle.heroCombo = 0;
+    if(/guard_wall/.test(low))battle.ironWard = true;
+    if(/smoke_step|vanish/.test(low))battle.heroEvasion = (battle.heroEvasion || 0) + 1;
+    if(/taunt/.test(low))battle.taunt = true;
+    if(/holy_guard/.test(low)){
+      const wardHeal = 8 + h.level * 2 + (h.stats.wisdom || 0) * 2;
+      h.hp = Math.min(h.maxHp, h.hp + wardHeal);
+      pushEffect("hero","heal",`+${wardHeal}`,{source:`skill:${id}`,actor:"hero"});
+    }
     setCombatPlayerVisualState("block", COMBAT_TIMING.poseBlock);
     pushEffect("hero","brace");
     pushEffect("hero",spellImpactForAbility(id,"spellWard"));
-    battle.log.push(`${h.name} uses ${title(id)} and braces.`);
+    battle.log.push(`${h.name} uses ${title(id)}${/smoke_step|vanish/.test(low) ? " and slips the next blow." : /taunt/.test(low) ? " and draws the next strike." : " and braces."}`);
     if(school)addSpellXp(id,4);
   }else{
-    const e = liveTarget();
-    if(e){
-      const magic = isMagicSkill(id);
-      const presentation = magic ? null : beginHeroAttackPresentation();
-      setCombatPlayerVisualState(magic ? "castAttack" : presentation.pose, COMBAT_TIMING.poseSkill);
-      pushEffect("hero", magic ? "cast" : "attack", "", magic ? {side:"hero"} : presentationDetail(presentation,"hero"));
+    const targets = cleave ? liveEnemies() : [liveTarget()].filter(Boolean);
+    if(!targets.length){
+      battle.log.push(tx("noTarget"));
+      battle.heroActionLocked = false;
+      h.mana += cost;
+      renderCombat();
+      return;
+    }
+    const magic = isMagicSkill(id);
+    const presentation = magic ? null : beginHeroAttackPresentation();
+    setCombatPlayerVisualState(magic ? "castAttack" : presentation.pose, COMBAT_TIMING.poseSkill);
+    pushEffect("hero", magic ? "cast" : "attack", "", magic ? {side:"hero"} : presentationDetail(presentation,"hero"));
+    targets.forEach(e=>{
       let dmg = magic
         ? Math.floor(16+h.level*5+(h.stats.wisdom||0)*7)
         : Math.floor(12+h.level*4+(h.stats.strength||0)*4+totalAttack()*.8);
       dmg = Math.floor(dmg * skillDamageMultiplier(id));
+      if(/power_strike/.test(low))dmg = Math.floor(dmg * 1.28);
+      if(/quick_strike/.test(low))dmg = Math.floor(dmg * 0.88);
+      if(/aimed_shot/.test(low))dmg = Math.floor(dmg * 1.12 + Math.max(0, e.defense * 0.5));
+      if(/execute/.test(low) && e.hp <= e.maxHp * 0.4)dmg = Math.floor(dmg * 1.75);
+      if(/shadow_strike/.test(low))dmg = Math.floor(dmg * 1.45);
+      if(/cleave/.test(low) && targets.length > 1)dmg = Math.floor(dmg * 0.78);
+      if(/shield_bash/.test(low)){
+        dmg = Math.floor(dmg * 0.7);
+        e.snared = (e.snared || 0) + 1;
+      }
+      if(/trap_snare/.test(low))e.snared = (e.snared || 0) + 1;
       if(hasPassive("rogue_ambush_discipline") && !battle.heroOffenseUsed)dmg = Math.floor(dmg*1.25);
       if(hasPassive("mage_overchannel") && magic && Math.random()<.15){
         dmg = Math.floor(dmg*1.35);
         battle.log.push("Overchannel!");
       }
       e.hp = Math.max(0,e.hp-dmg);
+      if(/fire_bolt|ember/.test(low))e.burn = Math.max(e.burn || 0, 3);
       pushImpact(presentation?.combo >= 3);
       pushEffect(e.id,"enemyHurt");
       if(magic)pushEffect(e.id,spellImpactForAbility(id,"arcane"));
@@ -1053,10 +1095,18 @@ export function useSkill(id){
       pushEffect(e.id,"damage",`-${dmg}`,{source:`skill:${id}`,actor:"hero"});
       markEnemyDefeated(e);
       battle.log.push(`${h.name} uses ${title(id)}${presentation ? ` (${styleDisplayName(presentation.style)})` : ""} on ${e.name} for ${dmg}.`);
-      battle.heroOffenseUsed = true;
-      if(isMagicSkill(id) || school)addSpellXp(id,6);
-      else addWeaponXp(activeWeaponType(h),3);
+    });
+    if(/quick_strike/.test(low) && targets[0] && targets[0].hp > 0 && targets[0].hp < targets[0].maxHp){
+      const e = targets[0];
+      const poke = Math.max(1, Math.floor((8 + h.level * 2 + (h.stats.speed || 0) * 2) * skillDamageMultiplier(id)));
+      e.hp = Math.max(0, e.hp - poke);
+      pushEffect(e.id,"damage",`-${poke}`,{source:`skill:${id}:follow`,actor:"hero"});
+      markEnemyDefeated(e);
+      battle.log.push(`${h.name} cuts again for ${poke}.`);
     }
+    battle.heroOffenseUsed = true;
+    if(isMagicSkill(id) || school)addSpellXp(id,6);
+    else addWeaponXp(activeWeaponType(h),3);
   }
   skillOpen = false;
   afterHeroAction();
@@ -1137,6 +1187,7 @@ function resolveUntilHero(){
   let a = actor();
   if(!a)return;
   if(a.side==="hero"){
+    tickHeroRegen();
     battle.resolving = false;
     battle.heroActionLocked = false;
     renderCombat();
@@ -1250,15 +1301,44 @@ function companionDamage(c,e){
   return Math.max(1,dmg);
 }
 
+function tickHeroRegen(){
+  if(!battle?.heroRegen || state.hero.hp <= 0)return;
+  const heal = battle.heroRegen;
+  state.hero.hp = Math.min(state.hero.maxHp, state.hero.hp + heal);
+  pushEffect("hero","heal",`+${heal}`,{source:"regen",actor:"hero"});
+  battle.log.push(`${state.hero.name} mends for ${heal}.`);
+  battle.heroRegen = 0;
+}
+
+function tickEnemyBurn(e){
+  if(!e || e.hp <= 0 || !e.burn)return;
+  const burn = Math.max(1, Math.min(8, e.burn));
+  e.hp = Math.max(0, e.hp - burn);
+  pushEffect(e.id,"damage",`-${burn}`,{source:"burn",actor:"hero"});
+  battle.log.push(`${e.name} burns for ${burn}.`);
+  e.burn = Math.max(0, e.burn - 1);
+  markEnemyDefeated(e);
+}
+
 function enemyAct(id){
   const e = battle.enemies.find(x=>x.id===id);
   if(!e||e.hp<=0)return;
+  tickEnemyBurn(e);
+  if(e.hp<=0)return;
+  if(e.snared){
+    e.snared -= 1;
+    beginNumberPhase();
+    battle.log.push(`${e.name} is held and skips the strike.`);
+    return;
+  }
   beginNumberPhase();
   const presentation = beginEnemyAttackPresentation(e);
   pushEffect(e.id,"enemyAttack","",presentationDetail(presentation,"enemy"));
   const targets = [{type:"hero",u:state.hero},...liveComps().map(c=>({type:"comp",u:c}))];
-  const target = targets[rnd(0,targets.length-1)];
-  if(target.type==="hero" && enemyMisses()){
+  const target = battle.taunt ? {type:"hero",u:state.hero} : targets[rnd(0,targets.length-1)];
+  if(battle.taunt && target.type==="hero")battle.taunt = false;
+  if(target.type==="hero" && (battle.heroEvasion || enemyMisses())){
+    if(battle.heroEvasion)battle.heroEvasion = Math.max(0, battle.heroEvasion - 1);
     pushEffect("hero","miss",tx("miss"),{source:`enemyMiss:${id}`,actor:id});
     battle.log.push(`${e.name} misses ${target.u.name}.`);
     return;
@@ -1276,8 +1356,9 @@ function enemyAct(id){
     battle.companionGuard = null;
   }
   if(target.type==="hero" && battle.defending){
-    dmg = Math.max(1,Math.floor(dmg*(hasPassive("warrior_guard_wall") ? .35 : .45)));
+    dmg = Math.max(1,Math.floor(dmg*(hasPassive("warrior_guard_wall") || battle.ironWard ? .28 : .45)));
     battle.defending = false;
+    battle.ironWard = false;
   }
   if(target.type==="hero")dmg = applyIncomingPassives(dmg,e);
   if(target.type==="hero" && dmg >= target.u.hp){
@@ -1649,6 +1730,8 @@ function victory(){
     ? ()=>window.FE?.resumeJourneyAfterBattle ? window.FE.resumeJourneyAfterBattle(meta) : show("map")
     : meta.source === "hard-area" && meta.onVictory === "hardAreaWon"
     ? ()=>window.FE?.completeHardArea ? window.FE.completeHardArea(meta) : show("home")
+    : meta.source === "lower-ward" && meta.onVictory === "wardCommissionWon"
+    ? ()=>window.FE?.completeWardCommissionFight ? window.FE.completeWardCommissionFight(meta) : show("home")
     : ()=>show("home");
   const victoryButtons = [];
   if(loot){
@@ -1673,16 +1756,40 @@ function defeat(){
   autoFight = false;
   skillOpen = false;
   save();
-  const continueFn = meta.source === "slum-prologue" && meta.onDefeat === "slumFightLost"
-    ? ()=>window.FE?.recordSlumFightDefeat ? window.FE.recordSlumFightDefeat(meta) : show("home")
-    : meta.source === "slum-prologue" && meta.onDefeat === "slumAlleyLost"
-    ? ()=>window.FE?.recordSlumAlleyDefeat ? window.FE.recordSlumAlleyDefeat(meta) : show("home")
-    : meta.source === "slum-prologue" && meta.onDefeat === "slumContractLost"
-    ? ()=>window.FE?.recordSlumContractDefeat ? window.FE.recordSlumContractDefeat(meta) : show("home")
-    : meta.source === "travel" && meta.onDefeat === "cancelJourney"
-    ? ()=>window.FE?.cancelTravel ? window.FE.cancelTravel() : show("home")
-    : ()=>show("home");
-  modal(tx("defeat"), `<div class="result-state defeat-state"><h3>${tx("defeat")}</h3><p>${tx("defeatBody")}</p></div>`, [{label:tx("continue"),fn:continueFn}]);
+  const settle = () => {
+    if(meta.source === "slum-prologue" && meta.onDefeat === "slumFightLost"){
+      if(window.FE?.recordSlumFightDefeat)window.FE.recordSlumFightDefeat(meta);
+      else show("home");
+      return;
+    }
+    if(meta.source === "slum-prologue" && meta.onDefeat === "slumAlleyLost"){
+      if(window.FE?.recordSlumAlleyDefeat)window.FE.recordSlumAlleyDefeat(meta);
+      else show("home");
+      return;
+    }
+    if(meta.source === "slum-prologue" && meta.onDefeat === "slumContractLost"){
+      if(window.FE?.recordSlumContractDefeat)window.FE.recordSlumContractDefeat(meta);
+      else show("home");
+      return;
+    }
+    if(meta.source === "travel" && meta.onDefeat === "cancelJourney"){
+      if(window.FE?.cancelTravel)window.FE.cancelTravel();
+      else show("home");
+      return;
+    }
+    show("home");
+  };
+  const crawlInn = () => {
+    settle();
+    if(meta.source === "travel")return;
+    state.hero.hp = Math.max(state.hero.hp, Math.floor(state.hero.maxHp * 0.5));
+    save();
+    setTimeout(()=>window.FE?.openTownService?.("inn"), 180);
+  };
+  modal(tx("defeat"), `<div class="result-state defeat-state"><h3>${tx("defeat")}</h3><p>${tx("defeatBody")}</p><p>${tx("defeatInnHint")}</p></div>`, [
+    {label:tx("defeatCrawlInn"),cls:"primary",fn:crawlInn},
+    {label:tx("continue"),cls:"secondary",fn:settle}
+  ]);
 }
 
 export function runBattle(){

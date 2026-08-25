@@ -677,8 +677,16 @@ function lowerWardUnlocked(){
   return !!state?.prologue?.lowerWardGate?.unlocked;
 }
 
+function chapterOneRoadsLocked(){
+  if(lowerWardUnlocked())return false;
+  const here = state.world?.locationId || START_LOCATION;
+  return here === "ashen_slums";
+}
+
 function routeLockReason(loc){
-  if(loc.id === "lower_ward" && !lowerWardUnlocked())return "Open the Lower Ward gate in Cinderhook first.";
+  if(!loc)return "";
+  if(loc.id === "lower_ward" && !lowerWardUnlocked())return tx("lockLowerWardGate");
+  if(chapterOneRoadsLocked() && loc.id !== "ashen_slums" && loc.id !== "lower_ward")return tx("lockUntilGate");
   return "";
 }
 
@@ -699,6 +707,7 @@ function renderRoadStopHome(place){
         <button class="secondary" ${place.canTurnBack ? `onclick="FE.turnBackJourney()"` : `disabled title="${esc(tx("turnBackDisabled"))}"`}>${tx("turnBack")}</button>
         <button class="secondary" ${place.build.hasCamp ? "disabled" : place.build.canBuild ? `onclick="FE.establishCamp()"` : `disabled title="${esc(place.build.disabledReason)}"`}>${place.build.hasCamp ? (place.build.fortified ? tx("campFortified") : tx("campEstablished")) : tx("establishCamp")}</button>
         ${place.build.hasCamp && !place.build.fortified ? `<button class="secondary" ${place.build.canFortify ? `onclick="FE.fortifyCamp()"` : `disabled title="${esc(place.build.fortifyDisabledReason)}"`}>${tx("fortifyCamp")}</button>` : ""}
+        ${place.build.hasCamp ? `<button class="secondary" onclick="FE.restAtCamp()">${tx("restAtCamp")}</button>` : ""}
         <button class="secondary" onclick="FE.cancelTravel()">${tx("cancelTravel")}</button>
       </div>` : `<div class="actions">
         <div class="grid3">
@@ -708,6 +717,7 @@ function renderRoadStopHome(place){
           <button class="secondary" onclick="FE.cancelTravel()">${tx("cancelTravel")}</button>
           <button class="secondary" ${place.canTurnBack ? `onclick="FE.turnBackJourney()"` : `disabled title="${esc(tx("turnBackDisabled"))}"`}>${tx("turnBack")}</button>
           <button class="secondary" ${place.build.hasCamp ? "disabled" : place.build.canBuild ? `onclick="FE.establishCamp()"` : `disabled title="${esc(place.build.disabledReason)}"`}>${place.build.hasCamp ? tx("campEstablished") : tx("establishCamp")}</button>
+          ${place.build.hasCamp ? `<button class="secondary" onclick="FE.restAtCamp()">${tx("restAtCamp")}</button>` : ""}
         </div>
       </div>`}
     ${debugHTML()}
@@ -814,6 +824,9 @@ export function startWorldSceneTraversal(actionId){
   }
   if(action.kind === "service" && !locationSupportsService(action.service, loc.id)){
     return toast(tx("serviceUnavailable"));
+  }
+  if((action.kind === "huntNearby" || action.kind === "scoutNearby") && chapterOneRoadsLocked()){
+    return toast(tx("lockUntilGate"));
   }
   clearWorldSceneTraversal();
   activeWorldSceneTraversal = createWorldSceneTraversal({location:loc, scene, action});
@@ -1001,6 +1014,12 @@ function maybeTriggerTravelEncounter(stopId){
   const danger = Math.max(from?.danger || 0, to?.danger || 0, routeStopDanger(stopId, allNodes));
   const encounter = rollTravelEncounter({danger, segmentIndex:activeTravel.currentIndex, stopId});
   travelDebug("encounter rolled", {stop:stopId,danger,type:encounter.type,forced:!!encounter.forced});
+  if(encounter.type === "battle" && !encounter.forced && consumeCampQuiet()){
+    state.world.story.push(tx("campRoadQuiet"));
+    activeTravel.stopMessage = tx("campRoadQuiet");
+    save();
+    return false;
+  }
   if(encounter.type === "nothing")return false;
   if(encounter.type === "strange"){
     state.world.story.push(`${tx("travelStrangeEvent")}: ${tx("travelStrangeEventBody")} (${nodeName(allNodes[stopId])}).`);
@@ -1276,6 +1295,8 @@ export function establishCamp(){
   state.hero.food -= cost.food || 0;
   state.world.roadStopStates ||= {};
   state.world.roadStopStates[node.id] = {type: "camp", stage: "basic", builtDay: state.world.day || 1};
+  recoverPartyAtCamp(false);
+  grantCampQuiet(node, false);
   state.world.story.push(`${tx("campEstablished")}: ${nodeName(node)}.`);
   playAudioHook("town-ambience", {intent: "settlement-loop"});
   advanceDays(1);
@@ -1302,6 +1323,8 @@ export function fortifyCamp(){
   state.hero.ore -= cost.ore;
   state.hero.food -= cost.food;
   state.world.roadStopStates[node.id] = {...existing, stage: "fortified", fortifiedDay: state.world.day || 1};
+  recoverPartyAtCamp(true);
+  grantCampQuiet(node, true);
   state.world.story.push(`${tx("campFortified")}: ${nodeName(node)}.`);
   playAudioHook("town-ambience", {intent: "settlement-loop"});
   advanceDays(2);
@@ -1309,6 +1332,53 @@ export function fortifyCamp(){
   updateTop();
   renderWorldHome();
   toast(tx("campFortified"));
+}
+
+function recoverPartyAtCamp(fortified){
+  const h = state.hero;
+  if(!h)return;
+  const pct = fortified ? 1 : 0.6;
+  h.hp = Math.min(h.maxHp, Math.max(h.hp, Math.floor(h.maxHp * pct)));
+  h.mana = Math.min(h.maxMana, Math.max(h.mana || 0, Math.floor((h.maxMana || 0) * pct)));
+  (h.companions || []).forEach(c=>{
+    if(!c)return;
+    const maxHp = c.maxHp || c.hp || 1;
+    c.hp = Math.min(maxHp, Math.max(c.hp || 0, Math.floor(maxHp * pct)));
+    if(c.maxMana)c.mana = Math.min(c.maxMana, Math.max(c.mana || 0, Math.floor(c.maxMana * pct)));
+  });
+}
+
+function grantCampQuiet(node, fortified){
+  state.world.campShelter = {
+    nodeId: node?.id || "",
+    quietLegs: fortified ? 2 : 1,
+    fortified: !!fortified
+  };
+}
+
+function consumeCampQuiet(){
+  const shelter = state.world?.campShelter;
+  if(!shelter || !(shelter.quietLegs > 0))return false;
+  shelter.quietLegs -= 1;
+  return true;
+}
+
+export function restAtCamp(){
+  const place = getCurrentPlaceContext();
+  if(place.type !== "roadStop" || activeTravel?.status !== "atRoadStop"){
+    return toast(tx("cannotBuildHere"));
+  }
+  const existing = state.world.roadStopStates?.[place.roadNode?.id];
+  if(existing?.type !== "camp")return toast(tx("cannotBuildHere"));
+  if(state.hero.food < 1)return toast(tx("needFood"));
+  state.hero.food -= 1;
+  recoverPartyAtCamp(existing.stage === "fortified");
+  grantCampQuiet(place.roadNode, existing.stage === "fortified");
+  advanceDays(1);
+  save();
+  updateTop();
+  renderWorldHome();
+  toast(tx("campRested"));
 }
 
 async function beginTravelBattle(from,to){
@@ -1611,6 +1681,7 @@ function refreshWorldScreen(){
 
 export function scoutNearby(){
   const loc = ensureWorld();
+  if(chapterOneRoadsLocked())return toast(tx("lockUntilGate"));
   if(loc.danger > 0 && Math.random() < 0.35){
     state.world.story.push(`${tx("scoutEncounter")}: ${locationText(loc,"name")}.`);
     save();
@@ -1628,6 +1699,7 @@ export function scoutNearby(){
 
 export function huntNearby(){
   const loc = ensureWorld();
+  if(chapterOneRoadsLocked())return toast(tx("lockUntilGate"));
   const count = loc.danger >= 3 ? 2 : 1;
   state.world.story.push(`${tx("huntNearby")}: ${locationText(loc,"name")}.`);
   save();

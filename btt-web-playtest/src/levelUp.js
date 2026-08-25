@@ -24,6 +24,10 @@ export function presentLevelUp(summary, {onDone, continueLabel} = {}){
   }
   dismissLevelUp(false);
   pendingDone = typeof onDone === "function" ? onDone : null;
+  if(summary.from < 2 && summary.to >= 2){
+    state.tutorialsSeen ||= {};
+    state.tutorialsSeen.growthHintPending = true;
+  }
   playAudioHook("hero-levelup");
   if(state.world?.story){
     state.world.story.push(`${tx("levelUpStory")} ${summary.to}.`);

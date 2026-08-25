@@ -82,6 +82,16 @@ export function inferEnemyVisualClass(enemy){
   return "bandit";
 }
 
+export function inferEnemyKit(enemy){
+  const text = `${enemy?.name || ""} ${enemy?.role || ""}`.toLowerCase();
+  if(/lieutenant|captain|hangman|factor|pit boss|warlord/.test(text))return "captain";
+  if(/bailiff|writ|tax|ledger|collector/.test(text))return "bailiff";
+  if(/rat|dock|enforcer/.test(text))return "rat";
+  if(/mask|court|candle|lantern/.test(text))return "court";
+  if(/knife|cutpurse|thief|desperate|cutthroat/.test(text))return "knife";
+  return "";
+}
+
 export function stampEnemyVisualClass(enemy, options = {}){
   if(!enemy || typeof enemy !== "object")return enemy;
   const force = !!options.force;
@@ -122,8 +132,9 @@ export function enemyVisualHTML(enemy, requestedPose = "idle"){
   const visual = resolveEnemyPoseAsset(enemy, requestedPose);
   if(!visual)return "";
   const name = enemy?.name || visual.label || "Enemy";
+  const kit = inferEnemyKit(enemy);
   return `
-    <div class="enemy-pose-frame enemy-pose-${visual.visualClass} enemy-pose-state-${visual.resolvedPose}" data-enemy-visual="${visual.visualClass}" data-enemy-pose="${visual.resolvedPose}" data-enemy-requested-pose="${visual.requestedPose}" data-tone="${visual.tone}" role="img" aria-label="${name} ${visual.resolvedPose} pose">
+    <div class="enemy-pose-frame enemy-pose-${visual.visualClass} enemy-pose-state-${visual.resolvedPose}${kit ? ` enemy-kit-${kit}` : ""}" data-enemy-visual="${visual.visualClass}" data-enemy-pose="${visual.resolvedPose}" data-enemy-requested-pose="${visual.requestedPose}" data-tone="${visual.tone}"${kit ? ` data-kit="${kit}"` : ""} role="img" aria-label="${name} ${visual.resolvedPose} pose">
       <img class="enemy-pose-art" src="${visual.path}" alt="" loading="eager" decoding="async" draggable="false" />
       <span class="enemy-pose-ground"></span>
       <span class="enemy-pose-glow"></span>

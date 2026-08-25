@@ -137,6 +137,15 @@ node scripts/test-combat-debug.mjs
 - A service-worker update no longer reloads the page during the title/tutorial, which was dumping players back to New Game after the skeleton
 - First Victory auto-continues into Kael's stand after a short beat
 
+## Pass 20 — Hold the first hour (v127)
+- Map roads stay locked in Cinderhook until the Lower Ward gate opens; hunt/scout from the slums send you back to contracts
+- Cinematic home HUD keeps compact HP/mana/XP bars visible
+- First level-up lands during Chapter 1 (work/scavenge XP + hotter alley fights); Growth prompts after you hit rank 2
+- Skills have identities: smoke slips the next blow, fire burns, cleave hits the pack, execute finishes wounded foes
+- Lower Ward opens on a Next-in-the-Ward banner and a named commission board
+- Defeat offers Crawl to the inn; camps heal the party and quiet the next road
+- Rats, bailiffs, knives, and captains tint apart on the same kits; slum/ward copy is in EN+ES
+
 ## Pass 19 — Level up ceremony (v126)
 - Reaching a new level holds the screen: gold flash, ember burst, rank slam, and a rising fanfare before any loot
 - Gains tick in (HP, mana, attack, defense, stat points); class oaths and Ability Book milestones get a callout

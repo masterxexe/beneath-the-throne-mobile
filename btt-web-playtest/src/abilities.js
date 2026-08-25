@@ -2,8 +2,8 @@ import { title, tx } from "./language.js";
 
 export function abilityKind(id){
   const low = String(id || "").toLowerCase();
-  if(/heal|mend|restore/.test(low))return "heal";
-  if(/guard|shield|wall/.test(low))return "ward";
+  if(/heal|mend|restore|renew|second_wind/.test(low))return "heal";
+  if(/guard|shield|wall|smoke|vanish|taunt/.test(low))return "ward";
   return "strike";
 }
 

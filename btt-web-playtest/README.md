@@ -113,7 +113,8 @@ Highlights:
 - Visual class trees in Growth (oaths, path ranks, and base mastery branches)
 - Lower Ward enter CTA, combat target/skill costs, and victory loot equip
 - Level-up ceremony with fanfare, gain readout, and a HUD XP bar
+- Chapter 1 keeps you in Cinderhook until the gate; cinematic HUD keeps HP/XP visible
 
 ## Cache version
 
-Current: **v126** (`index.html`, `service-worker.js`, `version.json`, `redesign.css`)
+Current: **v127** (`index.html`, `service-worker.js`, `version.json`, `redesign.css`)
