@@ -1,0 +1,11 @@
+# Workspace-level agent artifacts (not part of the game)
+/agent-tools/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
