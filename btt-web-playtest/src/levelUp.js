@@ -95,6 +95,12 @@ export function dismissLevelUp(runDone = true){
   const fn = pendingDone;
   pendingDone = null;
   if(runDone && fn)fn();
+  if(runDone){
+    window.setTimeout(() => {
+      if(document.querySelector(".modal-back") || document.querySelector(".level-up-back"))return;
+      window.FE?.showPendingGrowthHint?.();
+    }, 80);
+  }
 }
 
 function animateRank(el, from, to){
