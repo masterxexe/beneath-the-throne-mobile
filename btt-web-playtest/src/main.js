@@ -1,5 +1,6 @@
 import { getLanguage, setLanguage } from "./language.js";
-import { debugGrantCMXp, debugLevelTo, debugSetHeroHp } from "./state.js";
+import { debugGrantCMXp, debugLevelTo, debugSetHeroHp, grantHeroLevel } from "./state.js";
+import { presentLevelUp } from "./levelUp.js";
 import { renderStart } from "./tutorials-v19d.js";
 import { show, showSaveSlots } from "./ui.js";
 import * as tutorials from "./tutorials-v19d.js";
@@ -49,8 +50,14 @@ if(!debugMode){
 
 if(debugMode){
   window.FE.debugLevelTo = level => {
-    debugLevelTo(level);
+    const summary = debugLevelTo(level);
     ui.render();
+    if(summary)presentLevelUp(summary);
+  };
+  window.FE.debugGrantLevel = () => {
+    const summary = grantHeroLevel();
+    ui.render();
+    if(summary)presentLevelUp(summary);
   };
   window.FE.debugGrantCMXp = amount => {
     debugGrantCMXp(amount);

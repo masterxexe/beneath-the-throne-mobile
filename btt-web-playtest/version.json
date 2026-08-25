@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.24-overnight-50",
-  "build": 50,
-  "cache": "v125",
-  "notes": "Lower Ward enter CTA, combat targeting and skill costs, victory loot equip"
+  "version": "2026.08.24-overnight-51",
+  "build": 51,
+  "cache": "v126",
+  "notes": "Level-up ceremony with fanfare, gain readout, and HUD XP"
 }

@@ -93,7 +93,7 @@ export function updateTop(){
   byId("topStats").innerHTML = `
     <div class="top-status-hero">
       <div class="top-status-portrait">${renderPlayerHudPortrait(h, {supporterFrame:state.supporter?.equipped?.frame, supporterCloak:state.supporter?.equipped?.cloak})}</div>
-      <div class="top-vital-readout" aria-label="${tx("hp")} ${h.hp}/${h.maxHp}, ${tx("mana")} ${h.mana}/${h.maxMana}">
+      <div class="top-vital-readout" aria-label="${tx("hp")} ${h.hp}/${h.maxHp}, ${tx("mana")} ${h.mana}/${h.maxMana}, ${tx("xp")} ${h.xp}/${h.nextXp}">
         <div class="top-vital-line ${hudVitalClass(h.hp, h.maxHp)}">
           ${bar(h.hp, h.maxHp, "hp vital-hp")}
           <span class="top-vital-value">${h.hp}</span>
@@ -102,11 +102,15 @@ export function updateTop(){
           ${bar(h.mana, h.maxMana, "mana vital-mana")}
           <span class="top-vital-value">${h.mana}</span>
         </div>
+        <div class="top-vital-line top-vital-xp" aria-label="${tx("xp")} ${h.xp}/${h.nextXp}">
+          ${bar(h.xp, h.nextXp, "xp vital-xp")}
+          <span class="top-vital-value">${h.xp}</span>
+        </div>
       </div>
     </div>
     <div class="top-status-meta">
       <div class="top-status-pills top-pills-core">
-        <span class="pill good hud-token hud-token-hero">${esc(h.name)} ${h.level}</span>
+        <span class="pill good hud-token hud-token-hero">${esc(h.name)} ${tx("level")} ${h.level}</span>
         ${state.supporter?.title ? `<span class="pill hud-token hud-token-founder">${esc(state.supporter.title)}</span>` : ""}
         <span class="pill hud-token hud-token-gold">${h.gold}g</span>
         ${showSupplies ? `

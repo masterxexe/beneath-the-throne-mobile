@@ -8,7 +8,7 @@ export const AUDIO_CHANNELS = {
 export const AUDIO_HOOKS = {
   "combat-enter": {channel:AUDIO_CHANNELS.combat, intent:"start-combat-bed"},
   "battle-music-start": {channel:AUDIO_CHANNELS.music, intent:"combat-theme"},
-  "combat-victory": {channel:AUDIO_CHANNELS.music, intent:"victory-sting"},
+  "hero-levelup": {channel:AUDIO_CHANNELS.music, intent:"level-up-sting"},
   "combat-defeat": {channel:AUDIO_CHANNELS.music, intent:"defeat-sting"},
   "town-ambience": {channel:AUDIO_CHANNELS.ambience, intent:"settlement-loop"},
   "travel-ambience": {channel:AUDIO_CHANNELS.ambience, intent:"road-loop"},

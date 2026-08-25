@@ -137,6 +137,13 @@ node scripts/test-combat-debug.mjs
 - A service-worker update no longer reloads the page during the title/tutorial, which was dumping players back to New Game after the skeleton
 - First Victory auto-continues into Kael's stand after a short beat
 
+## Pass 19 — Level up ceremony (v126)
+- Reaching a new level holds the screen: gold flash, ember burst, rank slam, and a rising fanfare before any loot
+- Gains tick in (HP, mana, attack, defense, stat points); class oaths and Ability Book milestones get a callout
+- After Rise / Claim the spoils, victory loot still appears
+- HUD shows an XP bar toward the next rank; the nameplate flashes gold on a level-up
+- `?debug` home board has Level Up Now so the ceremony can be fired without a long grind
+
 ## Pass 18 — After the fight, after the slums (v125)
 - An unlocked Lower Ward gate always offers Enter, including from the Cinderhook home board
 - Combat shows the current target, Next target, and skill mana/type; strike skills no longer spend mana with nobody to hit

@@ -39,6 +39,10 @@ Append `?debug` to the URL for dev cheats exposed on `window.FE`.
 - Jump to Cinderhook Slums or Lower Ward cinematic scenes
 - Cultist enemy visual test
 
+**Home debug panel** (when `?debug`, after you are in the world):
+- Level Up Now — fire the ceremony for the next rank
+- Debug Level 5 / 10 / 15 / 20 — jump and replay the slam
+
 **Browser console:**
 
 ```js
@@ -108,7 +112,8 @@ Highlights:
 - Ambient NPCs in slums and lower ward
 - Visual class trees in Growth (oaths, path ranks, and base mastery branches)
 - Lower Ward enter CTA, combat target/skill costs, and victory loot equip
+- Level-up ceremony with fanfare, gain readout, and a HUD XP bar
 
 ## Cache version
 
-Current: **v125** (`index.html`, `service-worker.js`, `version.json`, `redesign.css`)
+Current: **v126** (`index.html`, `service-worker.js`, `version.json`, `redesign.css`)

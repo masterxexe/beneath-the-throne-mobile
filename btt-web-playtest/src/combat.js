@@ -9,6 +9,7 @@ import { resolvePlayerCombatPresentation } from "./characterRenderController.js"
 import { allEnemyStyleIds, allPlayerStyleIds, attackStyleClass, attackWeaponClass, fxOverlayHTML, nextCompanionAttackStyle, nextEnemyAttackStyle, nextHeroAttackStyle, presentationForStyle, styleDisplayName } from "./combatAnimations.js";
 import { applyGearVisuals } from "./gearVisuals.js";
 import { playAudioHook } from "./audioHooks.js";
+import { presentLevelUp } from "./levelUp.js";
 import { debugEnemyVisualRegistry, enemyVisualHTML, resolveEnemyPoseAsset, stampEnemyVisualClass } from "./enemyVisuals.js";
 import { actorDirectorAttributes, createBattlefieldComposition, directorStageAttributes } from "./combatSceneDirector.js";
 import { companionActorPath } from "./npcRegistry.js";
@@ -1589,7 +1590,6 @@ export function debugResolveEnemyPose(name = "Skeleton", pose = "idle"){
 function victory(){
   const h = state.hero, enemies = battle.enemies, comps = liveComps();
   const meta = battle.meta || {};
-  playAudioHook("combat-victory", {source:meta.source || "normal"});
   const xp = enemies.reduce((sum,e)=>sum+e.xp,0);
   const gold = enemies.reduce((sum,e)=>sum+e.gold,0);
   const each = Math.floor(xp/(1+comps.length));
@@ -1627,7 +1627,8 @@ function victory(){
     const bondLevels = grantCompanionBond(c, Math.max(5,Math.floor(each*.16)));
     if(bondLevels)state.world.story.push(`${c.name} ${tx("bondGrew").toLowerCase()}.`);
   });
-  levelHero();
+  const leveled = levelHero();
+  if(!leveled)playAudioHook("combat-victory", {source:meta.source || "normal"});
   convertCM();
   const cmPointsGained = h.mastery.cmPoints - cmPointsBefore;
   const delta = itemUpgradeDelta(loot);
@@ -1658,7 +1659,9 @@ function victory(){
     });
   }
   victoryButtons.push({label:tx("continue"),cls:delta.better?"secondary":"primary",fn:continueFn});
-  modal(tx("victory"), body, victoryButtons);
+  const showRewards = ()=>modal(tx("victory"), body, victoryButtons);
+  if(leveled)presentLevelUp(leveled, {onDone:showRewards, continueLabel:tx("levelUpContinue")});
+  else showRewards();
 }
 
 function defeat(){

@@ -214,6 +214,18 @@ body.btt-redesign .top-vital-line .bar.mana > div {
   background: linear-gradient(90deg, #1f3f72, #5f9fe8 60%, #b8dcff);
 }
 
+body.btt-redesign .top-vital-line.top-vital-xp .bar {
+  height: 6px;
+}
+
+body.btt-redesign .top-vital-line .bar.xp > div {
+  background: linear-gradient(90deg, #8a5a16, #f0cc6a 58%, #ffe7b8);
+}
+
+body.btt-redesign .top-vital-xp.is-level-burst .bar > div {
+  box-shadow: 0 0 12px rgba(240, 204, 106, 0.7);
+}
+
 @keyframes btt-vital-pulse {
   0%, 100% { filter: brightness(1); }
   50% { filter: brightness(1.25); }
@@ -2643,6 +2655,24 @@ body.btt-redesign .combat-target-bar {
 body.btt-redesign .skill-drawer-btn {
   border: 1px solid var(--btt-line);
   box-shadow: var(--btt-frame-tight);
+}
+
+body.btt-redesign .level-up-card {
+  border: 1px solid var(--btt-line-strong);
+  box-shadow: var(--btt-frame), 0 0 48px rgba(212, 168, 75, 0.22);
+}
+
+body.btt-redesign .level-up-card h2 {
+  font-family: var(--btt-font-display);
+}
+
+body.btt-redesign .level-up-gains li {
+  box-shadow: var(--btt-frame-tight);
+}
+
+body.btt-redesign .hud-token-hero.is-level-up {
+  border-color: var(--btt-gold-bright);
+  color: #ffe7b8;
 }
 
 body.btt-redesign .v59-title-legal a {

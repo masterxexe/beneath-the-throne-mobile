@@ -169,6 +169,23 @@ const SFX = {
     const t = now();
     [392, 494, 587, 784].forEach((freq, i) => tone({time:t + i * 0.11, freq, dur:0.28, type:"triangle", gain:0.07, dest:musicBus}));
   },
+  "level-up-sting"(){
+    const t = now();
+    const dest = prefs.music ? musicBus : sfxBus;
+    tone({time:t, freq:65.41, dur:0.5, type:"sine", gain:0.1, dest});
+    noiseBurst({time:t, dur:0.24, freq:240, q:0.45, gain:0.16, type:"lowpass", dest});
+    [196, 246.94, 293.66, 392, 493.88].forEach((freq, i) => {
+      tone({time:t + 0.07 + i * 0.1, freq, dur:0.38, type:"triangle", gain:0.08, dest});
+      tone({time:t + 0.07 + i * 0.1, freq: freq * 2, dur:0.2, type:"sine", gain:0.028, dest});
+    });
+    const hit = t + 0.62;
+    [130.81, 261.63, 329.63, 392, 523.25].forEach((freq, i) => {
+      tone({time:hit + i * 0.025, freq, dur:0.92, type:"triangle", gain:i ? 0.07 : 0.09, dest});
+    });
+    tone({time:hit + 0.06, freq:783.99, dur:0.78, type:"sine", gain:0.05, dest});
+    tone({time:hit + 0.12, freq:1046.5, dur:0.5, type:"triangle", gain:0.032, dest});
+    noiseBurst({time:hit, dur:0.38, freq:2200, q:0.7, gain:0.12, type:"bandpass", dest});
+  },
   "defeat-sting"(){
     const t = now();
     [196, 147, 98].forEach((freq, i) => tone({time:t + i * 0.16, freq, dur:0.34, type:"sawtooth", gain:0.06, dest:musicBus}));
@@ -263,7 +280,7 @@ const MUSIC_BEDS = {
   "dragon-music": "dragon"
 };
 
-const STINGS = new Set(["victory-sting", "defeat-sting"]);
+const STINGS = new Set(["victory-sting", "defeat-sting", "level-up-sting"]);
 
 function handleIntent(intent){
   audioContext();
@@ -274,11 +291,12 @@ function handleIntent(intent){
   if(STINGS.has(intent)){
     pauseBed();
     currentBed = "";
-    if(prefs.music)SFX[intent]?.();
+    const hearSting = prefs.music || (intent === "level-up-sting" && prefs.sfx);
+    if(hearSting)SFX[intent]?.();
     clearTimeout(stingTimer);
     stingTimer = window.setTimeout(() => {
       if(!currentBed)startBed("keep");
-    }, 1100);
+    }, intent === "level-up-sting" ? 2600 : 1600);
     return;
   }
   if(!prefs.sfx)return;

@@ -17812,3 +17812,265 @@ body.cinematic-combat-active .combat-shell.combat-impact{
   color:#9a8b6c;
 }
 
+/* v126: level-up ceremony */
+.top-vital-xp .bar{
+  height:6px;
+}
+.top-vital-xp.is-level-burst .bar>div{
+  box-shadow:0 0 10px rgba(240,204,106,.7);
+}
+.hud-token-hero.is-level-up{
+  animation:btt-level-flash 1.35s ease-out;
+  border-color:#f0cc6a;
+  color:#ffe7b8;
+}
+body.level-up-open{
+  overflow:hidden;
+}
+.level-up-back{
+  position:fixed;
+  inset:0;
+  z-index:1200;
+  display:grid;
+  place-items:center;
+  padding:18px;
+  overflow:hidden;
+  background:radial-gradient(ellipse at 50% 42%,rgba(48,32,10,.55),rgba(3,4,6,.88) 62%);
+  animation:btt-level-jolt .42s ease-out;
+}
+.level-up-flash{
+  position:absolute;
+  inset:0;
+  background:radial-gradient(circle at 50% 40%,rgba(255,236,190,.42),transparent 58%);
+  animation:btt-level-wash .7s ease-out forwards;
+  pointer-events:none;
+}
+.level-up-rays{
+  position:absolute;
+  width:min(140vw,720px);
+  height:min(140vw,720px);
+  border-radius:50%;
+  background:repeating-conic-gradient(from 0deg,rgba(240,204,106,.16) 0 8deg,transparent 8deg 22deg);
+  mask-image:radial-gradient(circle,rgba(0,0,0,.9) 12%,transparent 68%);
+  animation:btt-level-spin 9s linear infinite;
+  pointer-events:none;
+  opacity:.7;
+}
+.level-up-burst{
+  position:absolute;
+  width:min(90vw,540px);
+  height:min(90vw,540px);
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(240,204,106,.34),transparent 68%);
+  animation:btt-level-burst 1.2s ease-out;
+  pointer-events:none;
+}
+.level-up-embers{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  overflow:hidden;
+}
+.level-up-embers span{
+  position:absolute;
+  left:calc(8% + var(--i) * 6.2%);
+  bottom:-8%;
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  background:#ffe7b8;
+  box-shadow:0 0 10px #f0cc6a;
+  opacity:0;
+  animation:btt-level-ember 1.8s ease-out forwards;
+  animation-delay:calc(var(--i) * .07s);
+}
+.level-up-card{
+  position:relative;
+  width:min(420px,100%);
+  display:grid;
+  justify-items:center;
+  gap:10px;
+  padding:24px 18px 18px;
+  text-align:center;
+  border:1px solid rgba(212,168,75,.78);
+  border-radius:14px;
+  background:linear-gradient(180deg,rgba(36,26,12,.97),rgba(6,7,10,.98));
+  box-shadow:0 24px 60px rgba(0,0,0,.55),0 0 48px rgba(212,168,75,.22),inset 0 1px 0 rgba(255,232,170,.16);
+  color:#f3e8d4;
+}
+.level-up-back.is-live .level-up-card{
+  animation:btt-level-enter .55s cubic-bezier(.16,1.2,.32,1) both;
+}
+.level-up-portrait{
+  width:104px;
+  filter:drop-shadow(0 0 18px rgba(240,204,106,.42));
+}
+.level-up-portrait .paper-doll-frame{
+  width:96px;
+  max-width:96px;
+}
+.level-up-kicker{
+  margin:0;
+  color:#d9a451;
+  font:800 11px/1 system-ui,sans-serif;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+}
+.level-up-card h2{
+  margin:0;
+  color:#ffe7b8;
+  font-size:clamp(30px,8vw,46px);
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  text-shadow:0 0 28px rgba(240,204,106,.45);
+  animation:btt-level-title .7s ease-out;
+}
+.level-up-name{
+  margin:0;
+  color:#f3e8d4;
+  font-size:15px;
+  font-weight:700;
+}
+.level-up-count{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  font-size:24px;
+  font-weight:800;
+}
+.level-up-from{
+  color:#9a8b6c;
+}
+.level-up-to,
+.level-up-to.is-slam{
+  color:#ffe7b8;
+  animation:btt-level-slam .55s cubic-bezier(.2,1.4,.4,1);
+}
+.level-up-arrow{
+  color:#d9a451;
+}
+.level-up-multi,
+.level-up-note{
+  margin:0;
+  color:#cbb892;
+  font-size:13px;
+  line-height:1.35;
+}
+.level-up-gains{
+  list-style:none;
+  margin:6px 0 0;
+  padding:0;
+  width:100%;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+.level-up-gains li{
+  padding:9px 6px;
+  border:1px solid rgba(185,142,76,.35);
+  border-radius:8px;
+  background:rgba(10,11,14,.7);
+  font-size:13px;
+  opacity:0;
+  animation:btt-level-gain .4s ease-out forwards;
+  animation-delay:calc(.48s + var(--i, 0) * .1s);
+}
+.level-up-gains li b{
+  color:#ffe7b8;
+}
+.level-up-gains li.is-points{
+  grid-column:1 / -1;
+  border-color:rgba(240,204,106,.55);
+  box-shadow:0 0 16px rgba(240,204,106,.12);
+}
+.level-up-note{
+  opacity:0;
+  animation:btt-level-gain .4s ease-out .95s forwards;
+}
+.level-up-continue{
+  width:100%;
+  min-height:46px;
+  margin-top:6px;
+  opacity:0;
+  pointer-events:none;
+}
+.level-up-back.is-ready .level-up-continue{
+  opacity:1;
+  pointer-events:auto;
+  animation:btt-level-gain .35s ease-out;
+}
+@keyframes btt-level-flash{
+  0%,100%{filter:brightness(1)}
+  35%{filter:brightness(1.55) saturate(1.2)}
+}
+@keyframes btt-level-wash{
+  0%{opacity:1}
+  100%{opacity:0}
+}
+@keyframes btt-level-spin{
+  to{transform:rotate(360deg)}
+}
+@keyframes btt-level-jolt{
+  0%{transform:scale(1.02)}
+  18%{transform:translate(-3px,2px)}
+  36%{transform:translate(3px,-2px)}
+  54%{transform:translate(-2px,1px)}
+  100%{transform:none}
+}
+@keyframes btt-level-ember{
+  0%{transform:translateY(0) scale(.6);opacity:0}
+  18%{opacity:1}
+  100%{transform:translateY(-72vh) scale(1.2);opacity:0}
+}
+@keyframes btt-level-burst{
+  0%{transform:scale(.4);opacity:.1}
+  55%{opacity:1}
+  100%{transform:scale(1.18);opacity:.5}
+}
+@keyframes btt-level-enter{
+  0%{transform:scale(.86);opacity:0}
+  100%{transform:scale(1);opacity:1}
+}
+@keyframes btt-level-title{
+  0%{transform:scale(.68);opacity:0;letter-spacing:.32em}
+  100%{transform:scale(1);opacity:1;letter-spacing:.14em}
+}
+@keyframes btt-level-slam{
+  0%{transform:scale(1.7);opacity:0}
+  100%{transform:scale(1);opacity:1}
+}
+@keyframes btt-level-gain{
+  0%{transform:translateY(8px);opacity:0}
+  100%{transform:none;opacity:1}
+}
+@media(prefers-reduced-motion:reduce){
+  .level-up-back,
+  .level-up-flash,
+  .level-up-rays,
+  .level-up-burst,
+  .level-up-embers span,
+  .level-up-card,
+  .level-up-back.is-live .level-up-card,
+  .level-up-card h2,
+  .level-up-to,
+  .level-up-gains li,
+  .level-up-note,
+  .level-up-continue,
+  .hud-token-hero.is-level-up{
+    animation:none;
+  }
+  .level-up-card,
+  .level-up-gains li,
+  .level-up-note,
+  .level-up-continue{
+    opacity:1;
+    transform:none;
+    pointer-events:auto;
+  }
+  .level-up-rays,
+  .level-up-embers,
+  .level-up-flash{
+    display:none;
+  }
+}
+

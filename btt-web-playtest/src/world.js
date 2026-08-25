@@ -757,6 +757,7 @@ function debugHTML(){
     <div class="panel">
       <h2>Debug</h2>
       <div class="grid3">
+        <button onclick="FE.debugGrantLevel()">Level Up Now</button>
         <button onclick="FE.debugLevelTo(5)">Debug Level 5</button>
         <button onclick="FE.debugLevelTo(10)">Debug Level 10</button>
         <button onclick="FE.debugLevelTo(15)">Debug Level 15</button>

@@ -878,29 +878,60 @@ export function makeLoot(level){
 
 export function levelHero(){
   const h = state.hero;
+  const from = h.level || 1;
+  let hp = 0, mana = 0, attack = 0, defense = 0, points = 0, milestone = false, pathUnlock = false;
   while(h.xp >= h.nextXp){
+    const hpGain = 14 + (h.stats.endurance || 0) * 2;
+    const manaGain = 5 + (h.stats.wisdom || 0);
     h.xp -= h.nextXp;
     h.level++;
     h.points += 3;
     h.nextXp = xpNeed(h.level);
-    h.maxHp += 14 + (h.stats.endurance || 0) * 2;
+    h.maxHp += hpGain;
     h.hp = h.maxHp;
-    h.maxMana += 5 + (h.stats.wisdom || 0);
+    h.maxMana += manaGain;
     h.mana = h.maxMana;
     h.attack += 2;
     h.defense += 1;
+    hp += hpGain;
+    mana += manaGain;
+    attack += 2;
+    defense += 1;
+    points += 3;
+    if(from < 2 && h.level >= 2)pathUnlock = true;
+    if(ABILITY_MILESTONE_LEVELS.includes(h.level))milestone = true;
     queueAbilityMilestone(h.level,h);
   }
+  if(h.level <= from)return null;
+  return {from, to:h.level, levels:h.level - from, hp, mana, attack, defense, points, milestone, pathUnlock};
+}
+
+export function grantHeroLevel(){
+  const h = state.hero;
+  h.xp = Math.max(h.xp || 0, h.nextXp || xpNeed(h.level || 1));
+  const summary = levelHero();
+  save();
+  return summary;
 }
 
 export function debugLevelTo(targetLevel){
   const h = state.hero;
-  const target = clamp(Number(targetLevel) || 1, h.level || 1, 20);
+  const from = h.level || 1;
+  const target = clamp(Number(targetLevel) || 1, from, 20);
+  if(h.level >= target)return null;
+  const hp0 = h.maxHp, mana0 = h.maxMana, atk0 = h.attack, def0 = h.defense, pts0 = h.points;
   while(h.level < target){
     h.xp = h.nextXp;
     levelHero();
   }
   save();
+  return {
+    from, to:h.level, levels:h.level - from,
+    hp:h.maxHp - hp0, mana:h.maxMana - mana0, attack:h.attack - atk0, defense:h.defense - def0,
+    points:h.points - pts0,
+    milestone:ABILITY_MILESTONE_LEVELS.some(level => level > from && level <= h.level),
+    pathUnlock:from < 2 && h.level >= 2
+  };
 }
 
 export function debugGrantCMXp(amount=9000){
