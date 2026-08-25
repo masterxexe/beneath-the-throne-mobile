@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Agent / QA artifacts (Puppeteer screenshots, ship-readiness reports)
+agent-tools/
+
+# Python art pipeline
+__pycache__/
+*.pyc
+scripts/__pycache__/
+
+# Logs and local env
+*.log
+npm-debug.log*
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db

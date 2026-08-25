@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 420" role="img" aria-label="Dark fantasy survivor head layer">
+  <defs>
+    <linearGradient id="face" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#d8b890"/>
+      <stop offset=".45" stop-color="#9a6848"/>
+      <stop offset="1" stop-color="#382018"/>
+    </linearGradient>
+    <radialGradient id="eye" cx="50%" cy="50%" r="70%">
+      <stop offset="0" stop-color="#ffe49c"/>
+      <stop offset=".55" stop-color="#a65b23"/>
+      <stop offset="1" stop-color="#1a0e06" stop-opacity=".1"/>
+    </radialGradient>
+    <filter id="soft">
+      <feDropShadow dx="0" dy="6" stdDeviation="4" flood-color="#000" flood-opacity=".55"/>
+    </filter>
+  </defs>
+  <g filter="url(#soft)">
+    <path d="M126 73c10-30 29-43 34-43s25 13 34 43c7 21 4 48-4 67-7 17-18 28-30 28s-23-11-30-28c-8-19-11-46-4-67z" fill="#120c09"/>
+    <path d="M133 73c8-19 22-29 27-29s20 10 27 29c8 21 5 49-3 66-6 13-15 22-24 22s-18-9-24-22c-8-17-11-45-3-66z" fill="url(#face)"/>
+    <path d="M130 85c14-16 47-18 62-2-2-23-15-38-32-38s-29 14-30 40z" fill="#1d120c"/>
+    <path d="M132 95c10-9 21-13 33-13 9 0 17 2 25 8-5-20-16-33-30-33-13 0-24 12-28 38z" fill="#2b1a12" opacity=".86"/>
+    <path d="M137 113c9-7 19-7 30 0 9-7 18-7 28 0-7-13-16-20-28-20-13 0-23 7-30 20z" fill="#0b0705" opacity=".35"/>
+    <path d="M143 114h14M169 114h14" stroke="#080505" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="150" cy="114" r="3.2" fill="url(#eye)"/>
+    <circle cx="176" cy="114" r="3.2" fill="url(#eye)"/>
+    <path d="M160 118l-4 16 8 0" fill="none" stroke="#5c3828" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M151 145c7 4 13 4 19 0" fill="none" stroke="#21100b" stroke-width="3" stroke-linecap="round"/>
+    <path d="M132 130c6 17 16 27 28 27s22-10 28-27c-3 23-14 38-28 38s-25-15-28-38z" fill="#170d0a" opacity=".18"/>
+    <path d="M128 78c5 9 14 15 28 17 15 2 29-2 40-11-3-20-17-37-36-37-17 0-28 10-32 31z" fill="#26160f" opacity=".75"/>
+  </g>
+</svg>

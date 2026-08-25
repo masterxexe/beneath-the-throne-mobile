@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="Beneath the Throne - a dark fantasy browser RPG with world-first settlement scenes and tactical combat." />
+  <meta name="theme-color" content="#07080c" />
+  <meta name="application-name" content="Beneath the Throne" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Beneath the Throne" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>Beneath the Throne</title>
+  <link rel="icon" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="preload" as="image" href="./assets/ui/generated/title-bg-v19d.png" />
+  <style>
+    .boot-fallback{
+      min-height:100svh;
+      display:grid;
+      place-items:center;
+      padding:22px;
+      color:#f3e8d4;
+      background:
+        linear-gradient(180deg,rgba(5,6,10,.18),rgba(5,6,10,.9)),
+        url("./assets/ui/generated/title-bg-v19d.png") center/cover no-repeat,
+        #07080c;
+      font-family:"Cinzel",Georgia,"Times New Roman",serif;
+      text-align:center;
+    }
+    .boot-fallback-card{
+      width:min(430px,100%);
+      padding:18px 16px;
+      border:1px solid rgba(208,153,73,.42);
+      border-radius:8px;
+      background:rgba(4,5,5,.78);
+      box-shadow:0 18px 46px rgba(0,0,0,.68);
+    }
+    .boot-fallback-kicker{
+      display:block;
+      margin-bottom:7px;
+      color:#d9a451;
+      font:800 11px/1 system-ui,sans-serif;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    .boot-fallback h1{
+      margin:0 0 8px;
+      font-size:34px;
+      line-height:.95;
+      letter-spacing:0;
+    }
+    .boot-fallback-status{
+      margin:0;
+      color:#dbc4a0;
+      font:700 13px/1.35 system-ui,sans-serif;
+    }
+    .boot-fallback-actions{
+      display:none;
+      grid-template-columns:1fr;
+      gap:8px;
+      margin-top:14px;
+    }
+    .boot-fallback.is-slow .boot-fallback-actions{
+      display:grid;
+    }
+    .boot-fallback button{
+      min-height:42px;
+      border:1px solid rgba(218,162,81,.52);
+      border-radius:6px;
+      background:linear-gradient(180deg,#65401f,#27150c);
+      color:#ffe8bd;
+      font:900 14px/1 system-ui,sans-serif;
+    }
+    .boot-fallback button.secondary{
+      background:linear-gradient(180deg,#30302c,#111);
+    }
+  </style>
+  <link rel="stylesheet" href="./styles.css?v=127" />
+  <link rel="stylesheet" href="./redesign.css?v=20" />
+  <link rel="stylesheet" href="./combat-animations.css?v=123" />
+  <script>
+    document.addEventListener("error", function(event) {
+      const img = event.target;
+      if (!img || img.tagName !== "IMG" || img.dataset.fallbackApplied) return;
+      const src = img.getAttribute("src") || "";
+      if (!src.includes("/assets/") && !src.includes("/icons/")) return;
+      img.dataset.fallbackApplied = "1";
+      if (src.includes("portraits/player") || src.includes("composites")) {
+        img.src = "./assets/portraits/player/poses/base/player-idle-v80.png";
+      } else if (src.includes("enemies") || src.includes("actors") || src.includes("npcs")) {
+        img.src = "./assets/portraits/story/tutorial-skeleton-painted.png";
+      } else if (src.includes("items/icons")) {
+        img.src = "./assets/items/icons/weapons/rusted-sword-v16.png";
+      }
+    }, true);
+  </script>
+  <script>
+    (function(){
+      function fallback(){
+        return document.querySelector(".boot-fallback");
+      }
+      function setStatus(message){
+        const root = fallback();
+        if(!root || window.__BTT_BOOTED)return;
+        root.classList.add("is-slow");
+        const status = root.querySelector(".boot-fallback-status");
+        if(status)status.textContent = message;
+      }
+      window.BTT_RETRY_BOOT = function(){
+        location.reload();
+      };
+      window.BTT_CLEAR_BOOT_CACHE = async function(){
+        setStatus("Clearing the phone app cache...");
+        try{
+          if("caches" in window){
+            const keys = await caches.keys();
+            await Promise.all(keys.filter(key => key.startsWith("beneath-throne-")).map(key => caches.delete(key)));
+          }
+          if(navigator.serviceWorker?.getRegistrations){
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map(registration => registration.unregister()));
+          }
+        }catch(error){
+          console.warn("Boot cache clear failed", error);
+        }
+        const next = new URL(location.href);
+        next.searchParams.set("fresh", Date.now());
+        location.replace(next.href);
+      };
+      window.addEventListener("error", function(){
+        setStatus("Startup paused on this device. Tap Clear App Cache, then reload.");
+      });
+      window.addEventListener("unhandledrejection", function(){
+        setStatus("Startup paused on this device. Tap Clear App Cache, then reload.");
+      });
+      setTimeout(function(){
+        setStatus("Still loading. If this stays here, clear the app cache once.");
+      }, 4500);
+    })();
+  </script>
+</head>
+<body class="btt-redesign">
+  <div id="app">
+    <div id="setup">
+      <div class="boot-fallback" role="status" aria-live="polite">
+        <div class="boot-fallback-card">
+          <span class="boot-fallback-kicker">Ash Court</span>
+          <h1>Beneath the Throne</h1>
+          <p class="boot-fallback-status">The kingdom stirs below the ash...</p>
+          <div class="boot-fallback-actions">
+            <button onclick="BTT_RETRY_BOOT()">Retry</button>
+            <button class="secondary" onclick="BTT_CLEAR_BOOT_CACHE()">Clear App Cache</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="game" style="display:none">
+      <header class="topbar">
+        <div id="topStats"></div>
+        <div class="topline-actions">
+          <button class="hud-icon-btn" data-action="court-ledger" aria-label="Court Ledger" title="Court Ledger">⚖</button>
+          <button class="hud-icon-btn" data-action="audio-toggle" aria-label="Mute" title="Mute">♪</button>
+          <button class="hud-icon-btn" data-action="save-slots" aria-label="Save" title="Save">💾</button>
+        </div>
+      </header>
+      <main class="game-main">
+      <section id="home" class="screen"></section>
+      <section id="town" class="screen"></section>
+      <section id="gear" class="screen"></section>
+      <section id="party" class="screen"></section>
+      <section id="progression" class="screen"></section>
+      <section id="map" class="screen"></section>
+      <section id="kingdoms" class="screen"></section>
+      <section id="support" class="screen"></section>
+      <section id="combat" class="screen"></section>
+      </main>
+      <nav class="topline game-dock" aria-label="Main navigation">
+        <button data-screen="home" data-icon="⌂" aria-label="Home"><span class="dock-label">Home</span></button>
+        <button data-screen="gear" data-icon="⚔" aria-label="Gear"><span class="dock-label">Gear</span></button>
+        <button data-screen="party" data-icon="◈" aria-label="Party"><span class="dock-label">Party</span></button>
+        <button data-screen="progression" data-icon="✦" aria-label="Growth"><span class="dock-label">Growth</span></button>
+        <button data-screen="map" data-icon="◎" aria-label="Map"><span class="dock-label">Map</span></button>
+      </nav>
+    </div>
+  </div>
+  <script type="module" src="./src/main.js?v=127"></script>
+</body>
+</html>
