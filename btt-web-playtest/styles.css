@@ -17897,6 +17897,8 @@ body.level-up-open{
   background:linear-gradient(180deg,rgba(36,26,12,.97),rgba(6,7,10,.98));
   box-shadow:0 24px 60px rgba(0,0,0,.55),0 0 48px rgba(212,168,75,.22),inset 0 1px 0 rgba(255,232,170,.16);
   color:#f3e8d4;
+  max-height:calc(100dvh - 24px);
+  overflow-y:auto;
 }
 .level-up-back.is-live .level-up-card{
   animation:btt-level-enter .55s cubic-bezier(.16,1.2,.32,1) both;
