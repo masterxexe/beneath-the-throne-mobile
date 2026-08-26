@@ -577,6 +577,14 @@ export function getCurrentPlaceContext(options = {}){
   };
 }
 
+export function selectWorldInteractionSafety(){
+  return {
+    scene_traversal_active:!!activeWorldSceneTraversal,
+    travel_active:!!activeTravel,
+    travel_status:activeTravel?.status || null
+  };
+}
+
 function copiedActionCost(cost){
   if(!cost || typeof cost !== "object")return null;
   return Object.fromEntries(["gold","ore","food"]

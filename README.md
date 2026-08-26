@@ -2,11 +2,11 @@
 
 Beneath the Throne is an existing mobile-first dark-fantasy browser RPG. The playable game lives in `btt-web-playtest/` and remains a vanilla JavaScript, native ES-module PWA with no framework, bundler, backend, or second state store.
 
-The `webmcp-challenge` branch adds a thin WebMCP adapter over the existing game systems. This cleanup checkpoint does **not** publish the repository, configure hosting, merge into `main`, or submit a Devpost entry. There is no public live URL yet.
+The `webmcp-challenge` branch adds a thin WebMCP adapter over the existing game systems. The branch does **not** publish the repository, configure hosting, merge into `main`, or submit a Devpost entry. There is no public live URL yet.
 
 ## WebMCP Challenge scope
 
-The game registers exactly eight tools when `document.modelContext.registerTool` or `navigator.modelContext.registerTool` is available:
+The game registers exactly nine tools—seven read-only and two guarded mutations—when `document.modelContext.registerTool` or `navigator.modelContext.registerTool` is available:
 
 | Tool | Mode | Existing source of truth |
 |---|---|---|
@@ -16,10 +16,13 @@ The game registers exactly eight tools when `document.modelContext.registerTool`
 | `get_current_location` | Read-only | Canonical world/current-place selector |
 | `get_quest_log` | Read-only | Existing Cinderhook and Lower Ward quest selectors |
 | `get_available_actions` | Read-only | Existing combat, world, Cinderhook, Lower Ward, and UI availability selectors |
+| `get_storyteller_options` | Read-only | Pure game-owned eligibility selector for three predefined non-combat Storyteller events |
 | `use_item` | Guarded mutation | Canonical combat potion functions; only `health_potion` and `mana_potion` |
 | `equip_item` | Guarded mutation | Canonical `gear.equip(id)` using an exact ID from the latest inventory read |
 
-WebMCP does not expose travel, combat commands, abilities, dialogue, NPC interaction, quest acceptance or claiming, story events, autonomous play, arbitrary JavaScript, or arbitrary `FE.*` execution. Browsers without WebMCP continue running the normal game without registering tools.
+`get_storyteller_options` can inspect only the game-defined `cinderhook_warning_messenger`, `tavern_suspicious_stranger`, and `market_cutpurse` events when their canonical eligibility conditions are met. It returns fixed EN/ES copy and an in-memory observation token but cannot present, trigger, save, or resolve an event. No `trigger_story_event` tool exists.
+
+WebMCP does not expose travel, combat commands, abilities, dialogue, NPC interaction, quest acceptance or claiming, Storyteller mutation, autonomous play, arbitrary JavaScript, or arbitrary `FE.*` execution. Browsers without WebMCP continue running the normal game without registering tools.
 
 The adapter uses fixed schemas and routes, revalidates mutations at execution time, and returns detached JSON-safe projections. It does not change the save schema or replace existing gameplay rules.
 
@@ -38,6 +41,9 @@ Open `http://127.0.0.1:43123`.
 ```bash
 # Complete normal-game, PWA, WebMCP, and mutation regression suite
 npm run qa:webmcp
+
+# Pure Storyteller catalog and eligibility regression suite
+npm run qa:storyteller
 
 # Build the allowlisted hackathon artifact
 npm run prepare:deployment
@@ -62,9 +68,9 @@ The artifact is allowlisted to contain only:
 - `src/**/*.js` native browser modules.
 - Runtime images under `assets/` and PWA icons under `icons/`.
 
-It excludes QA and art-generation scripts, `agent-tools`, dependencies, package metadata, READMEs, environment files, logs, and local filesystem paths. For judge-facing hackathon builds it also omits the Court Ledger module, UI/routes, checkout configuration, mock grants, payment copy, and monetization setup while preserving the normal game and all eight WebMCP tools. The normal development source still contains the existing Court Ledger; only generated copies under `dist/public/` are transformed. A profile-specific build/cache suffix prevents a prior full-build cache from being reused.
+It excludes QA and art-generation scripts, `agent-tools`, dependencies, package metadata, READMEs, environment files, logs, and local filesystem paths. For judge-facing hackathon builds it also omits the Court Ledger module, UI/routes, checkout configuration, mock grants, payment copy, and monetization setup while preserving the normal game and all nine WebMCP tools. The normal development source still contains the existing Court Ledger; only generated copies under `dist/public/` are transformed. A profile-specific build/cache suffix prevents a prior full-build cache from being reused.
 
-`npm run qa:public` verifies that the source still has the development Ledger, the artifact has no Ledger/payment implementation or UI in EN/ES, its module graph is completely precached, WebMCP remains byte-for-byte unchanged, and the artifact still passes normal-game, offline-PWA, and exact-eight-tool browser tests. `dist/` is ignored and should be regenerated instead of committed. No hosting provider or deployment workflow is configured.
+`npm run qa:public` verifies that the source still has the development Ledger, the artifact has no Ledger/payment implementation or UI in EN/ES, its module graph is completely precached, WebMCP remains byte-for-byte unchanged, and the artifact still passes normal-game, offline-PWA, and exact-nine-tool browser tests. `dist/` is ignored and should be regenerated instead of committed. No hosting provider or deployment workflow is configured.
 
 ## Challenge review lineage
 

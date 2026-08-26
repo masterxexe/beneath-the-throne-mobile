@@ -9,6 +9,7 @@
     "start": "npm run dev",
     "qa:ship": "node scripts/ship-readiness.mjs",
     "qa:combat": "node scripts/test-combat-debug.mjs",
+    "qa:storyteller": "node scripts/test-storyteller.mjs",
     "qa:webmcp": "node scripts/test-webmcp.mjs",
     "prepare:deployment": "node scripts/prepare-deployment.mjs --profile hackathon",
     "qa:public": "npm run prepare:deployment && node scripts/test-public-readiness.mjs && node scripts/test-webmcp.mjs --root dist/public --base-path /fixture/repo"

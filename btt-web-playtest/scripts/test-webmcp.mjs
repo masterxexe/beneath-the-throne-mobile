@@ -28,6 +28,7 @@ const EXPECTED_TOOLS = [
   "get_inventory",
   "get_player_status",
   "get_quest_log",
+  "get_storyteller_options",
   "use_item"
 ];
 const READ_ONLY_TOOLS = new Set(EXPECTED_TOOLS.filter(name=>!['equip_item','use_item'].includes(name)));
@@ -292,7 +293,7 @@ async function testDebugGating(browser,baseUrl,port){
   const publicBaseUrl = `http://btt-public.test:${port}${BASE_PATH}`;
   await publicPage.goto(`${publicBaseUrl}/?debug`,{waitUntil:"domcontentloaded",timeout:60000});
   await publicPage.waitForFunction(()=>window.__BTT_BOOTED === true,{timeout:30000});
-  await publicPage.waitForFunction(()=>Object.keys(window.__WEBMCP_TEST_TOOLS || {}).length === 8,{timeout:10000});
+  await publicPage.waitForFunction(expected=>Object.keys(window.__WEBMCP_TEST_TOOLS || {}).length === expected,{timeout:10000},EXPECTED_TOOLS.length);
   const publicDebug = await publicPage.evaluate(()=>(
     {
       bootControls:!!document.querySelector(".debug-boot-controls"),
@@ -310,6 +311,43 @@ async function testDebugGating(browser,baseUrl,port){
   assert.equal(publicDebug.setupVisible,true,"normal gameplay must still boot when public ?debug is ignored");
   assert.deepEqual(publicDebug.toolNames,EXPECTED_TOOLS,"debug hardening must not change WebMCP discovery");
   await publicPage.close();
+}
+
+async function testStorytellerRegistrationFailure(browser,baseUrl){
+  const page = await browser.newPage();
+  const errors = trackPageErrors(page);
+  await page.evaluateOnNewDocument(()=>{
+    const tools = {};
+    Object.defineProperty(document,"modelContext",{configurable:true,value:{
+      registerTool(tool){
+        if(tool?.name === "get_storyteller_options")throw new Error("Intentional Storyteller registration failure");
+        tools[tool.name] = tool;
+        window.__WEBMCP_TEST_TOOLS = tools;
+      }
+    }});
+  });
+  await openGame(page,baseUrl);
+  await page.waitForFunction(expected=>Object.keys(window.__WEBMCP_TEST_TOOLS || {}).length === expected,{timeout:10000},EXPECTED_TOOLS.length - 1);
+  const result = await page.evaluate(async()=>{
+    window.FE.startActualGame("Partial Registration Tester","warrior");
+    await new Promise(resolve=>setTimeout(resolve,350));
+    window.FE.closeModals();
+    const status = await window.__WEBMCP_TEST_TOOLS.get_player_status.execute({});
+    const actions = await window.__WEBMCP_TEST_TOOLS.get_available_actions.execute({});
+    return {
+      toolNames:Object.keys(window.__WEBMCP_TEST_TOOLS).sort(),
+      status,
+      registeredActions:actions.actions.webmcp_invocable.map(action=>action.id).sort(),
+      gameVisible:document.getElementById("game")?.style.display === "block"
+    };
+  });
+  const originalEight = EXPECTED_TOOLS.filter(name=>name !== "get_storyteller_options");
+  assert.deepEqual(result.toolNames,originalEight,"failure of the ninth tool must not remove any approved existing tool");
+  assert.deepEqual(result.registeredActions,originalEight,"available actions must report only tools that actually registered");
+  assert.equal(result.status.ok,true);
+  assert.equal(result.gameVisible,true);
+  assert.deepEqual(errors,[],`partial Storyteller registration produced browser errors: ${errors.join(" | ")}`);
+  await page.close();
 }
 
 async function testCourtLedgerProfile(browser,baseUrl){
@@ -340,7 +378,7 @@ async function testCourtLedgerProfile(browser,baseUrl){
     };
   },HACKATHON_PROFILE);
   await openGame(page,baseUrl);
-  await page.waitForFunction(()=>Object.keys(window.__WEBMCP_TEST_TOOLS || {}).length === 8,{timeout:10000});
+  await page.waitForFunction(expected=>Object.keys(window.__WEBMCP_TEST_TOOLS || {}).length === expected,{timeout:10000},EXPECTED_TOOLS.length);
 
   let result = await page.evaluate(async(hackathonProfile)=>{
     window.FE.startActualGame("Artifact Profile Tester","warrior");
@@ -395,7 +433,7 @@ async function testCourtLedgerProfile(browser,baseUrl){
     ))};
   }
 
-  assert.deepEqual(result.toolNames,EXPECTED_TOOLS,"the deployment profile must preserve exactly the approved eight WebMCP tools");
+  assert.deepEqual(result.toolNames,EXPECTED_TOOLS,"the deployment profile must preserve exactly the approved nine WebMCP tools");
   if(HACKATHON_PROFILE){
     assert.equal(result.ledgerButton,false,"hackathon artifact must not render a Court Ledger action");
     assert.equal(result.supportScreen,false,"hackathon artifact must not contain a Court Ledger screen");
@@ -439,7 +477,7 @@ async function testWithWebMcp(browser,baseUrl){
     Object.defineProperty(document,"modelContext",{configurable:true,value:modelContext});
   });
   await openGame(page,baseUrl);
-  await page.waitForFunction(()=>Object.keys(window.__WEBMCP_TEST_TOOLS || {}).length === 8,{timeout:10000});
+  await page.waitForFunction(expected=>Object.keys(window.__WEBMCP_TEST_TOOLS || {}).length === expected,{timeout:10000},EXPECTED_TOOLS.length);
 
   const registration = await page.evaluate(()=>Object.values(window.__WEBMCP_TEST_TOOLS).map(tool=>({
     name:tool.name,
@@ -482,6 +520,14 @@ async function testWithWebMcp(browser,baseUrl){
     return Object.fromEntries(entries);
   });
   for(const name of EXPECTED_TOOLS){
+    if(name === "get_storyteller_options"){
+      assert.equal(titleResponses[name].ok,true,"Storyteller discovery should return a clean empty result when no game is active");
+      assert.equal(titleResponses[name].storyteller.status,"blocked");
+      assert.equal(titleResponses[name].storyteller.blocked_reason.code,"no_active_game");
+      assert.equal(titleResponses[name].storyteller.decision_token,null);
+      assert.deepEqual(titleResponses[name].storyteller.eligible_events,[]);
+      continue;
+    }
     assert.equal(titleResponses[name].ok,false,`${name} should report that no game is active on the title screen`);
     assert.equal(titleResponses[name].error.code,"no_active_game");
     if(!READ_ONLY_TOOLS.has(name)){
@@ -510,6 +556,13 @@ async function testWithWebMcp(browser,baseUrl){
     responses.get_current_location.location.services.push("fake_service");
     responses.get_quest_log.quest_log.chapters[0].quests[0].name = "Changed quest copy";
     responses.get_quest_log.quest_log.chapters[0].quests[0].reward.gold = 999;
+    const firstStorytellerEvent = responses.get_storyteller_options.storyteller.eligible_events[0];
+    if(firstStorytellerEvent){
+      firstStorytellerEvent.title = "Changed Storyteller copy";
+      firstStorytellerEvent.human_choices[0].label = "Changed Storyteller choice";
+      firstStorytellerEvent.context.location_id = "changed_location";
+    }
+    responses.get_storyteller_options.storyteller.context.location_id = "changed_context";
     const firstUiAction = responses.get_available_actions.actions.player_ui_controlled[0];
     if(firstUiAction)firstUiAction.parameters.changed = true;
     const reread = {
@@ -517,8 +570,22 @@ async function testWithWebMcp(browser,baseUrl){
       inventory:await window.__WEBMCP_TEST_TOOLS.get_inventory.execute({}),
       location:await window.__WEBMCP_TEST_TOOLS.get_current_location.execute({}),
       quests:await window.__WEBMCP_TEST_TOOLS.get_quest_log.execute({}),
-      actions:await window.__WEBMCP_TEST_TOOLS.get_available_actions.execute({})
+      actions:await window.__WEBMCP_TEST_TOOLS.get_available_actions.execute({}),
+      storyteller:await window.__WEBMCP_TEST_TOOLS.get_storyteller_options.execute({})
     };
+    const readEffectSnapshot = ()=>(
+      {
+        state:JSON.stringify(stateModule.state),
+        storage:JSON.stringify(Object.keys(localStorage).sort().map(key=>[key,localStorage.getItem(key)])),
+        currentScreen:stateModule.currentScreen,
+        activeScreens:[...document.querySelectorAll(".screen.active")].map(node=>node.id),
+        blockers:document.querySelectorAll(".modal-back,.level-up-back,.encounter-transition,.court-crier-overlay").length,
+        homeHtml:document.getElementById("home")?.innerHTML || ""
+      }
+    );
+    const storytellerReadEffectBefore = readEffectSnapshot();
+    await window.__WEBMCP_TEST_TOOLS.get_storyteller_options.execute({});
+    const storytellerReadEffectAfter = readEffectSnapshot();
 
     const worldBeforeTravel = JSON.parse(JSON.stringify(stateModule.state.world));
     stateModule.state.world.locationId = "ashen_keep";
@@ -529,6 +596,7 @@ async function testWithWebMcp(browser,baseUrl){
     const travelContextBeforeRead = JSON.stringify(window.FE.getCurrentPlaceContext({repairWorld:false}));
     const liveTravel = await window.__WEBMCP_TEST_TOOLS.get_current_location.execute({});
     const liveTravelActions = await window.__WEBMCP_TEST_TOOLS.get_available_actions.execute({});
+    const liveTravelStoryteller = await window.__WEBMCP_TEST_TOOLS.get_storyteller_options.execute({});
     const travelContextAfterRead = JSON.stringify(window.FE.getCurrentPlaceContext({repairWorld:false}));
     const travelAfterRead = JSON.stringify(stateModule.state.world);
     window.FE.cancelTravel();
@@ -541,12 +609,14 @@ async function testWithWebMcp(browser,baseUrl){
     stateModule.state.world.region = 999;
     const malformedBefore = JSON.stringify(stateModule.state.world);
     const malformedLocation = await window.__WEBMCP_TEST_TOOLS.get_current_location.execute({});
+    const malformedStoryteller = await window.__WEBMCP_TEST_TOOLS.get_storyteller_options.execute({});
     const malformedAfter = JSON.stringify(stateModule.state.world);
     stateModule.state.world = originalWorld;
     return {
       before,after,saveBefore,saveAfter,responses,reread,
-      keepActions,travelBeforeRead,travelAfterRead,travelContextBeforeRead,travelContextAfterRead,liveTravel,liveTravelActions,
-      malformedBefore,malformedAfter,malformedLocation
+      storytellerReadEffectBefore,storytellerReadEffectAfter,
+      keepActions,travelBeforeRead,travelAfterRead,travelContextBeforeRead,travelContextAfterRead,liveTravel,liveTravelActions,liveTravelStoryteller,
+      malformedBefore,malformedAfter,malformedLocation,malformedStoryteller
     };
   });
 
@@ -577,6 +647,26 @@ async function testWithWebMcp(browser,baseUrl){
   assert.equal(cinderhook.quests.find(quest=>quest.id === "ration_marks").status,"available");
   assert.equal(cinderhook.quests.find(quest=>quest.id === "forge_scrap").status,"locked");
   assert.equal(lowerWard.status,"locked");
+  const storyteller = actual.responses.get_storyteller_options;
+  assert.equal(storyteller.ok,true);
+  assert.equal(storyteller.storyteller.status,"ready");
+  assert.equal(storyteller.storyteller.mutation_available,false);
+  assert.equal(storyteller.storyteller.trigger_tool,null);
+  assert.equal(storyteller.storyteller.eligible_event_count,3);
+  assert.deepEqual(
+    storyteller.storyteller.eligible_events.map(event=>event.event_id),
+    ["cinderhook_warning_messenger","tavern_suspicious_stranger","market_cutpurse"]
+  );
+  assert.equal(new Set(storyteller.storyteller.eligible_events.map(event=>event.event_id)).size,3,"Storyteller options must not contain duplicate event IDs");
+  assert.match(storyteller.storyteller.decision_token,/^story-[0-9a-f-]{32,36}$/);
+  assert.equal(storyteller.storyteller.decision_token_status,"issued");
+  assert.ok(storyteller.storyteller.eligible_events.every(event=>event.human_choices.every(choice=>(
+    choice.interaction_owner === "player_ui"
+      && choice.currently_presented === false
+      && choice.webmcp_invocable === false
+  ))));
+  assert.doesNotMatch(JSON.stringify(storyteller),/eligibilityKey|eligibility_key|futureRoute|requiredActionId|serviceEventId|callback|predicate|effect|FE\./);
+  assert.ok(!EXPECTED_TOOLS.includes("trigger_story_event"),"no Storyteller mutation tool may be registered in this checkpoint");
   assert.equal(actual.responses.get_available_actions.ok,true);
   assert.equal(actual.responses.get_available_actions.mutation_tools_enabled,true);
   assert.deepEqual(
@@ -603,6 +693,21 @@ async function testWithWebMcp(browser,baseUrl){
   assert.ok(!actual.reread.location.location.services.includes("fake_service"),"location services must be a detached copy");
   assert.equal(actual.reread.quests.quest_log.chapters[0].quests[0].name,"Recover Stolen Food","quest entries must be detached copies");
   assert.equal(actual.reread.quests.quest_log.chapters[0].quests[0].reward.gold,5,"quest rewards must be detached copies");
+  assert.equal(actual.reread.storyteller.storyteller.context.location_id,"ashen_slums","Storyteller context must be detached");
+  assert.equal(actual.reread.storyteller.storyteller.eligible_events[0].title,"A Warning at the Door","Storyteller event titles must be detached");
+  assert.equal(actual.reread.storyteller.storyteller.eligible_events[0].human_choices[0].label,"Hear the warning","Storyteller choices must be detached");
+  assert.notEqual(
+    actual.reread.storyteller.storyteller.decision_token,
+    actual.responses.get_storyteller_options.storyteller.decision_token,
+    "each eligible read must replace the prior in-memory decision receipt"
+  );
+  assert.ok(!actual.before.includes(actual.responses.get_storyteller_options.storyteller.decision_token),"decision tokens must never be stored in live state");
+  assert.ok(!String(actual.saveAfter).includes(actual.responses.get_storyteller_options.storyteller.decision_token),"decision tokens must never be persisted");
+  assert.deepEqual(
+    actual.storytellerReadEffectAfter,
+    actual.storytellerReadEffectBefore,
+    "Storyteller discovery must not modify state, any localStorage entry, the active screen, blockers, or visible Home UI"
+  );
   const changedActionId = actual.responses.get_available_actions.actions.player_ui_controlled[0]?.id;
   if(changedActionId){
     const rereadAction = actual.reread.actions.actions.player_ui_controlled.find(action=>action.id === changedActionId);
@@ -619,10 +724,16 @@ async function testWithWebMcp(browser,baseUrl){
   assert.ok(actual.liveTravelActions.actions.player_ui_controlled.some(action=>action.id === "journey.cancel"));
   assert.ok(actual.liveTravelActions.actions.blocked_player_ui_actions.some(action=>action.id === "journey.continue"));
   assert.ok(![...actual.liveTravelActions.actions.player_ui_controlled,...actual.liveTravelActions.actions.blocked_player_ui_actions].some(action=>action.id.startsWith("location.")),"origin location actions must not leak during travel");
+  assert.equal(actual.liveTravelStoryteller.storyteller.status,"blocked");
+  assert.equal(actual.liveTravelStoryteller.storyteller.blocked_reason.code,"travel_in_progress");
+  assert.equal(actual.liveTravelStoryteller.storyteller.decision_token,null);
+  assert.deepEqual(actual.liveTravelStoryteller.storyteller.eligible_events,[]);
   assert.ok(actual.keepActions.actions.player_ui_controlled.some(action=>action.id === "location.hunt_nearby"),"the cinematic command rail should expose Hunt Nearby");
   assert.ok(actual.keepActions.actions.player_ui_controlled.some(action=>action.id === "location.scout_nearby"),"the cinematic command rail should expose Scout Nearby");
   assert.equal(actual.malformedBefore,actual.malformedAfter,"location reads must not repair or otherwise mutate malformed state");
   assert.equal(actual.malformedLocation.location.id,"ashen_slums","a malformed location should be read through the existing safe fallback");
+  assert.equal(actual.malformedStoryteller.storyteller.status,"blocked","Storyteller eligibility must fail closed for a malformed raw location");
+  assert.equal(actual.malformedStoryteller.storyteller.blocked_reason.code,"location_mismatch");
 
   const scenarios = await page.evaluate(async()=>{
     const stateModule = await import("./src/state.js");
@@ -684,6 +795,7 @@ async function testWithWebMcp(browser,baseUrl){
     const spanishBefore = JSON.stringify(stateModule.state);
     const spanishQuests = await window.__WEBMCP_TEST_TOOLS.get_quest_log.execute({});
     const spanishActions = await window.__WEBMCP_TEST_TOOLS.get_available_actions.execute({});
+    const spanishStoryteller = await window.__WEBMCP_TEST_TOOLS.get_storyteller_options.execute({});
     const spanishAfter = JSON.stringify(stateModule.state);
     languageModule.setLanguage("en");
 
@@ -695,7 +807,16 @@ async function testWithWebMcp(browser,baseUrl){
 
     window.FE.modal("Player choice","<p>Choose in the UI.</p>",[{label:"Continue"}]);
     const modalActions = await window.__WEBMCP_TEST_TOOLS.get_available_actions.execute({});
+    const modalStoryteller = await window.__WEBMCP_TEST_TOOLS.get_storyteller_options.execute({});
     window.FE.closeModals();
+
+    stateModule.setState(JSON.parse(JSON.stringify(baseline)));
+    stateModule.state.prologue.lowerWardGate.unlocked = true;
+    stateModule.state.prologue.phase = "gateUnlocked";
+    stateModule.state.world.locationId = "ashen_fields";
+    const noEligibleBefore = JSON.stringify(stateModule.state);
+    const noEligibleStoryteller = await window.__WEBMCP_TEST_TOOLS.get_storyteller_options.execute({});
+    const noEligibleAfter = JSON.stringify(stateModule.state);
 
     stateModule.setState(JSON.parse(JSON.stringify(baseline)));
     window.FE.slumClearAlley();
@@ -705,6 +826,7 @@ async function testWithWebMcp(browser,baseUrl){
     const knownBefore = stateModule.state.hero.known;
     const loadoutBefore = stateModule.state.hero.abilityLoadout;
     const combatActions = await window.__WEBMCP_TEST_TOOLS.get_available_actions.execute({});
+    const combatStoryteller = await window.__WEBMCP_TEST_TOOLS.get_storyteller_options.execute({});
     const battleAfter = JSON.stringify(combatModule.battle);
     const combatStateAfter = JSON.stringify(stateModule.state);
     const combatSaveAfter = localStorage.getItem("fallenEmpireSave_1");
@@ -714,12 +836,13 @@ async function testWithWebMcp(browser,baseUrl){
     return {
       cinderBefore,cinderAfter,cinderQuests,cinderActions,
       wardBefore,wardAfter,wardQuests,wardActions,
-      spanishBefore,spanishAfter,spanishQuests,spanishActions,
+      spanishBefore,spanishAfter,spanishQuests,spanishActions,spanishStoryteller,
       malformedQuestBefore,malformedQuestAfter,malformedQuests,
-      modalActions,campNoFoodBefore,campNoFoodAfter,campNoFoodActions,campReadyBefore,campReadyAfter,campReadyActions,
+      modalActions,modalStoryteller,noEligibleBefore,noEligibleAfter,noEligibleStoryteller,
+      campNoFoodBefore,campNoFoodAfter,campNoFoodActions,campReadyBefore,campReadyAfter,campReadyActions,
       campMovingBefore,campMovingAfter,campMovingActions,
       cinderTravelBefore,cinderTravelAfter,cinderTravelActions,
-      battleBefore,battleAfter,combatStateBefore,combatStateAfter,combatSaveBefore,combatSaveAfter,combatAbilityReferencesPreserved,combatActions
+      battleBefore,battleAfter,combatStateBefore,combatStateAfter,combatSaveBefore,combatSaveAfter,combatAbilityReferencesPreserved,combatActions,combatStoryteller
     };
   });
 
@@ -739,6 +862,9 @@ async function testWithWebMcp(browser,baseUrl){
   assert.equal(scenarios.spanishQuests.quest_log.language,"es");
   assert.equal(scenarios.spanishQuests.quest_log.chapters[0].quests[0].name,"Recuperar comida robada");
   assert.ok(scenarios.spanishActions.actions.player_ui_controlled.some(action=>action.label === "Mapa del camino"));
+  assert.equal(scenarios.spanishStoryteller.storyteller.language,"es");
+  assert.ok(scenarios.spanishStoryteller.storyteller.eligible_events.length >= 1);
+  assert.equal(scenarios.spanishStoryteller.storyteller.eligible_events[0].title,"El desconocido encapuchado");
   assert.equal(scenarios.malformedQuestBefore,scenarios.malformedQuestAfter,"quest reads must not normalize malformed or legacy quest state");
   const legacyBlockedQuest = scenarios.malformedQuests.quest_log.chapters[0].quests.find(quest=>quest.id === "ration_marks");
   assert.equal(legacyBlockedQuest.status,"blocked");
@@ -746,6 +872,15 @@ async function testWithWebMcp(browser,baseUrl){
   assert.equal(scenarios.modalActions.context.interaction_layer,"modal");
   assert.deepEqual(scenarios.modalActions.actions.player_ui_controlled,[]);
   assert.deepEqual(scenarios.modalActions.actions.blocked_player_ui_actions,[]);
+  assert.equal(scenarios.modalStoryteller.storyteller.status,"blocked");
+  assert.equal(scenarios.modalStoryteller.storyteller.blocked_reason.code,"blocking_interaction");
+  assert.equal(scenarios.modalStoryteller.storyteller.decision_token,null);
+  assert.equal(scenarios.noEligibleBefore,scenarios.noEligibleAfter,"an empty Storyteller read must not modify live state");
+  assert.equal(scenarios.noEligibleStoryteller.ok,true);
+  assert.equal(scenarios.noEligibleStoryteller.storyteller.status,"ready");
+  assert.equal(scenarios.noEligibleStoryteller.storyteller.blocked_reason.code,"no_eligible_events");
+  assert.deepEqual(scenarios.noEligibleStoryteller.storyteller.eligible_events,[]);
+  assert.equal(scenarios.noEligibleStoryteller.storyteller.decision_token,null);
   assert.equal(scenarios.campNoFoodBefore,scenarios.campNoFoodAfter,"camp-rest availability must not modify zero-food journey state");
   assert.ok(scenarios.campNoFoodActions.actions.blocked_player_ui_actions.some(action=>action.id === "journey.rest_at_camp" && action.blocked_reason_code === "not_enough_food"));
   assert.equal(scenarios.campReadyBefore,scenarios.campReadyAfter,"camp-rest availability must not modify ready journey state");
@@ -763,6 +898,9 @@ async function testWithWebMcp(browser,baseUrl){
   assert.ok(scenarios.combatActions.actions.player_ui_controlled.some(action=>action.id === "combat.attack"));
   assert.ok(![...scenarios.combatActions.actions.player_ui_controlled,...scenarios.combatActions.actions.blocked_player_ui_actions].some(action=>action.id.startsWith("location.") || action.id.startsWith("cinderhook.")),"combat context must suppress underlying location actions");
   assert.ok([...scenarios.combatActions.actions.player_ui_controlled,...scenarios.combatActions.actions.blocked_player_ui_actions].every(action=>action.webmcp_invocable === false));
+  assert.equal(scenarios.combatStoryteller.storyteller.status,"blocked");
+  assert.equal(scenarios.combatStoryteller.storyteller.blocked_reason.code,"combat_active");
+  assert.equal(scenarios.combatStoryteller.storyteller.decision_token,null);
 
   const mutations = await page.evaluate(async()=>{
     const stateModule = await import("./src/state.js");
@@ -1215,6 +1353,43 @@ async function testWithWebMcp(browser,baseUrl){
       context:{location_id:"fixture_place"},
       actions:[{id:"fixture.travel",label:"Travel",category:"travel",enabled:true,parameters:actionParameters}]
     }];
+    const storytellerChoice = {id:"fixture_choice",label:"Choose",callback:()=>"private"};
+    const storytellerEvent = {
+      id:"fixture_story",
+      title:"Fixture Story",
+      setup:"Fixture setup",
+      category:"mystery",
+      reasonCode:"fixture_reason",
+      reason:"Fixture reason",
+      context:{locationType:"majorLocation",locationId:"fixture_place"},
+      cooldown:{days:3,daysRemaining:0,priorOccurrences:0,maxOccurrences:null},
+      choices:[storytellerChoice],
+      requiredActionId:"private.action",
+      futureRoute:{serviceEventId:"private_event"},
+      predicate:()=>true,
+      effect:()=>false
+    };
+    const storytellerSelector = {
+      status:"ready",
+      language:"en",
+      eligibilityKey:"private-eligibility-key",
+      blockedReasonCode:null,
+      blockedReason:null,
+      context:{
+        currentScreen:"home",
+        interactionLayer:"screen",
+        blockingInteractionOpen:false,
+        combatActive:false,
+        locationType:"majorLocation",
+        locationId:"fixture_place",
+        isTraveling:false,
+        travelStatus:null,
+        calendar:{month:2,day:3,ordinal:33}
+      },
+      cooldown:{globalReady:true,globalDaysRemaining:0},
+      eligibleEvents:[storytellerEvent],
+      privateState:{mustNotEscape:true}
+    };
     const tools = createWebMcpTools({
       getState:()=>fixture,
       getTotalAttack:()=>17,
@@ -1233,6 +1408,7 @@ async function testWithWebMcp(browser,baseUrl){
       getQuestLogSections:()=>questSections,
       getUiInteractionContext:()=>({current_screen:"home",interaction_layer:"screen",blocking_modal_open:false,combat_active:false}),
       getActionSnapshots:()=>actionSnapshots,
+      getStorytellerOptions:()=>storytellerSelector,
       getRegisteredWebMcpTools:()=>["get_quest_log","get_available_actions"],
       gearSlots:["weapon"]
     });
@@ -1241,6 +1417,7 @@ async function testWithWebMcp(browser,baseUrl){
     const location = await tools.find(tool=>tool.name === "get_current_location").execute({});
     const quests = await tools.find(tool=>tool.name === "get_quest_log").execute({});
     const actions = await tools.find(tool=>tool.name === "get_available_actions").execute({});
+    const storyteller = await tools.find(tool=>tool.name === "get_storyteller_options").execute({});
     const toolsWithoutTotals = createWebMcpTools({getState:()=>fixture,gearSlots:["weapon"]});
     const statusWithoutTotals = await toolsWithoutTotals.find(tool=>tool.name === "get_player_status").execute({});
     const equipmentWithoutTotals = await toolsWithoutTotals.find(tool=>tool.name === "get_equipment").execute({});
@@ -1249,6 +1426,8 @@ async function testWithWebMcp(browser,baseUrl){
     location.location.services.push("Changed");
     quests.quest_log.chapters[0].quests[0].reward.gold = 999;
     actions.actions.player_ui_controlled[0].parameters.destination_id = "changed";
+    storyteller.storyteller.eligible_events[0].title = "Changed Story";
+    storyteller.storyteller.eligible_events[0].human_choices[0].label = "Changed choice";
     return {
       inventoryItem:Object.keys(inventory.inventory.items[0]),
       equipmentItem:Object.keys(equipment.equipment.slots.weapon),
@@ -1262,6 +1441,11 @@ async function testWithWebMcp(browser,baseUrl){
         equipmentDefense:equipmentWithoutTotals.equipment.total_defense
       },
       registeredReadTools:actions.actions.webmcp_invocable.map(action=>action.id),
+      storytellerEventKeys:Object.keys(storyteller.storyteller.eligible_events[0]).sort(),
+      storytellerChoiceKeys:Object.keys(storyteller.storyteller.eligible_events[0].human_choices[0]).sort(),
+      storytellerJson:JSON.stringify(storyteller),
+      sourceStoryTitle:storytellerEvent.title,
+      sourceStoryChoice:storytellerChoice.label,
       sourceQuestGold:questSections[0].quests[0].reward.gold,
       sourceDestinationId:actionParameters.destination_id,
       liveItemName:item.name,
@@ -1277,6 +1461,13 @@ async function testWithWebMcp(browser,baseUrl){
   assert.equal(projection.totalAttack,17);
   assert.equal(projection.totalDefense,8);
   assert.deepEqual(projection.registeredReadTools,["get_quest_log","get_available_actions"]);
+  assert.deepEqual(projection.storytellerEventKeys,[
+    "category","context","cooldown","eligibility_reason","eligibility_reason_code","event_id","human_choices","setup_text","title"
+  ]);
+  assert.deepEqual(projection.storytellerChoiceKeys,["choice_id","currently_presented","interaction_owner","label","webmcp_invocable"]);
+  assert.equal(projection.sourceStoryTitle,"Fixture Story","Storyteller titles must be defensively copied");
+  assert.equal(projection.sourceStoryChoice,"Choose","Storyteller choices must be defensively copied");
+  assert.doesNotMatch(projection.storytellerJson,/private-eligibility-key|privateState|requiredActionId|futureRoute|private_event|predicate|effect|callback/);
   assert.equal(projection.sourceQuestGold,3,"quest selector output must be defensively copied");
   assert.equal(projection.sourceDestinationId,"fixture_destination","action selector output must be defensively copied");
   assert.deepEqual(projection.unavailableTotals,{
@@ -1285,6 +1476,81 @@ async function testWithWebMcp(browser,baseUrl){
     equipmentAttack:null,
     equipmentDefense:null
   });
+
+  const storytellerContracts = await page.evaluate(async()=>{
+    const { createWebMcpTools } = await import("./src/webmcp.js");
+    const gameState = {hero:{name:"Contract Hero"},world:{locationId:"fixture_place"}};
+    const event = {
+      id:"fixture_story",
+      title:"Fixture Story",
+      setup:"Fixture setup",
+      category:"mystery",
+      reasonCode:"fixture_reason",
+      reason:"Fixture reason",
+      context:{locationType:"majorLocation",locationId:"fixture_place"},
+      cooldown:{days:3,daysRemaining:0,priorOccurrences:0,maxOccurrences:null},
+      choices:[{id:"fixture_choice",label:"Choose"}]
+    };
+    const selector = {
+      status:"ready",
+      language:"en",
+      eligibilityKey:"fixture-eligibility-key",
+      blockedReasonCode:null,
+      blockedReason:null,
+      context:{
+        currentScreen:"home",
+        interactionLayer:"screen",
+        blockingInteractionOpen:false,
+        combatActive:false,
+        locationType:"majorLocation",
+        locationId:"fixture_place",
+        isTraveling:false,
+        travelStatus:null,
+        calendar:{month:1,day:1,ordinal:1}
+      },
+      cooldown:{globalReady:true,globalDaysRemaining:0},
+      eligibleEvents:[event]
+    };
+    const execute = (selected,extra = {})=>createWebMcpTools({
+      getState:()=>gameState,
+      getStorytellerOptions:()=>selected,
+      ...extra
+    }).find(tool=>tool.name === "get_storyteller_options").execute({});
+
+    let noActiveSelectorCalls = 0;
+    const noActive = await createWebMcpTools({
+      getState:()=>null,
+      getStorytellerOptions:()=>{
+        noActiveSelectorCalls += 1;
+        throw new Error("must not run");
+      }
+    }).find(tool=>tool.name === "get_storyteller_options").execute({});
+    const blockedWithEvents = await execute({
+      ...selector,
+      status:"blocked",
+      blockedReasonCode:"combat_active",
+      blockedReason:"Combat is active."
+    },{createStorytellerDecisionToken:()=>{throw new Error("blocked reads must not issue tokens");}});
+    const contradictoryReady = await execute({
+      ...selector,
+      blockedReasonCode:"combat_active",
+      blockedReason:"Combat is active."
+    });
+    const noEntropy = await execute(selector,{createStorytellerDecisionToken:()=>null});
+    return {noActive,noActiveSelectorCalls,blockedWithEvents,contradictoryReady,noEntropy};
+  });
+  assert.equal(storytellerContracts.noActive.ok,true);
+  assert.equal(storytellerContracts.noActive.storyteller.blocked_reason.code,"no_active_game");
+  assert.equal(storytellerContracts.noActiveSelectorCalls,0,"title-screen discovery must not evaluate gameplay selectors");
+  assert.equal(storytellerContracts.blockedWithEvents.ok,true);
+  assert.deepEqual(storytellerContracts.blockedWithEvents.storyteller.eligible_events,[],"blocked selector output must never advertise events");
+  assert.equal(storytellerContracts.blockedWithEvents.storyteller.decision_token,null);
+  assert.equal(storytellerContracts.contradictoryReady.ok,false,"contradictory ready/blocked selector output must fail closed");
+  assert.equal(storytellerContracts.contradictoryReady.error.code,"storyteller_context_unavailable");
+  assert.equal(storytellerContracts.noEntropy.ok,true);
+  assert.equal(storytellerContracts.noEntropy.storyteller.eligible_event_count,1);
+  assert.equal(storytellerContracts.noEntropy.storyteller.decision_token,null);
+  assert.equal(storytellerContracts.noEntropy.storyteller.decision_token_status,"secure_random_unavailable");
 
   const mutationContracts = await page.evaluate(async()=>{
     const { createWebMcpTools } = await import("./src/webmcp.js");
@@ -1505,9 +1771,11 @@ async function main(){
     console.log("PASS app-scoped service-worker recovery preserves sibling workers, unrelated caches, and saves");
     await testDebugGating(browser,baseUrl,address.port);
     console.log("PASS local-only debug gate and public-host WebMCP discovery");
+    await testStorytellerRegistrationFailure(browser,baseUrl);
+    console.log("PASS original eight tools and normal gameplay survive isolated Storyteller registration failure");
     await testCourtLedgerProfile(browser,baseUrl);
     console.log(HACKATHON_PROFILE
-      ? "PASS hackathon artifact omits Court Ledger/payment UI and functions while preserving exactly eight WebMCP tools"
+      ? "PASS hackathon artifact omits Court Ledger/payment UI and functions while preserving exactly nine WebMCP tools"
       : "PASS normal development retains the existing Court Ledger UI and functions");
     await testWithWebMcp(browser,baseUrl);
     console.log(`PASS ${EXPECTED_TOOLS.join(", ")}`);

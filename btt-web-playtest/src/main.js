@@ -17,6 +17,7 @@ import * as world from "./world.js";
 import * as mapActivity from "./mapActivity.js";
 import * as slumPrologue from "./slumPrologue.js";
 import * as lowerWard from "./lowerWard.js";
+import * as storyteller from "./storyteller.js";
 import * as pwa from "./pwa.js";
 import * as supporterStore from "./supporterStore.js";
 import { initAudioEngine } from "./audioEngine.js";
@@ -121,6 +122,27 @@ void initWebMcp({
       slumPrologue.selectCinderhookAvailableActions(state,placeContext),
       lowerWard.selectLowerWardAvailableActions(state,placeContext)
     ];
+  },
+  getStorytellerOptions:()=>{
+    const placeContext = world.getCurrentPlaceContext({repairWorld:false});
+    return storyteller.selectStorytellerOptions({
+      gameState:state,
+      language:getLanguage(),
+      placeContext,
+      uiContext:ui.selectUiInteractionContext(),
+      safetyContext:ui.selectMutationSafetyContext(),
+      worldInteractionContext:world.selectWorldInteractionSafety(),
+      questSections:[
+        slumPrologue.selectCinderhookQuestLog(),
+        lowerWard.selectLowerWardQuestLog()
+      ],
+      actionSnapshots:[
+        combat.selectCombatAvailableActions(),
+        world.selectWorldAvailableActions(),
+        slumPrologue.selectCinderhookAvailableActions(state,placeContext),
+        lowerWard.selectLowerWardAvailableActions(state,placeContext)
+      ]
+    });
   },
   getMutationSafetyContext:()=>ui.selectMutationSafetyContext(),
   getSavedHero:()=>slotInfo(getActiveSlot())?.hero || null,
