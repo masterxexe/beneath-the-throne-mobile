@@ -129,31 +129,35 @@ function actionDay(){
   }
 }
 
-function gateReady(){
-  const p = prologue();
-  return state.hero.gold >= p.coinGoal && p.status >= p.statusGoal && p.safety >= p.safetyGoal && (p.gang.defeated || p.gang.paid > 0);
+function gateReady(p = prologue(), hero = state?.hero){
+  return hero?.gold >= p?.coinGoal
+    && p?.status >= p?.statusGoal
+    && p?.safety >= p?.safetyGoal
+    && (p?.gang?.defeated || p?.gang?.paid > 0);
 }
 
 function contractById(id){
   return CHAPTER_ONE_CONTRACTS.find(contract=>contract.id === id) || null;
 }
 
-function contractState(){
-  return prologue().contracts;
+function contractState(p = prologue()){
+  return p?.contracts || {};
 }
 
-function completedContracts(){
-  return new Set(contractState().completed || []);
+function completedContracts(p = prologue()){
+  const completed = contractState(p).completed;
+  return new Set(Array.isArray(completed) ? completed : []);
 }
 
 function contractUnlocked(contract,p = prologue()){
   if(!contract)return false;
-  const done = completedContracts();
+  const contracts = contractState(p);
+  const done = completedContracts(p);
   if(done.has(contract.id))return false;
   if(contract.id === "gate_lieutenant"){
-    return !p.contracts.chapterBossDefeated
-      && p.companion.recruited
-      && (p.contracts.completed || []).length >= 3
+    return !contracts.chapterBossDefeated
+      && !!p?.companion?.recruited
+      && (contracts.completed || []).length >= 3
       && (contract.requires || []).every(id=>done.has(id));
   }
   return (contract.requires || []).every(id=>done.has(id));
@@ -163,8 +167,8 @@ function visibleContracts(p = prologue()){
   return CHAPTER_ONE_CONTRACTS.filter(contract=>contractUnlocked(contract,p));
 }
 
-function activeContract(){
-  return contractById(contractState().active);
+function activeContract(p = prologue()){
+  return contractById(contractState(p).active);
 }
 
 function contractRewardLine(reward = {}){
@@ -449,6 +453,105 @@ function contractText(contract, field){
   const key = `contract_${contract.id}_${field}`;
   const translated = tx(key);
   return translated !== key ? translated : (contract[field] || "");
+}
+
+function copiedContractReward(reward = {}){
+  const fields = ["gold","food","ore","status","safety","danger","heat","debt","bond","training"];
+  return Object.fromEntries(fields
+    .filter(field=>Number.isFinite(Number(reward[field])))
+    .map(field=>[field,Number(reward[field])]));
+}
+
+export function selectCinderhookQuestLog(gameState = state){
+  const p = gameState?.prologue && typeof gameState.prologue === "object" ? gameState.prologue : {};
+  const hero = gameState?.hero || {};
+  const contracts = p.contracts && typeof p.contracts === "object" ? p.contracts : {};
+  const completedIds = Array.isArray(contracts.completed) ? contracts.completed.filter(id=>typeof id === "string") : [];
+  const failedIds = Array.isArray(contracts.failed) ? contracts.failed.filter(id=>typeof id === "string") : [];
+  const completed = new Set(completedIds);
+  const activeId = typeof contracts.active === "string" && contracts.active ? contracts.active : null;
+  const gateUnlocked = p.phase === "gateUnlocked" || !!p.lowerWardGate?.unlocked;
+  const quests = CHAPTER_ONE_CONTRACTS.map(contract=>{
+    const unlocked = contractUnlocked(contract,p);
+    let status = "locked";
+    if(completed.has(contract.id))status = "completed";
+    else if(gateUnlocked)status = "closed";
+    else if(activeId === contract.id)status = "active";
+    else if(unlocked && activeId)status = "blocked";
+    else if(unlocked)status = "available";
+    const failedAttempts = failedIds.filter(id=>id === contract.id).length;
+    return {
+      id:contract.id,
+      type:"contract",
+      status,
+      name:contractText(contract,"name"),
+      description:contractText(contract,"desc"),
+      action_label:contractText(contract,"action"),
+      contact:String(contract.contact || ""),
+      kind:String(contract.kind || ""),
+      tag:contractText(contract,"tag"),
+      reward:copiedContractReward(contract.reward),
+      prerequisite_ids:[...(contract.requires || [])],
+      unmet_prerequisite_ids:(contract.requires || []).filter(id=>!completed.has(id)),
+      objective_met:completed.has(contract.id),
+      can_accept:status === "available",
+      can_start:status === "active",
+      can_hold:status === "active",
+      failed_attempts:failedAttempts,
+      last_attempt_failed:failedIds[failedIds.length - 1] === contract.id,
+      blocked_by_quest_id:status === "blocked" ? activeId : null
+    };
+  });
+  const gangPressureMet = !!p.gang?.defeated || Number(p.gang?.paid || 0) > 0;
+  return {
+    id:"cinderhook",
+    title:tx("slumPrologueTitle"),
+    status:gateUnlocked ? "completed" : "active",
+    goal:String(p.goal || "Reach the Lower Ward gate"),
+    progress:{completed:quests.filter(quest=>quest.status === "completed").length,total:quests.length},
+    active_quest_id:activeId,
+    gate:{
+      visited:!!p.lowerWardGate?.visited,
+      unlocked:gateUnlocked,
+      ready:gateReady(p,hero),
+      requirements:{
+        gold:{current:Number(hero.gold || 0),required:Number(p.coinGoal || 0),met:Number(hero.gold || 0) >= Number(p.coinGoal || 0)},
+        reputation:{current:Number(p.status || 0),required:Number(p.statusGoal || 0),met:Number(p.status || 0) >= Number(p.statusGoal || 0)},
+        safety:{current:Number(p.safety || 0),required:Number(p.safetyGoal || 0),met:Number(p.safety || 0) >= Number(p.safetyGoal || 0)},
+        gang_pressure:{met:gangPressureMet}
+      }
+    },
+    quests,
+    recent_log:Array.isArray(p.log) ? p.log.slice(-12).map(String) : []
+  };
+}
+
+export function selectCinderhookAvailableActions(gameState = state, placeContext = null){
+  const isAtCinderhook = placeContext
+    ? placeContext.isTraveling !== true && placeContext.id === "ashen_slums"
+    : gameState?.world?.locationId === "ashen_slums";
+  if(!isAtCinderhook)return {id:"cinderhook",applicable:false,actions:[]};
+  const chapter = selectCinderhookQuestLog(gameState);
+  const actions = [];
+  const add = (id,label,category,parameters = {})=>actions.push({id,label,category,enabled:true,blocked_reason_code:null,parameters:{...parameters}});
+  if(!chapter.gate.unlocked){
+    add("cinderhook.open_contract_board",tx("slumContracts"),"quest");
+    const active = chapter.quests.find(quest=>quest.status === "active");
+    if(active){
+      add(`cinderhook.start_contract.${active.id}`,active.action_label,"quest",{quest_id:active.id});
+      add(`cinderhook.hold_contract.${active.id}`,tx("contractHold"),"quest",{quest_id:active.id});
+    }else{
+      chapter.quests.filter(quest=>quest.can_accept).forEach(quest=>{
+        add(`cinderhook.accept_contract.${quest.id}`,`${tx("contractAccept")}: ${quest.name}`,"quest",{quest_id:quest.id});
+      });
+    }
+    add("cinderhook.approach_lower_ward_gate",tx("slumGateTest"),"gate");
+  }else{
+    add("cinderhook.enter_lower_ward",tx("enterLowerWard"),"gate");
+  }
+  add("cinderhook.open_town_actions",tx("slumTownWork"),"location");
+  add("cinderhook.open_shelter_actions",tx("slumShelterAlly"),"location");
+  return {id:"cinderhook",applicable:true,actions};
 }
 
 function contractCardHTML(contract,{active = false} = {}){

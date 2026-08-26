@@ -12,6 +12,16 @@ export function byId(id){return document.getElementById(id);}
 export function esc(value){return String(value ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
 export function bar(value,max,cls=""){return `<div class="bar ${cls}"><div style="width:${pct(value,max)}%"></div></div>`;}
 
+export function selectUiInteractionContext(){
+  const blockingModalOpen = typeof document !== "undefined" && !!document.querySelector(".modal-back");
+  return {
+    current_screen:currentScreen,
+    interaction_layer:!state?.hero ? "title" : blockingModalOpen ? "modal" : battle ? "combat" : "screen",
+    blocking_modal_open:blockingModalOpen,
+    combat_active:!!battle
+  };
+}
+
 export function show(id){
   if(battle && id !== "combat"){
     toast(tx("combatInProgress"));

@@ -25,7 +25,7 @@ const LOWER_WARD_QUESTS = [
     id:"enter_ward",
     name:"Step Above Cinderhook",
     desc:"Enter the Lower Ward and establish your first clean line in the city ledger.",
-    check:()=>ward().entered,
+    check:gameState=>!!readLowerWard(gameState).entered,
     action:"FE.enterLowerWard()",
     actionLabel:"Enter Ward",
     reward:{influence:1,gold:4}
@@ -34,7 +34,7 @@ const LOWER_WARD_QUESTS = [
     id:"first_commission",
     name:"Stamp Work",
     desc:"Complete one ward commission for Orlen Voss.",
-    check:()=>ward().commissions >= 1,
+    check:gameState=>Number(readLowerWard(gameState).commissions || 0) >= 1,
     action:"FE.lowerWardTalk('clerk')",
     actionLabel:"Meet Clerk",
     reward:{influence:1,gold:6}
@@ -43,7 +43,7 @@ const LOWER_WARD_QUESTS = [
     id:"train_path",
     name:"Take a Ward Name",
     desc:"Train or change into one advanced class path.",
-    check:()=>activePathIds().some(id=>state.hero.unlockedClasses?.includes(id)),
+    check:gameState=>activePathIds(gameState).some(id=>gameState?.hero?.unlockedClasses?.includes(id)),
     action:"FE.lowerWardOpenTrainers()",
     actionLabel:"Open Trainers",
     reward:{influence:1,gold:5}
@@ -52,7 +52,7 @@ const LOWER_WARD_QUESTS = [
     id:"recruit_garran",
     name:"A Shield in the Crowd",
     desc:"Recruit Old Garran, a Lower Ward guard companion.",
-    check:()=>hasLowerWardCompanion(),
+    check:gameState=>hasLowerWardCompanion(gameState),
     action:"FE.lowerWardTalk('companion')",
     actionLabel:"Meet Garran",
     reward:{influence:2,gold:4}
@@ -61,7 +61,7 @@ const LOWER_WARD_QUESTS = [
     id:"clear_tax_vault",
     name:"Break the Tax Vault",
     desc:"Clear the Tax Vault Break-In hard district once.",
-    check:()=>Number(state.world.hardAreas?.clears?.lower_ward_tax_vault || 0) >= 1,
+    check:gameState=>Number(gameState?.world?.hardAreas?.clears?.lower_ward_tax_vault || 0) >= 1,
     action:"FE.lowerWardFocusHardAreas()",
     actionLabel:"Hard Districts",
     reward:{influence:2,writs:1,gold:8}
@@ -70,7 +70,7 @@ const LOWER_WARD_QUESTS = [
     id:"ward_foothold",
     name:"Ward Foothold",
     desc:"Reach 10 influence and hold 3 writs for the next social rung.",
-    check:()=>ward().influence >= 10 && ward().writs >= 3,
+    check:gameState=>Number(readLowerWard(gameState).influence || 0) >= 10 && Number(readLowerWard(gameState).writs || 0) >= 3,
     action:"FE.lowerWardTalk('clerk')",
     actionLabel:"Review Ledger",
     reward:{influence:3,gold:12}
@@ -138,8 +138,13 @@ function ward(){
   return ensureLowerWardState();
 }
 
-function activePathIds(){
-  const base = state.hero?.class || "warrior";
+function readLowerWard(gameState = state){
+  const value = gameState?.world?.lowerWard;
+  return value && typeof value === "object" ? value : {};
+}
+
+function activePathIds(gameState = state){
+  const base = gameState?.hero?.class || "warrior";
   return Object.entries(ADVANCED_CLASSES)
     .filter(([,path])=>path.baseClass === base)
     .map(([id])=>id);
@@ -149,8 +154,8 @@ function className(id){
   return ADVANCED_CLASSES[id]?.name || CLASSES[id]?.name || title(id);
 }
 
-function hasLowerWardCompanion(){
-  return (state.hero?.companions || []).some(companion=>companion.id === LOWER_WARD_COMPANION_ID);
+function hasLowerWardCompanion(gameState = state){
+  return (gameState?.hero?.companions || []).some(companion=>companion.id === LOWER_WARD_COMPANION_ID);
 }
 
 function makeGarran(){
@@ -185,9 +190,9 @@ function questClaimed(id){
   return ward().quests?.claimed?.includes(id);
 }
 
-function questComplete(quest){
+function questComplete(quest,gameState = state){
   try{
-    return !!quest.check();
+    return !!quest.check(gameState);
   }catch(error){
     return false;
   }
@@ -199,6 +204,86 @@ function questRewardLine(reward = {}){
   if(reward.influence)parts.push(`+${reward.influence} influence`);
   if(reward.writs)parts.push(`+${reward.writs} writ`);
   return parts.join(" | ");
+}
+
+function copiedQuestReward(reward = {}){
+  return Object.fromEntries(["gold","influence","writs"]
+    .filter(field=>Number.isFinite(Number(reward[field])))
+    .map(field=>[field,Number(reward[field])]));
+}
+
+export function selectLowerWardQuestLog(gameState = state){
+  const w = readLowerWard(gameState);
+  const gateUnlocked = !!gameState?.prologue?.lowerWardGate?.unlocked;
+  const claimedIds = Array.isArray(w.quests?.claimed) ? w.quests.claimed.filter(id=>typeof id === "string") : [];
+  const claimed = new Set(claimedIds);
+  const activeQuest = LOWER_WARD_QUESTS.find(quest=>!claimed.has(quest.id)) || null;
+  const quests = LOWER_WARD_QUESTS.map((quest,index)=>{
+    const objectiveMet = questComplete(quest,gameState);
+    const wasClaimed = claimed.has(quest.id);
+    let status = "locked";
+    if(wasClaimed)status = "completed";
+    else if(!gateUnlocked)status = "locked";
+    else if(objectiveMet)status = "ready_to_claim";
+    else if(activeQuest?.id === quest.id)status = "active";
+    return {
+      id:quest.id,
+      type:"quest",
+      sequence_index:index,
+      status,
+      name:String(quest.name || ""),
+      description:String(quest.desc || ""),
+      action_label:String(quest.actionLabel || ""),
+      reward:copiedQuestReward(quest.reward),
+      prerequisite_ids:[],
+      objective_met:objectiveMet,
+      can_claim:gateUnlocked && objectiveMet && !wasClaimed
+    };
+  });
+  return {
+    id:"lower_ward",
+    title:tx("wardQuestChain"),
+    status:!gateUnlocked ? "locked" : quests.every(quest=>quest.status === "completed") ? "completed" : "active",
+    progress:{completed:quests.filter(quest=>quest.status === "completed").length,total:quests.length},
+    active_quest_id:activeQuest?.id || null,
+    gate_unlocked:gateUnlocked,
+    ledger:{
+      entered:!!w.entered,
+      influence:Number(w.influence || 0),
+      writs:Number(w.writs || 0),
+      commissions_completed:Number(w.commissions || 0),
+      completed_commission_ids:Array.isArray(w.commissionDone) ? w.commissionDone.filter(id=>typeof id === "string") : []
+    },
+    quests,
+    recent_log:Array.isArray(w.log) ? w.log.slice(-12).map(String) : []
+  };
+}
+
+export function selectLowerWardAvailableActions(gameState = state, placeContext = null){
+  const chapter = selectLowerWardQuestLog(gameState);
+  const isAtLowerWard = placeContext
+    ? placeContext.isTraveling !== true && placeContext.id === "lower_ward"
+    : gameState?.world?.locationId === "lower_ward";
+  if(!isAtLowerWard || !chapter.gate_unlocked){
+    return {id:"lower_ward",applicable:false,actions:[]};
+  }
+  const actions = [
+    {id:"lower_ward.open_trainers",label:tx("wardClassTrainers"),category:"progression",enabled:true,blocked_reason_code:null,parameters:{}},
+    {id:"lower_ward.open_commissions",label:tx("wardCommission"),category:"quest",enabled:true,blocked_reason_code:null,parameters:{}},
+    {id:"lower_ward.view_hard_districts",label:tx("wardHardDistricts"),category:"combat",enabled:true,blocked_reason_code:null,parameters:{}},
+    {id:"lower_ward.open_road_map",label:tx("wardRoadMap"),category:"travel",enabled:true,blocked_reason_code:null,parameters:{}}
+  ];
+  chapter.quests.filter(quest=>quest.can_claim).forEach(quest=>{
+    actions.push({
+      id:`lower_ward.claim_quest.${quest.id}`,
+      label:`${tx("continue")}: ${quest.name}`,
+      category:"quest",
+      enabled:true,
+      blocked_reason_code:null,
+      parameters:{quest_id:quest.id}
+    });
+  });
+  return {id:"lower_ward",applicable:true,actions};
 }
 
 function lowerWardQuestChainHTML(){

@@ -105,6 +105,21 @@ void initWebMcp({
   getTotalDefense:()=>combat.totalDefense(),
   getWeaponType:item=>weaponTypeForItem(item),
   getCurrentPlaceContext:()=>world.getCurrentPlaceContext({repairWorld:false}),
+  getLanguage:()=>getLanguage(),
+  getQuestLogSections:()=>[
+    slumPrologue.selectCinderhookQuestLog(),
+    lowerWard.selectLowerWardQuestLog()
+  ],
+  getUiInteractionContext:()=>ui.selectUiInteractionContext(),
+  getActionSnapshots:()=>{
+    const placeContext = world.getCurrentPlaceContext({repairWorld:false});
+    return [
+      combat.selectCombatAvailableActions(),
+      world.selectWorldAvailableActions(),
+      slumPrologue.selectCinderhookAvailableActions(state,placeContext),
+      lowerWard.selectLowerWardAvailableActions(state,placeContext)
+    ];
+  },
   gearSlots:VISUAL_GEAR_SLOTS
 }).then(result=>{
   if(result.failed.length)console.warn("[WebMCP] Some tools could not be registered.",result.failed);

@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.25-webmcp-53",
-  "build": 53,
-  "cache": "v128",
-  "notes": "Read-only WebMCP player status, inventory, equipment, and location tools"
+  "version": "2026.08.25-webmcp-54",
+  "build": 54,
+  "cache": "v129",
+  "notes": "Adds read-only WebMCP quest log and available action tools"
 }

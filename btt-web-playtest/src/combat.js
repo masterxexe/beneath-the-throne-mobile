@@ -160,6 +160,16 @@ function actor(){
   return null;
 }
 
+function peekActor(){
+  if(!battle || !Array.isArray(battle.queue) || !battle.queue.length)return null;
+  const start = Math.max(0,Number(battle.index) || 0);
+  for(let offset = 0; offset < battle.queue.length; offset++){
+    const candidate = battle.queue[(start + offset) % battle.queue.length];
+    if(actorAlive(candidate))return candidate;
+  }
+  return null;
+}
+
 function actorAlive(a){
   if(!a)return false;
   if(a.side==="hero")return state.hero.hp>0;
@@ -810,9 +820,17 @@ function liveTarget(){
   return live[targetIndex];
 }
 
+function peekLiveTarget(live = liveEnemies()){
+  const index = clamp(targetIndex,0,Math.max(0,live.length - 1));
+  return live[index] || null;
+}
+
+function heroTurnReadyFor(currentActor){
+  return !!(battle && currentActor?.side === "hero" && !battle.resolving && !battle.heroActionLocked && state.hero.hp > 0);
+}
+
 function isHeroTurnReady(){
-  const a = actor();
-  return !!(battle && a?.side === "hero" && !battle.resolving && !battle.heroActionLocked && state.hero.hp > 0);
+  return heroTurnReadyFor(actor());
 }
 
 function hasPassive(id){
@@ -837,6 +855,104 @@ function skillCost(id){
   if(/aimed_shot|power_strike|cleave|execute/.test(low))cost = 11;
   if(/second_wind/.test(low))cost = 8;
   return Math.max(1,cost-discount);
+}
+
+function skillAvailability(id,heroTurnReady,hero = state.hero,target = liveTarget()){
+  const cost = skillCost(id);
+  const kind = abilityKind(id);
+  let blockedReasonCode = null;
+  if(!heroTurnReady)blockedReasonCode = "hero_turn_not_ready";
+  else if(kind === "strike" && !target)blockedReasonCode = "no_live_target";
+  else if(hero.mana < cost)blockedReasonCode = "not_enough_mana";
+  return {cost,kind,enabled:blockedReasonCode === null,blockedReasonCode};
+}
+
+function combatAction({id,label,category = "combat",enabled = true,blockedReasonCode = null,parameters = {}}){
+  return {
+    id,
+    label:String(label || id),
+    category,
+    enabled:!!enabled,
+    blocked_reason_code:enabled ? null : blockedReasonCode,
+    parameters:{...parameters}
+  };
+}
+
+function peekActiveAbilities(hero = state.hero){
+  return activeAbilities({
+    known:Array.isArray(hero?.known) ? [...hero.known] : [],
+    abilityLoadout:Array.isArray(hero?.abilityLoadout) ? [...hero.abilityLoadout] : []
+  });
+}
+
+export function selectCombatAvailableActions(){
+  if(!battle)return {id:"combat",applicable:false,context:null,actions:[]};
+  const currentActor = peekActor();
+  const heroTurnReady = heroTurnReadyFor(currentActor);
+  const enemies = liveEnemies();
+  const target = peekLiveTarget(enemies);
+  const turnBlock = heroTurnReady ? null : "hero_turn_not_ready";
+  const actions = [
+    combatAction({
+      id:"combat.attack",
+      label:tx("attack"),
+      enabled:heroTurnReady && !!target,
+      blockedReasonCode:turnBlock || "no_live_target",
+      parameters:{target_id:target?.id || null,target_name:target?.name || null}
+    }),
+    combatAction({id:"combat.defend",label:tx("defend"),enabled:heroTurnReady,blockedReasonCode:turnBlock}),
+    combatAction({
+      id:"combat.use_health_potion",
+      label:tx("healthPotion"),
+      category:"consumable",
+      enabled:heroTurnReady && Number(state.hero.potions || 0) > 0,
+      blockedReasonCode:turnBlock || (Number(state.hero.potions || 0) > 0 ? null : "no_health_potions"),
+      parameters:{quantity:Number(state.hero.potions || 0)}
+    }),
+    combatAction({
+      id:"combat.use_mana_potion",
+      label:tx("manaPotion"),
+      category:"consumable",
+      enabled:heroTurnReady && Number(state.hero.manaPotions || 0) > 0 && state.hero.mana < state.hero.maxMana,
+      blockedReasonCode:turnBlock
+        || (Number(state.hero.manaPotions || 0) <= 0 ? "no_mana_potions" : state.hero.mana >= state.hero.maxMana ? "mana_full" : null),
+      parameters:{quantity:Number(state.hero.manaPotions || 0)}
+    }),
+    combatAction({id:"combat.run",label:tx("run")}),
+    combatAction({id:"combat.toggle_auto",label:tx("auto")})
+  ];
+  peekActiveAbilities(state.hero).forEach(id=>{
+    const availability = skillAvailability(id,heroTurnReady,state.hero,target);
+    actions.push(combatAction({
+      id:`combat.use_skill.${id}`,
+      label:abilityName(id),
+      category:"combat_skill",
+      enabled:availability.enabled,
+      blockedReasonCode:availability.blockedReasonCode,
+      parameters:{ability_id:id,mana_cost:availability.cost,ability_kind:availability.kind,target_id:availability.kind === "strike" ? target?.id || null : null}
+    }));
+  });
+  if(enemies.length > 1){
+    actions.push(combatAction({
+      id:"combat.cycle_target",
+      label:tx("nextTarget"),
+      enabled:heroTurnReady,
+      blockedReasonCode:turnBlock
+    }));
+  }
+  return {
+    id:"combat",
+    applicable:true,
+    context:{
+      round:Number(battle.round || 0),
+      current_actor_side:currentActor?.side || null,
+      current_actor_id:currentActor?.id || null,
+      hero_turn_ready:heroTurnReady,
+      target_id:target?.id || null,
+      live_enemy_count:enemies.length
+    },
+    actions
+  };
 }
 
 function isMagicSkill(id){
@@ -980,15 +1096,11 @@ function skillDrawerHTML(enabled){
 }
 
 function skillButtonHTML(id, enabled, hero){
-  const cost = skillCost(id);
-  const kind = abilityKind(id);
-  const lacksTarget = kind === "strike" && !liveTarget();
-  const poorMana = hero.mana < cost;
-  const ready = enabled && !lacksTarget && !poorMana;
-  return `<button class="skill-drawer-btn" ${ready?`onclick="FE.useSkill('${id}')"`:"disabled"}>
+  const availability = skillAvailability(id,enabled,hero,liveTarget());
+  return `<button class="skill-drawer-btn" ${availability.enabled?`onclick="FE.useSkill('${id}')"`:"disabled"}>
     <b>${esc(abilityName(id))}</b>
     <span class="skill-drawer-meta">
-      <span class="pill">${tx("mana")} ${cost}</span>
+      <span class="pill">${tx("mana")} ${availability.cost}</span>
       <span class="pill">${esc(abilityKindLabel(id))}</span>
     </span>
   </button>`;

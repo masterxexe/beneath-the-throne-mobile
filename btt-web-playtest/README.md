@@ -2,7 +2,7 @@
 
 Mobile-first dark fantasy RPG playtest (static PWA). **No bundler or compile step** — vanilla ES modules served over HTTP.
 
-**Cache version:** v128 (`2026.08.25-webmcp-53`)
+**Cache version:** v129 (`2026.08.25-webmcp-54`)
 
 ---
 

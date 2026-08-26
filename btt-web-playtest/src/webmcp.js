@@ -12,6 +12,14 @@ const GEAR_ITEM_FIELDS = [
 
 const ATTRIBUTE_KEYS = ["strength", "endurance", "speed", "wisdom", "luck"];
 const RESISTANCE_KEYS = ["fire", "frost", "poison", "shadow", "lightning"];
+const WEBMCP_READ_TOOL_NAMES = [
+  "get_player_status",
+  "get_inventory",
+  "get_equipment",
+  "get_current_location",
+  "get_quest_log",
+  "get_available_actions"
+];
 
 function numberValue(value){
   const number = Number(value);
@@ -34,6 +42,26 @@ function nullableString(value){
 
 function copyNumberRecord(source, keys){
   return Object.fromEntries(keys.map(key=>[key,numberValue(source?.[key])]));
+}
+
+function copyJsonValue(value,seen = new WeakSet(),depth = 0){
+  if(value === null || typeof value === "string" || typeof value === "boolean")return value;
+  if(typeof value === "number")return Number.isFinite(value) ? value : null;
+  if(depth >= 12 || typeof value !== "object")return null;
+  if(seen.has(value))return null;
+  seen.add(value);
+  if(Array.isArray(value)){
+    const copy = value.map(item=>copyJsonValue(item,seen,depth + 1));
+    seen.delete(value);
+    return copy;
+  }
+  const copy = {};
+  for(const [key,item] of Object.entries(value)){
+    if(key === "__proto__" || key === "constructor" || typeof item === "function" || item === undefined)continue;
+    copy[key] = copyJsonValue(item,seen,depth + 1);
+  }
+  seen.delete(value);
+  return copy;
 }
 
 function copyGearItem(item,getWeaponType){
@@ -92,6 +120,11 @@ export function createWebMcpTools({
   getTotalDefense = ()=>null,
   getWeaponType = ()=>null,
   getCurrentPlaceContext = ()=>null,
+  getLanguage = ()=>"en",
+  getQuestLogSections = ()=>[],
+  getUiInteractionContext = ()=>null,
+  getActionSnapshots = ()=>[],
+  getRegisteredWebMcpTools = ()=>WEBMCP_READ_TOOL_NAMES,
   gearSlots = []
 } = {}){
   const slots = [...gearSlots];
@@ -226,6 +259,74 @@ export function createWebMcpTools({
           } : null
         };
       }
+    ),
+    readOnlyTool(
+      "get_quest_log",
+      "Get quest log",
+      "Return a safe combined projection of the existing Cinderhook contract and Lower Ward quest systems without creating or changing saved quest state.",
+      ()=>{
+        const gameState = safeCall(getState,null);
+        if(!gameState?.hero)return noActiveGame();
+        const sections = safeCall(getQuestLogSections,[]);
+        return {
+          ok:true,
+          quest_log:{
+            language:stringValue(safeCall(getLanguage,"en")) || "en",
+            chapters:copyJsonValue(Array.isArray(sections) ? sections : []),
+            recent_story:Array.isArray(gameState.world?.story) ? gameState.world.story.slice(-20).map(String) : []
+          }
+        };
+      }
+    ),
+    readOnlyTool(
+      "get_available_actions",
+      "Get available actions",
+      "Return read-only WebMCP capabilities separately from valid gameplay actions that remain controlled exclusively by the player UI.",
+      ()=>{
+        const gameState = safeCall(getState,null);
+        if(!gameState?.hero)return noActiveGame();
+        const uiContext = safeCall(getUiInteractionContext,{}) || {};
+        const snapshots = safeCall(getActionSnapshots,[]);
+        const safeSnapshots = Array.isArray(snapshots) ? snapshots.filter(snapshot=>snapshot && typeof snapshot === "object") : [];
+        const interactionLayer = uiContext.interaction_layer || "screen";
+        const selectedSnapshots = interactionLayer === "combat"
+          ? safeSnapshots.filter(snapshot=>snapshot.id === "combat" && snapshot.applicable !== false)
+          : interactionLayer === "modal"
+            ? []
+            : safeSnapshots.filter(snapshot=>snapshot.id !== "combat" && snapshot.applicable !== false);
+        const uiActions = selectedSnapshots.flatMap(snapshot=>Array.isArray(snapshot.actions) ? snapshot.actions : [])
+          .filter(action=>action && typeof action === "object")
+          .map(action=>({
+            ...copyJsonValue(action),
+            execution:"player_ui_only",
+            webmcp_invocable:false,
+            webmcp_tool:null
+          }));
+        const registered = safeCall(getRegisteredWebMcpTools,WEBMCP_READ_TOOL_NAMES);
+        const registeredSet = new Set(Array.isArray(registered) ? registered : []);
+        const webmcpInvocable = WEBMCP_READ_TOOL_NAMES
+          .filter(name=>registeredSet.has(name))
+          .map(name=>({id:name,type:"read_only_tool",modifies_game_state:false}));
+        const worldContext = safeSnapshots.find(snapshot=>snapshot.id === "world")?.context || null;
+        const combatContext = safeSnapshots.find(snapshot=>snapshot.id === "combat")?.context || null;
+        return {
+          ok:true,
+          context:{
+            ...copyJsonValue(uiContext),
+            world:copyJsonValue(worldContext),
+            combat:interactionLayer === "combat" ? copyJsonValue(combatContext) : null
+          },
+          actions:{
+            webmcp_invocable:webmcpInvocable,
+            player_ui_controlled:uiActions.filter(action=>action.enabled !== false),
+            blocked_player_ui_actions:uiActions.filter(action=>action.enabled === false)
+          },
+          mutation_tools_enabled:false,
+          note:interactionLayer === "modal"
+            ? "A blocking dialog is open. Its choices remain player-controlled and are not exposed as WebMCP tools."
+            : "Gameplay actions are informational only in this checkpoint and cannot be invoked through WebMCP."
+        };
+      }
     )
   ];
 }
@@ -246,7 +347,8 @@ export async function initWebMcp(dependencies = {}){
 
   const registered = [];
   const failed = [];
-  for(const tool of createWebMcpTools(dependencies)){
+  const tools = createWebMcpTools({...dependencies,getRegisteredWebMcpTools:()=>[...registered]});
+  for(const tool of tools){
     try{
       await modelContext.registerTool(tool);
       registered.push(tool.name);

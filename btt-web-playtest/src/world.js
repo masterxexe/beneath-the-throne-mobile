@@ -7,7 +7,7 @@ import { renderLocationStageHTML, renderOverworldHTML, renderRoadStopSceneStageH
 import { routeAngle, routePoint } from "./routePaths.js";
 import { getMapNodes } from "./roadNodes.js";
 import { resolveRoadStopArt, roadStopArtClass } from "./locationArt.js";
-import { availableRoadStopSceneActions, resolveRoadStopScene, resolveWorldScene, worldSceneAction } from "./worldScenes.js";
+import { availableRoadStopSceneActions, availableWorldSceneActions, resolveRoadStopScene, resolveWorldScene, worldSceneAction } from "./worldScenes.js";
 import { routeLegs, routeStopDanger, travelRouteStops } from "./travelGraph.js";
 import { forceNextTravelEncounter, rollTravelEncounter } from "./encounterTables.js";
 import { playEncounterTransition } from "./encounterTransition.js";
@@ -574,6 +574,181 @@ export function getCurrentPlaceContext(options = {}){
     canInspectArea: false,
     location: major
   };
+}
+
+function copiedActionCost(cost){
+  if(!cost || typeof cost !== "object")return null;
+  return Object.fromEntries(["gold","ore","food"]
+    .filter(field=>Number.isFinite(Number(cost[field])))
+    .map(field=>[field,Number(cost[field])]));
+}
+
+function worldAction({id,label,category,enabled = true,blockedReasonCode = null,blockedReason = "",parameters = {}}){
+  return {
+    id,
+    label:String(label || id),
+    category,
+    enabled:!!enabled,
+    blocked_reason_code:enabled ? null : blockedReasonCode,
+    blocked_reason:enabled ? "" : String(blockedReason || ""),
+    parameters:{...parameters}
+  };
+}
+
+function sceneActionText(action,field){
+  const value = action?.[field];
+  if(typeof value === "string")return value;
+  return value?.[getLanguage()] || value?.en || "";
+}
+
+export function selectWorldAvailableActions(){
+  if(!state?.hero)return {id:"world",applicable:false,context:null,actions:[]};
+  const place = getCurrentPlaceContext({repairWorld:false});
+  const context = {
+    location_type:place.type,
+    location_id:place.id,
+    is_traveling:place.isTraveling === true,
+    travel_status:place.isTraveling ? place.status || null : null
+  };
+  const actions = [];
+  if(place.isTraveling){
+    const continueState = journeyContinueState(activeTravel);
+    const turnBackState = journeyTurnBackState(activeTravel);
+    actions.push(
+      worldAction({id:"journey.open_map",label:tx("openMap"),category:"travel"}),
+      worldAction({id:"journey.cancel",label:tx("cancelTravel"),category:"travel"}),
+      worldAction({
+        id:"journey.continue",
+        label:tx("continueJourney"),
+        category:"travel",
+        enabled:continueState.enabled,
+        blockedReasonCode:continueState.enabled ? null : "journey_not_ready",
+        blockedReason:continueState.enabled ? "" : tx("journeyNotReady")
+      }),
+      worldAction({
+        id:"journey.inspect",
+        label:tx("inspectArea"),
+        category:"travel",
+        enabled:place.canInspectArea,
+        blockedReasonCode:place.canInspectArea ? null : "journey_not_at_road_stop",
+        blockedReason:tx("travelingBetweenRoadStops")
+      }),
+      worldAction({
+        id:"journey.turn_back",
+        label:tx("turnBack"),
+        category:"travel",
+        enabled:turnBackState.enabled,
+        blockedReasonCode:turnBackState.enabled ? null : "turn_back_unavailable",
+        blockedReason:turnBackState.enabled ? "" : tx("turnBackDisabled")
+      })
+    );
+    const build = place.build || {};
+    if(!build.hasCamp){
+      actions.push(worldAction({
+        id:"journey.establish_camp",
+        label:tx("establishCamp"),
+        category:"camp",
+        enabled:build.canBuild,
+        blockedReasonCode:build.canBuild ? null : "camp_unavailable",
+        blockedReason:build.disabledReason,
+        parameters:{cost:copiedActionCost(build.cost)}
+      }));
+    }
+    if(build.hasCamp && !build.fortified){
+      actions.push(worldAction({
+        id:"journey.fortify_camp",
+        label:tx("fortifyCamp"),
+        category:"camp",
+        enabled:build.canFortify,
+        blockedReasonCode:build.canFortify ? null : "camp_fortify_unavailable",
+        blockedReason:build.fortifyDisabledReason,
+        parameters:{cost:copiedActionCost(build.fortifyCost)}
+      }));
+    }
+    if(build.hasCamp){
+      const restState = campRestState(place,activeTravel,state.hero);
+      actions.push(worldAction({
+        id:"journey.rest_at_camp",
+        label:tx("restAtCamp"),
+        category:"camp",
+        enabled:restState.enabled,
+        blockedReasonCode:restState.enabled ? null : restState.reasonCode,
+        blockedReason:restState.reason
+      }));
+    }
+    return {id:"world",applicable:true,context,actions};
+  }
+
+  const loc = place.location;
+  const scene = resolveWorldScene(loc);
+  const sceneActions = availableWorldSceneActions(scene,place.services);
+  const sceneByService = new Map(sceneActions.filter(action=>action.service).map(action=>[action.service,action]));
+  place.services.forEach(service=>{
+    const sceneAction = sceneByService.get(service);
+    actions.push(worldAction({
+      id:`location.open_service.${service}`,
+      label:sceneActionText(sceneAction,"label") || tx(service),
+      category:"service",
+      parameters:{service_id:service}
+    }));
+  });
+  if(!scene || sceneActions.some(action=>action.kind === "townCenter")){
+    actions.push(worldAction({id:"location.open_town_center",label:tx("townCenter"),category:"location"}));
+  }
+  actions.push(worldAction({id:"location.open_map",label:tx("openMap"),category:"travel"}));
+  const roadsLocked = chapterOneRoadsLocked();
+  actions.push(
+    worldAction({
+      id:"location.hunt_nearby",
+      label:tx("huntNearby"),
+      category:"combat",
+      enabled:!roadsLocked,
+      blockedReasonCode:roadsLocked ? "chapter_one_gate_locked" : null,
+      blockedReason:roadsLocked ? tx("lockUntilGate") : ""
+    }),
+    worldAction({
+      id:"location.scout_nearby",
+      label:tx("scoutNearby"),
+      category:"exploration",
+      enabled:!roadsLocked,
+      blockedReasonCode:roadsLocked ? "chapter_one_gate_locked" : null,
+      blockedReason:roadsLocked ? tx("lockUntilGate") : ""
+    })
+  );
+  (loc?.routes || []).map(locationById).filter(Boolean).forEach(destination=>{
+    const lockReason = routeLockReason(destination);
+    actions.push(worldAction({
+      id:`location.travel.${destination.id}`,
+      label:`${tx("travelTo")} ${locationText(destination,"name")}`,
+      category:"travel",
+      enabled:!lockReason,
+      blockedReasonCode:lockReason ? "route_locked" : null,
+      blockedReason:lockReason,
+      parameters:{destination_id:destination.id}
+    }));
+  });
+  const previous = locationById(state.world?.previousLocationId);
+  if(previous && previous.id !== loc?.id){
+    const lockReason = routeLockReason(previous);
+    actions.push(worldAction({
+      id:`location.return.${previous.id}`,
+      label:`${tx("returnTo")} ${locationText(previous,"name")}`,
+      category:"travel",
+      enabled:!lockReason,
+      blockedReasonCode:lockReason ? "route_locked" : null,
+      blockedReason:lockReason,
+      parameters:{destination_id:previous.id}
+    }));
+  }
+  hardAreasForLocation(loc).forEach(area=>{
+    actions.push(worldAction({
+      id:`location.enter_hard_area.${area.id}`,
+      label:`${tx("enterHardArea")}: ${hardAreaText(area,"name")}`,
+      category:"combat",
+      parameters:{hard_area_id:area.id,recommended_level:Number(area.recommendedLevel || 0)}
+    }));
+  });
+  return {id:"world",applicable:true,context,actions};
 }
 
 export function renderWorldHome(){
@@ -1182,6 +1357,19 @@ function journeyTurnBackState(travel = activeTravel){
   return {enabled:true, reason:"ready"};
 }
 
+function campRestState(place, travel = activeTravel, hero = state?.hero){
+  if(place?.type !== "roadStop" || travel?.status !== "atRoadStop"){
+    return {enabled:false,reasonCode:"journey_not_at_road_stop",reason:tx("cannotBuildHere")};
+  }
+  if(!place?.build?.hasCamp){
+    return {enabled:false,reasonCode:"camp_unavailable",reason:tx("cannotBuildHere")};
+  }
+  if(Number(hero?.food || 0) < 1){
+    return {enabled:false,reasonCode:"not_enough_food",reason:tx("needFood")};
+  }
+  return {enabled:true,reasonCode:null,reason:""};
+}
+
 function campFortifyCost(node){
   const base = node?.roadBuildCost || {gold: 30, ore: 2};
   return {
@@ -1365,12 +1553,9 @@ function consumeCampQuiet(){
 
 export function restAtCamp(){
   const place = getCurrentPlaceContext();
-  if(place.type !== "roadStop" || activeTravel?.status !== "atRoadStop"){
-    return toast(tx("cannotBuildHere"));
-  }
+  const restState = campRestState(place,activeTravel,state.hero);
+  if(!restState.enabled)return toast(restState.reason);
   const existing = state.world.roadStopStates?.[place.roadNode?.id];
-  if(existing?.type !== "camp")return toast(tx("cannotBuildHere"));
-  if(state.hero.food < 1)return toast(tx("needFood"));
   state.hero.food -= 1;
   recoverPartyAtCamp(existing.stage === "fortified");
   grantCampQuiet(place.roadNode, existing.stage === "fortified");
