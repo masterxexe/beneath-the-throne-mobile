@@ -8,13 +8,16 @@ import puppeteer from "puppeteer-core";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
 const EXPECTED_TOOLS = [
+  "equip_item",
   "get_available_actions",
   "get_current_location",
   "get_equipment",
   "get_inventory",
   "get_player_status",
-  "get_quest_log"
+  "get_quest_log",
+  "use_item"
 ];
+const READ_ONLY_TOOLS = new Set(EXPECTED_TOOLS.filter(name=>!['equip_item','use_item'].includes(name)));
 
 const MIME_TYPES = {
   ".css":"text/css; charset=utf-8",
@@ -109,8 +112,10 @@ async function testWithoutWebMcp(browser,baseUrl){
   assert.equal(title.loadGame,true,"Load Game should remain available without WebMCP");
   assert.equal(title.setupVisible,true,"the normal title screen should render without WebMCP");
 
-  const gameplay = await page.evaluate(()=>{
+  const gameplay = await page.evaluate(async()=>{
     window.FE.startActualGame("Fallback Tester","warrior");
+    await new Promise(resolve=>setTimeout(resolve,350));
+    window.FE.closeModals();
     window.FE.show("gear");
     return {
       gameVisible:document.getElementById("game")?.style.display === "block",
@@ -119,6 +124,51 @@ async function testWithoutWebMcp(browser,baseUrl){
   });
   await page.waitForFunction(()=>document.getElementById("gear")?.classList.contains("active") === true,{timeout:10000});
   assert.deepEqual(gameplay,{gameVisible:true,savePresent:true});
+
+  const ordinaryMutations = await page.evaluate(async()=>{
+    const stateModule = await import("./src/state.js");
+    const combatModule = await import("./src/combat.js");
+    const fallbackBlade = {id:"fallback_blade",name:"Fallback Blade",slot:"weapon",level:1,attack:5,defense:0,value:8,quality:"common"};
+    stateModule.state.hero.inv = [fallbackBlade];
+    stateModule.save(1);
+    window.FE.show("gear");
+    const equipButton = [...document.querySelectorAll("#gear button")]
+      .find(button=>(button.textContent || "").trim() === "Equip");
+    equipButton?.click();
+    const equipped = stateModule.state.hero.gear.weapon?.id;
+    const gearText = document.getElementById("gear")?.textContent || "";
+
+    stateModule.state.hero.hp = 30;
+    stateModule.state.hero.potions = 2;
+    stateModule.save(1);
+    combatModule.startBattle([{
+      name:"Fallback Test Dummy",role:"test",level:1,hp:500,maxHp:500,attack:1,defense:0,speed:-100,xp:0,gold:0
+    }],"Normal UI mutation smoke.",{source:"normal-ui-test"});
+    const potionButton = [...document.querySelectorAll("#combat button")]
+      .find(button=>/^Health Potion \(2\)$/.test((button.textContent || "").trim()));
+    potionButton?.click();
+    const savedHero = JSON.parse(localStorage.getItem("fallenEmpireSave_1")).hero;
+    const result = {
+      equipped,
+      gearVisible:gearText.includes("Fallback Blade") && gearText.includes("Equipped"),
+      hp:stateModule.state.hero.hp,
+      potions:stateModule.state.hero.potions,
+      savedHp:savedHero.hp,
+      savedPotions:savedHero.potions,
+      resolving:combatModule.battle?.resolving === true,
+      combatVisible:(document.getElementById("combat")?.textContent || "").includes("Health Potion (1)")
+    };
+    combatModule.runBattle();
+    return result;
+  });
+  assert.equal(ordinaryMutations.equipped,"fallback_blade","normal gear UI must still invoke canonical equip without WebMCP");
+  assert.equal(ordinaryMutations.gearVisible,true);
+  assert.ok(ordinaryMutations.hp > 30,"normal combat UI must still invoke the canonical health potion");
+  assert.equal(ordinaryMutations.potions,1);
+  assert.equal(ordinaryMutations.savedHp,ordinaryMutations.hp);
+  assert.equal(ordinaryMutations.savedPotions,1);
+  assert.equal(ordinaryMutations.resolving,true);
+  assert.equal(ordinaryMutations.combatVisible,true);
 
   await page.evaluate(async()=>{
     if("serviceWorker" in navigator)await navigator.serviceWorker.ready;
@@ -154,22 +204,40 @@ async function testWithWebMcp(browser,baseUrl){
     Object.defineProperty(document,"modelContext",{configurable:true,value:modelContext});
   });
   await openGame(page,baseUrl);
-  await page.waitForFunction(()=>Object.keys(window.__WEBMCP_TEST_TOOLS || {}).length === 6,{timeout:10000});
+  await page.waitForFunction(()=>Object.keys(window.__WEBMCP_TEST_TOOLS || {}).length === 8,{timeout:10000});
 
   const registration = await page.evaluate(()=>Object.values(window.__WEBMCP_TEST_TOOLS).map(tool=>({
     name:tool.name,
     readOnly:tool.annotations?.readOnlyHint,
+    destructive:tool.annotations?.destructiveHint,
+    idempotent:tool.annotations?.idempotentHint,
+    openWorld:tool.annotations?.openWorldHint,
     inputType:tool.inputSchema?.type,
     properties:Object.keys(tool.inputSchema?.properties || {}),
+    required:tool.inputSchema?.required || [],
+    itemEnum:tool.inputSchema?.properties?.item_id?.enum || null,
     additionalProperties:tool.inputSchema?.additionalProperties
   })).sort((a,b)=>a.name.localeCompare(b.name)));
   assert.deepEqual(registration.map(tool=>tool.name),EXPECTED_TOOLS);
   for(const tool of registration){
-    assert.equal(tool.readOnly,true,`${tool.name} must be marked read-only`);
     assert.equal(tool.inputType,"object");
-    assert.deepEqual(tool.properties,[]);
     assert.equal(tool.additionalProperties,false);
+    if(READ_ONLY_TOOLS.has(tool.name)){
+      assert.equal(tool.readOnly,true,`${tool.name} must remain marked read-only`);
+      assert.deepEqual(tool.properties,[]);
+      assert.deepEqual(tool.required,[]);
+      continue;
+    }
+    assert.equal(tool.readOnly,false,`${tool.name} must be marked as a mutation`);
+    assert.equal(tool.idempotent,false);
+    assert.equal(tool.openWorld,false);
+    assert.deepEqual(tool.properties,["item_id"]);
+    assert.deepEqual(tool.required,["item_id"]);
   }
+  assert.equal(registration.find(tool=>tool.name === "use_item").destructive,true);
+  assert.deepEqual(registration.find(tool=>tool.name === "use_item").itemEnum,["health_potion","mana_potion"]);
+  assert.equal(registration.find(tool=>tool.name === "equip_item").destructive,false);
+  assert.equal(registration.find(tool=>tool.name === "equip_item").itemEnum,null);
 
   const titleResponses = await page.evaluate(async()=>{
     const entries = await Promise.all(Object.entries(window.__WEBMCP_TEST_TOOLS).map(async([name,tool])=>[
@@ -181,10 +249,16 @@ async function testWithWebMcp(browser,baseUrl){
   for(const name of EXPECTED_TOOLS){
     assert.equal(titleResponses[name].ok,false,`${name} should report that no game is active on the title screen`);
     assert.equal(titleResponses[name].error.code,"no_active_game");
+    if(!READ_ONLY_TOOLS.has(name)){
+      assert.equal(titleResponses[name].accepted,false);
+      assert.equal(titleResponses[name].success,false);
+    }
   }
 
   const actual = await page.evaluate(async()=>{
     window.FE.startActualGame("WebMCP Tester","warrior");
+    await new Promise(resolve=>setTimeout(resolve,350));
+    window.FE.closeModals();
     const stateModule = await import("./src/state.js");
     const before = JSON.stringify(stateModule.state);
     const saveBefore = localStorage.getItem("fallenEmpireSave_1");
@@ -269,7 +343,7 @@ async function testWithWebMcp(browser,baseUrl){
   assert.equal(cinderhook.quests.find(quest=>quest.id === "forge_scrap").status,"locked");
   assert.equal(lowerWard.status,"locked");
   assert.equal(actual.responses.get_available_actions.ok,true);
-  assert.equal(actual.responses.get_available_actions.mutation_tools_enabled,false);
+  assert.equal(actual.responses.get_available_actions.mutation_tools_enabled,true);
   assert.deepEqual(
     actual.responses.get_available_actions.actions.webmcp_invocable.map(action=>action.id).sort(),
     [...EXPECTED_TOOLS].sort()
@@ -279,7 +353,13 @@ async function testWithWebMcp(browser,baseUrl){
   assert.ok(freshUiActions.some(action=>action.id === "cinderhook.open_contract_board"));
   assert.ok(freshBlockedActions.some(action=>action.id === "location.hunt_nearby" && action.blocked_reason_code === "chapter_one_gate_locked"));
   assert.ok([...freshUiActions,...freshBlockedActions].every(action=>action.execution === "player_ui_only" && action.webmcp_invocable === false && action.webmcp_tool === null));
-  assert.ok(!actual.responses.get_available_actions.actions.webmcp_invocable.some(action=>["use_item","equip_item"].includes(action.id)));
+  assert.deepEqual(
+    actual.responses.get_available_actions.actions.webmcp_invocable
+      .filter(action=>action.modifies_game_state)
+      .map(action=>action.id)
+      .sort(),
+    ["equip_item","use_item"]
+  );
   assert.doesNotMatch(JSON.stringify(actual.responses.get_quest_log),/FE\./,"quest projections must not expose executable UI strings");
   assert.equal(actual.reread.status.player.name,"WebMCP Tester","player status must be a detached copy");
   assert.equal(actual.reread.status.player.attributes.strength,4,"attributes must be a detached copy");
@@ -449,6 +529,423 @@ async function testWithWebMcp(browser,baseUrl){
   assert.ok(![...scenarios.combatActions.actions.player_ui_controlled,...scenarios.combatActions.actions.blocked_player_ui_actions].some(action=>action.id.startsWith("location.") || action.id.startsWith("cinderhook.")),"combat context must suppress underlying location actions");
   assert.ok([...scenarios.combatActions.actions.player_ui_controlled,...scenarios.combatActions.actions.blocked_player_ui_actions].every(action=>action.webmcp_invocable === false));
 
+  const mutations = await page.evaluate(async()=>{
+    const stateModule = await import("./src/state.js");
+    const combatModule = await import("./src/combat.js");
+    const languageModule = await import("./src/language.js");
+    const tools = window.__WEBMCP_TEST_TOOLS;
+    const baseline = JSON.parse(JSON.stringify(stateModule.state));
+    const saveKey = "fallenEmpireSave_1";
+    const closeBlockingInteractions = ()=>{
+      window.FE.closeModals();
+      document.querySelectorAll(".level-up-back,.encounter-transition,.court-crier-overlay").forEach(node=>node.remove());
+    };
+    const endBattle = ()=>{
+      if(combatModule.battle)combatModule.runBattle();
+    };
+    const reset = ()=>{
+      endBattle();
+      closeBlockingInteractions();
+      languageModule.setLanguage("en");
+      stateModule.setState(JSON.parse(JSON.stringify(baseline)));
+      stateModule.save(1);
+    };
+    const startHeroTurnBattle = ()=>combatModule.startBattle([{
+      name:"Mutation Test Dummy",
+      role:"test",
+      level:1,
+      hp:500,
+      maxHp:500,
+      attack:1,
+      defense:0,
+      speed:-100,
+      xp:0,
+      gold:0
+    }],"Mutation test battle.",{source:"webmcp-test"});
+    const snapshot = ()=>({
+      state:JSON.stringify(stateModule.state),
+      battle:JSON.stringify(combatModule.battle),
+      save:localStorage.getItem(saveKey),
+      combatHtml:document.getElementById("combat")?.innerHTML || ""
+    });
+    const unchanged = (before,after)=>({
+      state:before.state === after.state,
+      battle:before.battle === after.battle,
+      save:before.save === after.save,
+      combatHtml:before.combatHtml === after.combatHtml
+    });
+
+    reset();
+    const outsideBefore = snapshot();
+    const outsideCombat = await tools.use_item.execute({item_id:"health_potion"});
+    const outsideUnchanged = unchanged(outsideBefore,snapshot());
+
+    reset();
+    stateModule.state.hero.hp = 30;
+    stateModule.state.hero.potions = 1;
+    stateModule.save(1);
+    startHeroTurnBattle();
+    combatModule.battle.index = combatModule.battle.queue.findIndex(actor=>actor.side === "enemy");
+    combatModule.battle.resolving = false;
+    combatModule.battle.heroActionLocked = false;
+    const enemyTurnBefore = snapshot();
+    const enemyTurnPotion = await tools.use_item.execute({item_id:"health_potion"});
+    const enemyTurnUnchanged = unchanged(enemyTurnBefore,snapshot());
+    endBattle();
+
+    reset();
+    stateModule.state.hero.hp = 40;
+    stateModule.state.hero.potions = 2;
+    stateModule.save(1);
+    startHeroTurnBattle();
+    const health = await tools.use_item.execute({item_id:"health_potion"});
+    const healthResult = {
+      response:health,
+      hp:stateModule.state.hero.hp,
+      potions:stateModule.state.hero.potions,
+      savedHp:JSON.parse(localStorage.getItem(saveKey)).hero.hp,
+      savedPotions:JSON.parse(localStorage.getItem(saveKey)).hero.potions,
+      resolving:combatModule.battle?.resolving === true,
+      actionLocked:combatModule.battle?.heroActionLocked === true,
+      uiText:document.getElementById("combat")?.textContent || ""
+    };
+    const combatSettled = ()=>combatModule.battle?.resolving === false
+      && combatModule.battle?.heroActionLocked === false
+      && combatModule.battle?.queue?.[combatModule.battle.index]?.side === "hero";
+    const settleDeadline = Date.now() + 8000;
+    while(!combatSettled() && Date.now() < settleDeadline){
+      await new Promise(resolve=>setTimeout(resolve,50));
+    }
+    healthResult.settled = combatSettled();
+    healthResult.settledUiText = document.getElementById("combat")?.textContent || "";
+    endBattle();
+
+    reset();
+    stateModule.state.hero.hp = stateModule.state.hero.maxHp;
+    stateModule.state.hero.potions = 1;
+    stateModule.save(1);
+    startHeroTurnBattle();
+    const fullHealth = await tools.use_item.execute({item_id:"health_potion"});
+    const fullHealthResult = {
+      response:fullHealth,
+      hp:stateModule.state.hero.hp,
+      potions:stateModule.state.hero.potions,
+      savedPotions:JSON.parse(localStorage.getItem(saveKey)).hero.potions
+    };
+    endBattle();
+
+    reset();
+    stateModule.state.hero.mana = 4;
+    stateModule.state.hero.manaPotions = 1;
+    stateModule.save(1);
+    startHeroTurnBattle();
+    const mana = await tools.use_item.execute({item_id:"mana_potion"});
+    const manaResult = {
+      response:mana,
+      mana:stateModule.state.hero.mana,
+      manaPotions:stateModule.state.hero.manaPotions,
+      savedMana:JSON.parse(localStorage.getItem(saveKey)).hero.mana,
+      savedManaPotions:JSON.parse(localStorage.getItem(saveKey)).hero.manaPotions,
+      resolving:combatModule.battle?.resolving === true,
+      uiText:document.getElementById("combat")?.textContent || ""
+    };
+    endBattle();
+
+    reset();
+    stateModule.state.hero.mana = stateModule.state.hero.maxMana;
+    stateModule.state.hero.manaPotions = 1;
+    stateModule.save(1);
+    startHeroTurnBattle();
+    languageModule.setLanguage("es");
+    const fullManaBefore = snapshot();
+    const fullMana = await tools.use_item.execute({item_id:"mana_potion"});
+    const fullManaUnchanged = unchanged(fullManaBefore,snapshot());
+    languageModule.setLanguage("en");
+    endBattle();
+
+    reset();
+    stateModule.state.hero.potions = 0;
+    stateModule.save(1);
+    startHeroTurnBattle();
+    const missingPotionBefore = snapshot();
+    const missingPotion = await tools.use_item.execute({item_id:"health_potion"});
+    const missingPotionUnchanged = unchanged(missingPotionBefore,snapshot());
+    endBattle();
+
+    reset();
+    stateModule.state.hero.mana = 1;
+    stateModule.state.hero.manaPotions = 0;
+    stateModule.save(1);
+    startHeroTurnBattle();
+    const missingManaPotionBefore = snapshot();
+    const missingManaPotion = await tools.use_item.execute({item_id:"mana_potion"});
+    const missingManaPotionUnchanged = unchanged(missingManaPotionBefore,snapshot());
+    endBattle();
+
+    reset();
+    stateModule.state.hero.hp = 30;
+    stateModule.state.hero.potions = 2;
+    stateModule.save(1);
+    startHeroTurnBattle();
+    const repeatedFirst = await tools.use_item.execute({item_id:"health_potion"});
+    const repeatedBefore = snapshot();
+    const repeatedSecond = await tools.use_item.execute({item_id:"health_potion"});
+    const repeatedUnchanged = unchanged(repeatedBefore,snapshot());
+    endBattle();
+
+    reset();
+    stateModule.state.hero.hp = 30;
+    stateModule.state.hero.potions = 1;
+    stateModule.save(1);
+    startHeroTurnBattle();
+    const potionBlocker = document.createElement("div");
+    potionBlocker.className = "level-up-back";
+    document.body.appendChild(potionBlocker);
+    const blockedPotionBefore = snapshot();
+    const blockedPotion = await tools.use_item.execute({item_id:"health_potion"});
+    const blockedPotionUnchanged = unchanged(blockedPotionBefore,snapshot());
+    potionBlocker.remove();
+    endBattle();
+
+    reset();
+    stateModule.state.hero.hp = 30;
+    stateModule.state.hero.potions = 1;
+    stateModule.save(1);
+    startHeroTurnBattle();
+    const unsupportedPotionBefore = snapshot();
+    const unsupportedPotion = await tools.use_item.execute({item_id:"FE.usePotion"});
+    const unsupportedPotionUnchanged = unchanged(unsupportedPotionBefore,snapshot());
+    endBattle();
+
+    reset();
+    const oldWeapon = {id:"old_blade",name:"Old Blade",slot:"weapon",level:1,attack:3,defense:0,value:5,quality:"common"};
+    const newWeapon = {id:"new_blade",name:"New Blade",slot:"weapon",level:2,attack:9,defense:0,value:15,quality:"rare"};
+    stateModule.state.hero.gear.weapon = oldWeapon;
+    stateModule.state.hero.inv = [newWeapon];
+    stateModule.save(1);
+    languageModule.setLanguage("es");
+    window.FE.show("gear");
+    const exposedInventory = await tools.get_inventory.execute({});
+    const equip = await tools.equip_item.execute({item_id:"new_blade"});
+    const equipResponseName = equip.newly_equipped?.name;
+    if(equip.newly_equipped)equip.newly_equipped.name = "Changed detached response";
+    const repeatedEquipBefore = snapshot();
+    const repeatedEquip = await tools.equip_item.execute({item_id:"new_blade"});
+    const repeatedEquipUnchanged = unchanged(repeatedEquipBefore,snapshot());
+    const inventoryAfterEquip = await tools.get_inventory.execute({});
+    const equipmentAfterEquip = await tools.get_equipment.execute({});
+    const savedAfterEquip = JSON.parse(localStorage.getItem(saveKey));
+    const equipResult = {
+      response:equip,
+      responseName:equipResponseName,
+      liveEquippedName:stateModule.state.hero.gear.weapon?.name,
+      equippedId:stateModule.state.hero.gear.weapon?.id,
+      inventoryIds:stateModule.state.hero.inv.map(item=>item.id),
+      exposedIds:exposedInventory.inventory.items.map(item=>item.id),
+      readInventoryIds:inventoryAfterEquip.inventory.items.map(item=>item.id),
+      readEquipmentId:equipmentAfterEquip.equipment.slots.weapon?.id,
+      savedEquipmentId:savedAfterEquip.hero.gear.weapon?.id,
+      savedInventoryIds:savedAfterEquip.hero.inv.map(item=>item.id),
+      uiText:document.getElementById("gear")?.textContent || ""
+    };
+    languageModule.setLanguage("en");
+
+    const invalidEquipBefore = snapshot();
+    const invalidEquip = await tools.equip_item.execute({item_id:"missing_blade"});
+    const invalidEquipUnchanged = unchanged(invalidEquipBefore,snapshot());
+
+    const observedOld = await tools.get_inventory.execute({});
+    stateModule.state.hero.inv = stateModule.state.hero.inv.filter(item=>item.id !== "old_blade");
+    stateModule.save(1);
+    const missingObservedBefore = snapshot();
+    const missingObserved = await tools.equip_item.execute({item_id:"old_blade"});
+    const missingObservedUnchanged = unchanged(missingObservedBefore,snapshot());
+
+    reset();
+    const staleBlade = {...newWeapon,id:"stale_blade"};
+    const freshBlade = {...newWeapon,id:"fresh_blade"};
+    stateModule.state.hero.inv = [staleBlade];
+    stateModule.save(1);
+    await tools.get_inventory.execute({});
+    stateModule.state.hero.inv = [freshBlade];
+    stateModule.save(1);
+    await tools.get_inventory.execute({});
+    const staleSnapshotBefore = snapshot();
+    const staleSnapshotEquip = await tools.equip_item.execute({item_id:"stale_blade"});
+    const staleSnapshotUnchanged = unchanged(staleSnapshotBefore,snapshot());
+
+    reset();
+    stateModule.state.hero.inv = [{...newWeapon,id:"replacement_blade"}];
+    stateModule.save(1);
+    await tools.get_inventory.execute({});
+    stateModule.setState(JSON.parse(JSON.stringify(stateModule.state)));
+    const replacedHeroBefore = snapshot();
+    const replacedHeroEquip = await tools.equip_item.execute({item_id:"replacement_blade"});
+    const replacedHeroUnchanged = unchanged(replacedHeroBefore,snapshot());
+
+    reset();
+    stateModule.state.hero.inv = [
+      {...newWeapon,id:"duplicate_blade"},
+      {...newWeapon,id:"duplicate_blade",name:"Duplicate Blade Two"}
+    ];
+    stateModule.save(1);
+    await tools.get_inventory.execute({});
+    const duplicateBefore = snapshot();
+    const duplicateEquip = await tools.equip_item.execute({item_id:"duplicate_blade"});
+    const duplicateUnchanged = unchanged(duplicateBefore,snapshot());
+
+    reset();
+    stateModule.state.hero.inv = [{id:"quest_token",name:"Quest Token",slot:"quest",level:0,attack:0,defense:0,value:0}];
+    stateModule.save(1);
+    await tools.get_inventory.execute({});
+    const nonEquippableBefore = snapshot();
+    const nonEquippable = await tools.equip_item.execute({item_id:"quest_token"});
+    const nonEquippableUnchanged = unchanged(nonEquippableBefore,snapshot());
+
+    reset();
+    stateModule.state.hero.inv = [{...newWeapon,id:"combat_blade"}];
+    stateModule.save(1);
+    await tools.get_inventory.execute({});
+    startHeroTurnBattle();
+    const combatEquipBefore = snapshot();
+    const combatEquip = await tools.equip_item.execute({item_id:"combat_blade"});
+    const combatEquipUnchanged = unchanged(combatEquipBefore,snapshot());
+    endBattle();
+
+    reset();
+    stateModule.state.hero.inv = [{...newWeapon,id:"modal_blade"}];
+    stateModule.save(1);
+    await tools.get_inventory.execute({});
+    const blocker = document.createElement("div");
+    blocker.className = "level-up-back";
+    document.body.appendChild(blocker);
+    const modalEquipBefore = snapshot();
+    const modalEquip = await tools.equip_item.execute({item_id:"modal_blade"});
+    const modalEquipUnchanged = unchanged(modalEquipBefore,snapshot());
+    blocker.remove();
+
+    const invalidObjectBefore = snapshot();
+    const invalidObject = await tools.equip_item.execute({item_id:{call:"FE.equip"}});
+    const invalidObjectUnchanged = unchanged(invalidObjectBefore,snapshot());
+    const extraFieldBefore = snapshot();
+    const extraField = await tools.equip_item.execute({item_id:"modal_blade",action:"FE.equip"});
+    const extraFieldUnchanged = unchanged(extraFieldBefore,snapshot());
+
+    reset();
+    return {
+      outsideCombat,outsideUnchanged,
+      enemyTurnPotion,enemyTurnUnchanged,
+      healthResult,fullHealthResult,manaResult,
+      fullMana,fullManaUnchanged,
+      missingPotion,missingPotionUnchanged,
+      missingManaPotion,missingManaPotionUnchanged,
+      repeatedFirst,repeatedSecond,repeatedUnchanged,
+      blockedPotion,blockedPotionUnchanged,
+      unsupportedPotion,unsupportedPotionUnchanged,
+      equipResult,repeatedEquip,repeatedEquipUnchanged,invalidEquip,invalidEquipUnchanged,
+      observedOldIds:observedOld.inventory.items.map(item=>item.id),missingObserved,missingObservedUnchanged,
+      staleSnapshotEquip,staleSnapshotUnchanged,
+      replacedHeroEquip,replacedHeroUnchanged,
+      duplicateEquip,duplicateUnchanged,
+      nonEquippable,nonEquippableUnchanged,
+      combatEquip,combatEquipUnchanged,
+      modalEquip,modalEquipUnchanged,
+      invalidObject,invalidObjectUnchanged,extraField,extraFieldUnchanged
+    };
+  });
+
+  assert.equal(mutations.outsideCombat.error.code,"combat_not_active");
+  assert.deepEqual(mutations.outsideUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+  assert.equal(mutations.enemyTurnPotion.error.code,"hero_turn_required");
+  assert.deepEqual(mutations.enemyTurnUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+  assert.equal(mutations.healthResult.response.accepted,true);
+  assert.equal(mutations.healthResult.response.success,true);
+  assert.equal(mutations.healthResult.response.save_persisted,true);
+  assert.equal(mutations.healthResult.response.item_used,"health_potion");
+  assert.equal(mutations.healthResult.response.before.quantity,2);
+  assert.equal(mutations.healthResult.response.after.quantity,1);
+  assert.equal(mutations.healthResult.potions,1);
+  assert.ok(mutations.healthResult.hp > 40);
+  assert.equal(mutations.healthResult.savedHp,mutations.healthResult.hp);
+  assert.equal(mutations.healthResult.savedPotions,1);
+  assert.equal(mutations.healthResult.resolving,true);
+  assert.equal(mutations.healthResult.actionLocked,true);
+  assert.match(mutations.healthResult.uiText,/Health Potion \(1\)/);
+  assert.equal(mutations.healthResult.settled,true,"the canonical combat timer must advance through the enemy response and restore the hero turn");
+  assert.match(mutations.healthResult.settledUiText,/uses .* on .* for \d+/i);
+  assert.equal(mutations.fullHealthResult.response.success,true,"health potions must preserve the canonical full-health behavior");
+  assert.equal(mutations.fullHealthResult.response.before.health.current,mutations.fullHealthResult.response.before.health.maximum);
+  assert.equal(mutations.fullHealthResult.response.after.health.current,mutations.fullHealthResult.response.after.health.maximum);
+  assert.equal(mutations.fullHealthResult.potions,0);
+  assert.equal(mutations.fullHealthResult.savedPotions,0);
+  assert.equal(mutations.manaResult.response.accepted,true);
+  assert.equal(mutations.manaResult.response.success,true);
+  assert.equal(mutations.manaResult.response.save_persisted,true);
+  assert.equal(mutations.manaResult.response.item_used,"mana_potion");
+  assert.equal(mutations.manaResult.manaPotions,0);
+  assert.ok(mutations.manaResult.mana > 4);
+  assert.equal(mutations.manaResult.savedMana,mutations.manaResult.mana);
+  assert.equal(mutations.manaResult.savedManaPotions,0);
+  assert.equal(mutations.manaResult.resolving,true);
+  assert.match(mutations.manaResult.uiText,/restores \d+ Mana/i);
+  assert.equal(mutations.fullMana.error.code,"mana_full");
+  assert.equal(mutations.fullMana.error.message,"El mana ya esta lleno.");
+  assert.deepEqual(mutations.fullManaUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+  assert.equal(mutations.missingPotion.error.code,"no_health_potions");
+  assert.deepEqual(mutations.missingPotionUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+  assert.equal(mutations.missingManaPotion.error.code,"no_mana_potions");
+  assert.deepEqual(mutations.missingManaPotionUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+  assert.equal(mutations.repeatedFirst.success,true);
+  assert.equal(mutations.repeatedSecond.error.code,"combat_resolving");
+  assert.deepEqual(mutations.repeatedUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+  assert.equal(mutations.blockedPotion.error.code,"blocking_interaction");
+  assert.deepEqual(mutations.blockedPotionUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+  assert.equal(mutations.unsupportedPotion.error.code,"unsupported_item");
+  assert.deepEqual(mutations.unsupportedPotionUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+
+  assert.equal(mutations.equipResult.response.accepted,true);
+  assert.equal(mutations.equipResult.response.success,true);
+  assert.equal(mutations.equipResult.response.save_persisted,true);
+  assert.equal(mutations.equipResult.response.slot,"weapon");
+  assert.equal(mutations.equipResult.response.previously_equipped.id,"old_blade");
+  assert.equal(mutations.equipResult.responseName,"New Blade");
+  assert.equal(mutations.equipResult.liveEquippedName,"New Blade","equip response must be detached from live gear");
+  assert.equal(mutations.equipResult.equippedId,"new_blade");
+  assert.ok(mutations.equipResult.inventoryIds.includes("old_blade"));
+  assert.deepEqual(mutations.equipResult.exposedIds,["new_blade"]);
+  assert.deepEqual(mutations.equipResult.readInventoryIds,["old_blade"]);
+  assert.equal(mutations.equipResult.readEquipmentId,"new_blade");
+  assert.equal(mutations.equipResult.savedEquipmentId,"new_blade");
+  assert.ok(mutations.equipResult.savedInventoryIds.includes("old_blade"));
+  assert.equal(mutations.equipResult.response.previous_item_returned_to_inventory,true);
+  assert.equal(mutations.equipResult.response.derived_stats.total_attack.change,6);
+  assert.match(mutations.equipResult.uiText,/Equipado/);
+  assert.match(mutations.equipResult.uiText,/New Blade/);
+  assert.match(mutations.equipResult.uiText,/Old Blade/);
+  assert.equal(mutations.repeatedEquip.error.code,"item_not_observed");
+  assert.deepEqual(mutations.repeatedEquipUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+  assert.equal(mutations.invalidEquip.error.code,"item_not_observed");
+  assert.deepEqual(mutations.invalidEquipUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+  assert.ok(mutations.observedOldIds.includes("old_blade"));
+  assert.equal(mutations.missingObserved.error.code,"item_not_found");
+  assert.deepEqual(mutations.missingObservedUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+  assert.equal(mutations.staleSnapshotEquip.error.code,"item_not_observed");
+  assert.deepEqual(mutations.staleSnapshotUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+  assert.equal(mutations.replacedHeroEquip.error.code,"item_not_observed");
+  assert.deepEqual(mutations.replacedHeroUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+  assert.equal(mutations.duplicateEquip.error.code,"ambiguous_item_id");
+  assert.deepEqual(mutations.duplicateUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+  assert.equal(mutations.nonEquippable.error.code,"item_not_equippable");
+  assert.deepEqual(mutations.nonEquippableUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+  assert.equal(mutations.combatEquip.error.code,"combat_active");
+  assert.deepEqual(mutations.combatEquipUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+  assert.equal(mutations.modalEquip.error.code,"blocking_interaction");
+  assert.deepEqual(mutations.modalEquipUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+  assert.equal(mutations.invalidObject.error.code,"invalid_item_id");
+  assert.deepEqual(mutations.invalidObjectUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+  assert.equal(mutations.extraField.error.code,"invalid_arguments");
+  assert.deepEqual(mutations.extraFieldUnchanged,{state:true,battle:true,save:true,combatHtml:true});
+
   const projection = await page.evaluate(async()=>{
     const { createWebMcpTools } = await import("./src/webmcp.js");
     const item = {
@@ -554,6 +1051,152 @@ async function testWithWebMcp(browser,baseUrl){
     equipmentDefense:null
   });
 
+  const mutationContracts = await page.evaluate(async()=>{
+    const { createWebMcpTools } = await import("./src/webmcp.js");
+    const oldItem = {id:"contract_old",name:"Contract Old",slot:"weapon",attack:2,defense:0};
+    const newItem = {id:"contract_new",name:"Contract New",slot:"weapon",attack:7,defense:0};
+    const unchangedState = {hero:{inv:[newItem],gear:{weapon:oldItem},companions:[],stats:{},resists:{}}};
+    const unchangedTools = createWebMcpTools({
+      getState:()=>unchangedState,
+      getMutationSafetyContext:()=>({combat_active:false,blocking_interaction_open:false}),
+      executeUseItem:()=>undefined,
+      getEquipItemAvailability:()=>({allowed:true,slot:"weapon"}),
+      equipItem:()=>undefined,
+      gearSlots:["weapon"]
+    });
+    await unchangedTools.find(tool=>tool.name === "get_inventory").execute({});
+    const beforeNoConfirmation = JSON.stringify(unchangedState);
+    const unconfirmedPotion = await unchangedTools.find(tool=>tool.name === "use_item").execute({item_id:"health_potion"});
+    const unconfirmedEquip = await unchangedTools.find(tool=>tool.name === "equip_item").execute({item_id:"contract_new"});
+    const afterNoConfirmation = JSON.stringify(unchangedState);
+
+    const throwingState = {
+      hero:{
+        inv:[{...newItem}],
+        gear:{weapon:{...oldItem}},
+        companions:[],
+        stats:{},
+        resists:{}
+      }
+    };
+    let persistedThrowingHero = null;
+    const throwingTools = createWebMcpTools({
+      getState:()=>throwingState,
+      getSavedHero:()=>persistedThrowingHero,
+      getTotalAttack:()=>10 + Number(throwingState.hero.gear.weapon?.attack || 0),
+      getTotalDefense:()=>5,
+      getMutationSafetyContext:()=>({combat_active:false,blocking_interaction_open:false}),
+      getEquipItemAvailability:()=>({allowed:true,slot:"weapon"}),
+      equipItem:id=>{
+        const index = throwingState.hero.inv.findIndex(item=>item.id === id);
+        const [item] = throwingState.hero.inv.splice(index,1);
+        throwingState.hero.inv.push(throwingState.hero.gear.weapon);
+        throwingState.hero.gear.weapon = item;
+        persistedThrowingHero = JSON.parse(JSON.stringify(throwingState.hero));
+        throw new Error("simulated post-save UI refresh failure");
+      },
+      gearSlots:["weapon"]
+    });
+    await throwingTools.find(tool=>tool.name === "get_inventory").execute({});
+    const confirmedDespiteThrow = await throwingTools.find(tool=>tool.name === "equip_item").execute({item_id:"contract_new"});
+
+    const unsavedState = {
+      hero:{
+        inv:[{...newItem,id:"unsaved_new"}],
+        gear:{weapon:{...oldItem,id:"unsaved_old"}},
+        companions:[],
+        stats:{},
+        resists:{}
+      }
+    };
+    const unsavedTools = createWebMcpTools({
+      getState:()=>unsavedState,
+      getSavedHero:()=>null,
+      getMutationSafetyContext:()=>({combat_active:false,blocking_interaction_open:false}),
+      getEquipItemAvailability:()=>({allowed:true,slot:"weapon"}),
+      equipItem:id=>{
+        const index = unsavedState.hero.inv.findIndex(item=>item.id === id);
+        const [item] = unsavedState.hero.inv.splice(index,1);
+        unsavedState.hero.inv.push(unsavedState.hero.gear.weapon);
+        unsavedState.hero.gear.weapon = item;
+        throw new Error("simulated save failure");
+      },
+      gearSlots:["weapon"]
+    });
+    await unsavedTools.find(tool=>tool.name === "get_inventory").execute({});
+    const unpersistedEquip = await unsavedTools.find(tool=>tool.name === "equip_item").execute({item_id:"unsaved_new"});
+
+    let unsafeMutationCalls = 0;
+    const partialSafetyState = {hero:{inv:[{...newItem,id:"partial_safety"}],gear:{weapon:null},companions:[],stats:{},resists:{}}};
+    const partialSafetyTools = createWebMcpTools({
+      getState:()=>partialSafetyState,
+      getMutationSafetyContext:()=>({}),
+      executeUseItem:()=>{unsafeMutationCalls++;},
+      getEquipItemAvailability:()=>({allowed:true,slot:"weapon"}),
+      equipItem:()=>{unsafeMutationCalls++;},
+      gearSlots:["weapon"]
+    });
+    await partialSafetyTools.find(tool=>tool.name === "get_inventory").execute({});
+    const partialSafetyPotion = await partialSafetyTools.find(tool=>tool.name === "use_item").execute({item_id:"health_potion"});
+    const partialSafetyEquip = await partialSafetyTools.find(tool=>tool.name === "equip_item").execute({item_id:"partial_safety"});
+
+    const projectedPotionHero = {hp:70,maxHp:120,mana:45,maxMana:45,potions:0,manaPotions:1};
+    const projectedPotionTools = createWebMcpTools({
+      getState:()=>({hero:projectedPotionHero}),
+      getSavedHero:()=>({...projectedPotionHero}),
+      getMutationSafetyContext:()=>({combat_active:true,blocking_interaction_open:false}),
+      executeUseItem:()=>({
+        ok:true,accepted:true,success:true,item_id:"health_potion",item_used:"health_potion",
+        before:{quantity:1,health:{current:30,maximum:120},mana:{current:45,maximum:45}},
+        after:{quantity:0,health:{current:70,maximum:120},mana:{current:45,maximum:45}},
+        combat_before:{active:true,resolving:false,hero_action_locked:false,current_actor_side:"hero",current_actor_id:"hero"},
+        combat:{active:true,resolving:true,hero_action_locked:true,current_actor_side:"hero",current_actor_id:"hero"},
+        combat_resolving:true,
+        error:null,
+        secret_live_state:{hero:projectedPotionHero},
+        callback:()=>"must not escape"
+      })
+    });
+    const projectedPotion = await projectedPotionTools.find(tool=>tool.name === "use_item").execute({item_id:"health_potion"});
+    return {
+      unconfirmedPotion,
+      unconfirmedEquip,
+      noConfirmationChanged:beforeNoConfirmation !== afterNoConfirmation,
+      confirmedDespiteThrow,
+      liveEquippedId:throwingState.hero.gear.weapon.id,
+      liveInventoryIds:throwingState.hero.inv.map(item=>item.id),
+      unpersistedEquip,
+      partialSafetyPotion,
+      partialSafetyEquip,
+      unsafeMutationCalls,
+      projectedPotion,
+      projectedPotionKeys:Object.keys(projectedPotion)
+    };
+  });
+  assert.equal(mutationContracts.unconfirmedPotion.accepted,true);
+  assert.equal(mutationContracts.unconfirmedPotion.success,false,"an undefined canonical potion result must not be treated as success");
+  assert.equal(mutationContracts.unconfirmedPotion.error.code,"execution_not_confirmed");
+  assert.equal(mutationContracts.unconfirmedEquip.accepted,true);
+  assert.equal(mutationContracts.unconfirmedEquip.success,false,"an undefined equip return must require state postconditions");
+  assert.equal(mutationContracts.unconfirmedEquip.error.code,"execution_not_confirmed");
+  assert.equal(mutationContracts.noConfirmationChanged,false);
+  assert.equal(mutationContracts.confirmedDespiteThrow.success,false,"a post-save refresh exception must not be silently reported as a complete mutation");
+  assert.equal(mutationContracts.confirmedDespiteThrow.error.code,"execution_error");
+  assert.equal(mutationContracts.confirmedDespiteThrow.save_persisted,true);
+  assert.equal(mutationContracts.liveEquippedId,"contract_new");
+  assert.deepEqual(mutationContracts.liveInventoryIds,["contract_old"]);
+  assert.equal(mutationContracts.confirmedDespiteThrow.previous_item_returned_to_inventory,true);
+  assert.equal(mutationContracts.unpersistedEquip.success,false,"a live equipment change without save persistence must not be reported as success");
+  assert.equal(mutationContracts.unpersistedEquip.error.code,"save_not_confirmed");
+  assert.equal(mutationContracts.unpersistedEquip.save_persisted,false);
+  assert.equal(mutationContracts.partialSafetyPotion.error.code,"safety_context_unavailable");
+  assert.equal(mutationContracts.partialSafetyEquip.error.code,"safety_context_unavailable");
+  assert.equal(mutationContracts.unsafeMutationCalls,0,"an incomplete mutation safety context must fail closed");
+  assert.equal(mutationContracts.projectedPotion.success,true);
+  assert.equal(mutationContracts.projectedPotion.save_persisted,true);
+  assert.ok(!mutationContracts.projectedPotionKeys.includes("secret_live_state"));
+  assert.ok(!mutationContracts.projectedPotionKeys.includes("callback"));
+
   const travel = await page.evaluate(async()=>{
     const { createWebMcpTools } = await import("./src/webmcp.js");
     const travelState = {hero:{},world:{locationId:"ashen_keep",previousLocationId:"ashen_slums"}};
@@ -614,6 +1257,7 @@ async function main(){
     console.log("PASS normal game boot, gameplay navigation, saving, and offline PWA boot without WebMCP");
     await testWithWebMcp(browser,baseUrl);
     console.log(`PASS ${EXPECTED_TOOLS.join(", ")}`);
+    console.log("PASS use_item/equip_item rules, persistence, UI synchronization, EN/ES, and failure immutability");
     console.log("PASS tool responses are whitelisted detached JSON snapshots");
   }finally{
     if(browser)await browser.close();

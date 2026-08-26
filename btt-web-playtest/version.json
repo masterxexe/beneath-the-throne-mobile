@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.25-webmcp-54",
-  "build": 54,
-  "cache": "v129",
-  "notes": "Adds read-only WebMCP quest log and available action tools"
+  "version": "2026.08.25-webmcp-55",
+  "build": 55,
+  "cache": "v130",
+  "notes": "Adds tightly controlled WebMCP potion and equipment mutation tools"
 }

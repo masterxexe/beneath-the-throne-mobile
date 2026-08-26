@@ -2,7 +2,7 @@
 
 Mobile-first dark fantasy RPG playtest (static PWA). **No bundler or compile step** — vanilla ES modules served over HTTP.
 
-**Cache version:** v129 (`2026.08.25-webmcp-54`)
+**Cache version:** v130 (`2026.08.25-webmcp-55`)
 
 ---
 
@@ -264,7 +264,7 @@ Playtest checkout grants items locally without charging when Stripe URLs are not
 ## PWA and caching
 
 - Bump **`?v=`** query strings in `index.html` CSS links, **`CACHE_VERSION`** in `service-worker.js`, and **`version.json`** together when shipping changes.
-- Current: **v127**
+- Current: **v130**
 - Users can clear cache via boot fallback button or browser devtools.
 
 ---

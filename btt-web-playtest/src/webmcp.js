@@ -12,14 +12,17 @@ const GEAR_ITEM_FIELDS = [
 
 const ATTRIBUTE_KEYS = ["strength", "endurance", "speed", "wisdom", "luck"];
 const RESISTANCE_KEYS = ["fire", "frost", "poison", "shadow", "lightning"];
-const WEBMCP_READ_TOOL_NAMES = [
-  "get_player_status",
-  "get_inventory",
-  "get_equipment",
-  "get_current_location",
-  "get_quest_log",
-  "get_available_actions"
+const WEBMCP_TOOL_CAPABILITIES = [
+  {name:"get_player_status",type:"read_only_tool",modifiesGameState:false},
+  {name:"get_inventory",type:"read_only_tool",modifiesGameState:false},
+  {name:"get_equipment",type:"read_only_tool",modifiesGameState:false},
+  {name:"get_current_location",type:"read_only_tool",modifiesGameState:false},
+  {name:"get_quest_log",type:"read_only_tool",modifiesGameState:false},
+  {name:"get_available_actions",type:"read_only_tool",modifiesGameState:false},
+  {name:"use_item",type:"mutation_tool",modifiesGameState:true},
+  {name:"equip_item",type:"mutation_tool",modifiesGameState:true}
 ];
+const WEBMCP_TOOL_NAMES = WEBMCP_TOOL_CAPABILITIES.map(tool=>tool.name);
 
 function numberValue(value){
   const number = Number(value);
@@ -113,6 +116,151 @@ function readOnlyTool(name,title,description,execute){
   };
 }
 
+function mutationTool(name,title,description,inputSchema,execute,{destructive = false} = {}){
+  return {
+    name,
+    title,
+    description,
+    inputSchema,
+    annotations:{
+      readOnlyHint:false,
+      destructiveHint:destructive,
+      idempotentHint:false,
+      openWorldHint:false,
+      untrustedContentHint:true
+    },
+    execute
+  };
+}
+
+function itemInputSchema(allowedIds = null){
+  const itemId = {type:"string",minLength:1};
+  if(Array.isArray(allowedIds))itemId.enum = [...allowedIds];
+  return {
+    type:"object",
+    properties:{item_id:itemId},
+    required:["item_id"],
+    additionalProperties:false
+  };
+}
+
+function exactItemArgument(input){
+  if(!input || typeof input !== "object" || Array.isArray(input)){
+    return {ok:false,error:{code:"invalid_arguments",message:"Expected an object containing only item_id."}};
+  }
+  const keys = Object.keys(input);
+  if(keys.length !== 1 || keys[0] !== "item_id"){
+    return {ok:false,error:{code:"invalid_arguments",message:"Only the item_id field is accepted."}};
+  }
+  if(typeof input.item_id !== "string" || !input.item_id){
+    return {ok:false,error:{code:"invalid_item_id",message:"item_id must be an exact non-empty string."}};
+  }
+  return {ok:true,itemId:input.item_id};
+}
+
+function mutationFailure(itemId,code,message,extra = {}){
+  return {
+    ok:false,
+    accepted:false,
+    success:false,
+    item_id:typeof itemId === "string" ? itemId : null,
+    ...copyJsonValue(extra),
+    error:{code,message}
+  };
+}
+
+function useItemFailure(itemId,code,message,extra = {}){
+  return mutationFailure(itemId,code,message,{
+    item_used:null,
+    item_consumed:false,
+    before:null,
+    after:null,
+    combat:null,
+    combat_resolving:false,
+    ...extra
+  });
+}
+
+function equipItemFailure(itemId,code,message,extra = {}){
+  return mutationFailure(itemId,code,message,{
+    slot:null,
+    previously_equipped:null,
+    newly_equipped:null,
+    previous_item_returned_to_inventory:null,
+    derived_stats:{
+      total_attack:derivedStatChange(null,null),
+      total_defense:derivedStatChange(null,null)
+    },
+    ...extra
+  });
+}
+
+function derivedStatChange(before,after){
+  const beforeValue = nullableNumber(before);
+  const afterValue = nullableNumber(after);
+  return {
+    before:beforeValue,
+    after:afterValue,
+    change:beforeValue === null || afterValue === null ? null : afterValue - beforeValue
+  };
+}
+
+function validMutationSafetyContext(context){
+  return !!context
+    && typeof context === "object"
+    && typeof context.combat_active === "boolean"
+    && typeof context.blocking_interaction_open === "boolean";
+}
+
+function potionValueSnapshot(source){
+  return {
+    quantity:nullableNumber(source?.quantity),
+    health:{
+      current:nullableNumber(source?.health?.current),
+      maximum:nullableNumber(source?.health?.maximum)
+    },
+    mana:{
+      current:nullableNumber(source?.mana?.current),
+      maximum:nullableNumber(source?.mana?.maximum)
+    }
+  };
+}
+
+function potionCombatSnapshot(source){
+  if(!source || typeof source !== "object")return null;
+  return {
+    active:source.active === true,
+    resolving:source.resolving === true,
+    hero_action_locked:source.hero_action_locked === true,
+    current_actor_side:nullableString(source.current_actor_side),
+    current_actor_id:nullableString(source.current_actor_id)
+  };
+}
+
+function projectPotionMutationResult(result,itemId){
+  const accepted = result?.accepted === true;
+  const success = accepted && result?.success === true && result?.ok === true;
+  const errorCode = nullableString(result?.error?.code);
+  const errorMessage = nullableString(result?.error?.message);
+  return {
+    ok:success,
+    accepted,
+    success,
+    item_id:itemId,
+    item_used:accepted && result?.item_used === itemId ? itemId : null,
+    item_consumed:accepted && result?.item_consumed === true,
+    before:potionValueSnapshot(result?.before),
+    after:potionValueSnapshot(result?.after),
+    combat_before:potionCombatSnapshot(result?.combat_before),
+    combat:potionCombatSnapshot(result?.combat),
+    combat_resolving:result?.combat_resolving === true,
+    error:success ? null : {
+      code:errorCode || "execution_not_confirmed",
+      message:errorMessage || "The canonical potion action did not provide a verifiable result."
+    }
+  };
+}
+
 export function createWebMcpTools({
   getState = ()=>null,
   getCurrentScreen = ()=>null,
@@ -124,10 +272,24 @@ export function createWebMcpTools({
   getQuestLogSections = ()=>[],
   getUiInteractionContext = ()=>null,
   getActionSnapshots = ()=>[],
-  getRegisteredWebMcpTools = ()=>WEBMCP_READ_TOOL_NAMES,
+  getMutationSafetyContext = ()=>null,
+  getSavedHero = ()=>null,
+  executeUseItem = ()=>null,
+  getEquipItemAvailability = ()=>null,
+  equipItem = ()=>undefined,
+  getRegisteredWebMcpTools = ()=>WEBMCP_TOOL_NAMES,
   gearSlots = []
 } = {}){
   const slots = [...gearSlots];
+  let observedInventoryHero = null;
+  const observedInventoryItemIds = new Set();
+
+  const syncObservedInventoryHero = hero=>{
+    if(hero !== observedInventoryHero){
+      observedInventoryHero = hero || null;
+      observedInventoryItemIds.clear();
+    }
+  };
 
   return [
     readOnlyTool(
@@ -177,8 +339,13 @@ export function createWebMcpTools({
       "Return a safe snapshot of unequipped gear, consumable counts, and carried resources from the live hero inventory.",
       ()=>{
         const hero = safeCall(getState,null)?.hero;
+        syncObservedInventoryHero(hero);
         if(!hero)return noActiveGame();
+        observedInventoryItemIds.clear();
         const items = Array.isArray(hero.inv) ? hero.inv.map(item=>copyGearItem(item,getWeaponType)).filter(Boolean) : [];
+        items.forEach(item=>{
+          if(typeof item.id === "string" && item.id)observedInventoryItemIds.add(item.id);
+        });
         return {
           ok:true,
           inventory:{
@@ -281,7 +448,7 @@ export function createWebMcpTools({
     readOnlyTool(
       "get_available_actions",
       "Get available actions",
-      "Return read-only WebMCP capabilities separately from valid gameplay actions that remain controlled exclusively by the player UI.",
+      "Return registered WebMCP capabilities separately from valid gameplay actions that remain controlled exclusively by the player UI.",
       ()=>{
         const gameState = safeCall(getState,null);
         if(!gameState?.hero)return noActiveGame();
@@ -302,11 +469,11 @@ export function createWebMcpTools({
             webmcp_invocable:false,
             webmcp_tool:null
           }));
-        const registered = safeCall(getRegisteredWebMcpTools,WEBMCP_READ_TOOL_NAMES);
+        const registered = safeCall(getRegisteredWebMcpTools,WEBMCP_TOOL_NAMES);
         const registeredSet = new Set(Array.isArray(registered) ? registered : []);
-        const webmcpInvocable = WEBMCP_READ_TOOL_NAMES
-          .filter(name=>registeredSet.has(name))
-          .map(name=>({id:name,type:"read_only_tool",modifies_game_state:false}));
+        const webmcpInvocable = WEBMCP_TOOL_CAPABILITIES
+          .filter(tool=>registeredSet.has(tool.name))
+          .map(tool=>({id:tool.name,type:tool.type,modifies_game_state:tool.modifiesGameState}));
         const worldContext = safeSnapshots.find(snapshot=>snapshot.id === "world")?.context || null;
         const combatContext = safeSnapshots.find(snapshot=>snapshot.id === "combat")?.context || null;
         return {
@@ -321,10 +488,180 @@ export function createWebMcpTools({
             player_ui_controlled:uiActions.filter(action=>action.enabled !== false),
             blocked_player_ui_actions:uiActions.filter(action=>action.enabled === false)
           },
-          mutation_tools_enabled:false,
+          mutation_tools_enabled:webmcpInvocable.some(action=>action.modifies_game_state),
           note:interactionLayer === "modal"
             ? "A blocking dialog is open. Its choices remain player-controlled and are not exposed as WebMCP tools."
-            : "Gameplay actions are informational only in this checkpoint and cannot be invoked through WebMCP."
+            : "Only the listed mutation tools can modify game state through WebMCP; all listed gameplay actions remain player-controlled."
+        };
+      }
+    ),
+    mutationTool(
+      "use_item",
+      "Use item",
+      "Use exactly one supported combat potion through the game's canonical potion action and return a verified before/after result.",
+      itemInputSchema(["health_potion","mana_potion"]),
+      input=>{
+        const gameState = safeCall(getState,null);
+        if(!gameState?.hero)return useItemFailure(null,"no_active_game","Start a new game or load a save before using an item.");
+        const argument = exactItemArgument(input);
+        if(!argument.ok)return useItemFailure(null,argument.error.code,argument.error.message);
+        if(argument.itemId !== "health_potion" && argument.itemId !== "mana_potion"){
+          return useItemFailure(argument.itemId,"unsupported_item","Only health_potion and mana_potion are supported.");
+        }
+        const safetyContext = safeCall(getMutationSafetyContext,null);
+        if(!validMutationSafetyContext(safetyContext)){
+          return useItemFailure(argument.itemId,"safety_context_unavailable","The game could not verify whether this action is currently safe.");
+        }
+        let result;
+        try{
+          result = executeUseItem(argument.itemId,{
+            blockingInteraction:safetyContext.blocking_interaction_open === true
+          });
+        }catch(error){
+          return useItemFailure(argument.itemId,"execution_error",error instanceof Error ? error.message : String(error));
+        }
+        if(!result || typeof result !== "object"){
+          return {
+            ...useItemFailure(argument.itemId,"execution_not_confirmed","The canonical item action did not provide a verifiable result."),
+            accepted:true
+          };
+        }
+        const projected = projectPotionMutationResult(result,argument.itemId);
+        if(projected.success){
+          const savedHero = safeCall(getSavedHero,null);
+          const expected = projected.after;
+          const savedQuantity = argument.itemId === "mana_potion" ? savedHero?.manaPotions : savedHero?.potions;
+          const saveConfirmed = !!savedHero
+            && expected?.quantity !== null
+            && expected?.health?.current !== null
+            && expected?.mana?.current !== null
+            && Number(savedQuantity) === Number(expected?.quantity)
+            && Number(savedHero.hp) === Number(expected?.health?.current)
+            && Number(savedHero.mana) === Number(expected?.mana?.current);
+          if(!saveConfirmed){
+            return {
+              ...projected,
+              ok:false,
+              success:false,
+              save_persisted:false,
+              error:{code:"save_not_confirmed",message:"The potion changed live state, but the active save could not be confirmed."}
+            };
+          }
+          return {...projected,save_persisted:true};
+        }
+        return projected;
+      },
+      {destructive:true}
+    ),
+    mutationTool(
+      "equip_item",
+      "Equip item",
+      "Equip one exact previously observed inventory item through the game's canonical gear action and return a verified swap result.",
+      itemInputSchema(),
+      input=>{
+        const gameState = safeCall(getState,null);
+        const hero = gameState?.hero;
+        syncObservedInventoryHero(hero);
+        if(!hero)return equipItemFailure(null,"no_active_game","Start a new game or load a save before equipping an item.");
+        const argument = exactItemArgument(input);
+        if(!argument.ok)return equipItemFailure(null,argument.error.code,argument.error.message);
+        const itemId = argument.itemId;
+        if(!observedInventoryItemIds.has(itemId)){
+          return equipItemFailure(itemId,"item_not_observed","Call get_inventory and use an exact item ID from its current-game results before equipping it.");
+        }
+        const safetyContext = safeCall(getMutationSafetyContext,null);
+        if(!validMutationSafetyContext(safetyContext)){
+          return equipItemFailure(itemId,"safety_context_unavailable","The game could not verify whether equipment changes are currently safe.");
+        }
+        if(safetyContext.combat_active === true){
+          return equipItemFailure(itemId,"combat_active","Equipment cannot be changed while combat is active.");
+        }
+        if(safetyContext.blocking_interaction_open === true){
+          return equipItemFailure(itemId,"blocking_interaction","Equipment cannot be changed while a blocking interaction is open.");
+        }
+        const availability = safeCall(()=>getEquipItemAvailability(itemId),null);
+        if(!availability?.allowed){
+          return equipItemFailure(
+            itemId,
+            availability?.reason_code || "item_not_equippable",
+            availability?.reason || "That inventory item cannot be equipped.",
+            {slot:availability?.slot || null}
+          );
+        }
+        const slot = availability.slot;
+        if(typeof slot !== "string" || !slots.includes(slot)){
+          return equipItemFailure(itemId,"item_not_equippable","That inventory entry does not resolve to a canonical equipment slot.");
+        }
+        const inventoryBefore = Array.isArray(hero.inv) ? hero.inv : [];
+        const requestedBefore = inventoryBefore.find(item=>item?.id === itemId);
+        const previousBefore = hero.gear?.[slot] || null;
+        const requestedCountBefore = inventoryBefore.filter(item=>item?.id === itemId).length;
+        const previousCountBefore = previousBefore
+          ? inventoryBefore.filter(item=>item?.id === previousBefore.id).length
+          : null;
+        const totalAttackBefore = safeCall(getTotalAttack,null);
+        const totalDefenseBefore = safeCall(getTotalDefense,null);
+        let executionError = null;
+        let executionCompleted = false;
+        try{
+          equipItem(itemId);
+          executionCompleted = true;
+        }catch(error){
+          executionError = error instanceof Error ? error.message : String(error);
+        }
+        observedInventoryItemIds.delete(itemId);
+        const afterState = safeCall(getState,null);
+        const afterHero = afterState?.hero;
+        const inventoryAfter = Array.isArray(afterHero?.inv) ? afterHero.inv : [];
+        const newlyEquipped = afterHero?.gear?.[slot] || null;
+        const requestedCountAfter = inventoryAfter.filter(item=>item?.id === itemId).length;
+        const liveConfirmed = newlyEquipped?.id === itemId
+          && requestedCountAfter === requestedCountBefore - 1;
+        const previousItemReturned = previousBefore
+          ? inventoryAfter.filter(item=>item?.id === previousBefore.id).length === previousCountBefore + 1
+          : null;
+        const savedHero = safeCall(getSavedHero,null);
+        const savedInventory = Array.isArray(savedHero?.inv) ? savedHero.inv : [];
+        const saveConfirmed = !!savedHero
+          && savedHero.gear?.[slot]?.id === itemId
+          && savedInventory.filter(item=>item?.id === itemId).length === requestedCountAfter
+          && (!previousBefore
+            || savedInventory.filter(item=>item?.id === previousBefore.id).length
+              === inventoryAfter.filter(item=>item?.id === previousBefore.id).length);
+        const success = executionCompleted
+          && liveConfirmed
+          && saveConfirmed
+          && (previousBefore ? previousItemReturned : true);
+        return {
+          ok:success,
+          accepted:true,
+          success,
+          item_id:itemId,
+          slot,
+          previously_equipped:copyGearItem(previousBefore,getWeaponType),
+          newly_equipped:copyGearItem(newlyEquipped,getWeaponType),
+          previous_item_returned_to_inventory:previousItemReturned,
+          derived_stats:{
+            total_attack:derivedStatChange(totalAttackBefore,safeCall(getTotalAttack,null)),
+            total_defense:derivedStatChange(totalDefenseBefore,safeCall(getTotalDefense,null))
+          },
+          save_persisted:saveConfirmed,
+          error:success ? null : {
+            code:liveConfirmed && !saveConfirmed
+              ? "save_not_confirmed"
+              : executionError
+                ? "execution_error"
+                : liveConfirmed && previousBefore && !previousItemReturned
+                  ? "previous_item_not_returned"
+                  : "execution_not_confirmed",
+            message:liveConfirmed && !saveConfirmed
+              ? "The equipment changed live state, but the active save could not be confirmed."
+              : executionError
+                || (liveConfirmed && previousBefore && !previousItemReturned
+                  ? "The previously equipped item was not returned to inventory."
+                  : "The canonical equip action did not produce the expected inventory and equipment change.")
+          },
+          requested_item:copyGearItem(requestedBefore,getWeaponType)
         };
       }
     )

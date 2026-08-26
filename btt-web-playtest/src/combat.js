@@ -829,6 +829,74 @@ function heroTurnReadyFor(currentActor){
   return !!(battle && currentActor?.side === "hero" && !battle.resolving && !battle.heroActionLocked && state.hero.hp > 0);
 }
 
+function combatMutationContext(){
+  const currentActor = peekActor();
+  return {
+    active:!!battle,
+    resolving:!!battle?.resolving,
+    hero_action_locked:!!battle?.heroActionLocked,
+    current_actor_side:currentActor?.side || null,
+    current_actor_id:currentActor?.id || null
+  };
+}
+
+function potionStateSnapshot(itemId){
+  const hero = state?.hero;
+  const quantity = itemId === "mana_potion" ? hero?.manaPotions : hero?.potions;
+  return {
+    quantity:Number(quantity || 0),
+    health:{current:Number(hero?.hp || 0),maximum:Number(hero?.maxHp || 0)},
+    mana:{current:Number(hero?.mana || 0),maximum:Number(hero?.maxMana || 0)}
+  };
+}
+
+function potionFailureMessage(code){
+  if(code === "no_health_potions")return tx("noPotions");
+  if(code === "no_mana_potions")return tx("noManaPotions");
+  if(code === "mana_full")return tx("manaFull");
+  if(code === "combat_not_active")return "Potion use is only available during active combat.";
+  if(code === "combat_resolving")return "Combat is currently resolving another action.";
+  if(code === "hero_action_locked")return "The hero's current combat action is locked.";
+  if(code === "hero_defeated")return "A defeated hero cannot use a potion.";
+  if(code === "hero_turn_required")return "Potions can only be used during the hero's turn.";
+  if(code === "blocking_interaction")return "A blocking interaction must be resolved before using a potion.";
+  return "That item is not supported by this action.";
+}
+
+export function selectPotionUseAvailability(itemId,{blockingInteraction = false} = {}){
+  if(itemId !== "health_potion" && itemId !== "mana_potion"){
+    return {allowed:false,reason_code:"unsupported_item",reason:potionFailureMessage("unsupported_item")};
+  }
+  if(!state?.hero || !battle){
+    return {allowed:false,reason_code:"combat_not_active",reason:potionFailureMessage("combat_not_active")};
+  }
+  if(blockingInteraction){
+    return {allowed:false,reason_code:"blocking_interaction",reason:potionFailureMessage("blocking_interaction")};
+  }
+  if(battle.resolving){
+    return {allowed:false,reason_code:"combat_resolving",reason:potionFailureMessage("combat_resolving")};
+  }
+  if(battle.heroActionLocked){
+    return {allowed:false,reason_code:"hero_action_locked",reason:potionFailureMessage("hero_action_locked")};
+  }
+  if(state.hero.hp <= 0){
+    return {allowed:false,reason_code:"hero_defeated",reason:potionFailureMessage("hero_defeated")};
+  }
+  if(peekActor()?.side !== "hero"){
+    return {allowed:false,reason_code:"hero_turn_required",reason:potionFailureMessage("hero_turn_required")};
+  }
+  if(itemId === "health_potion" && Number(state.hero.potions || 0) <= 0){
+    return {allowed:false,reason_code:"no_health_potions",reason:potionFailureMessage("no_health_potions")};
+  }
+  if(itemId === "mana_potion" && Number(state.hero.manaPotions || 0) <= 0){
+    return {allowed:false,reason_code:"no_mana_potions",reason:potionFailureMessage("no_mana_potions")};
+  }
+  if(itemId === "mana_potion" && state.hero.mana >= state.hero.maxMana){
+    return {allowed:false,reason_code:"mana_full",reason:potionFailureMessage("mana_full")};
+  }
+  return {allowed:true,reason_code:null,reason:""};
+}
+
 function isHeroTurnReady(){
   return heroTurnReadyFor(actor());
 }
@@ -1272,6 +1340,61 @@ export function useManaPotion(){
   battle.log.push(`${h.name} ${tx("heroManaPotion")} ${h.mana-before} ${tx("mana")}.`);
   save();
   afterHeroAction();
+}
+
+export function executeSupportedPotionUse(itemId,options = {}){
+  const before = potionStateSnapshot(itemId);
+  const combatBefore = combatMutationContext();
+  const availability = selectPotionUseAvailability(itemId,options);
+  if(!availability.allowed){
+    return {
+      ok:false,
+      accepted:false,
+      success:false,
+      item_id:itemId,
+      item_used:null,
+      item_consumed:false,
+      before,
+      after:potionStateSnapshot(itemId),
+      combat:combatMutationContext(),
+      combat_resolving:!!battle?.resolving,
+      error:{code:availability.reason_code,message:availability.reason}
+    };
+  }
+
+  let executionError = null;
+  let executionCompleted = false;
+  try{
+    if(itemId === "health_potion")usePotion();
+    else useManaPotion();
+    executionCompleted = true;
+  }catch(error){
+    executionError = error instanceof Error ? error.message : String(error);
+  }
+
+  const after = potionStateSnapshot(itemId);
+  const combatAfter = combatMutationContext();
+  const itemConsumed = after.quantity === before.quantity - 1;
+  const success = executionCompleted && itemConsumed && combatAfter.resolving && combatAfter.hero_action_locked;
+  return {
+    ok:success,
+    accepted:true,
+    success,
+    item_id:itemId,
+    item_used:itemConsumed ? itemId : null,
+    item_consumed:itemConsumed,
+    before,
+    after,
+    combat_before:combatBefore,
+    combat:combatAfter,
+    combat_resolving:combatAfter.resolving,
+    error:success ? null : {
+      code:executionError ? "execution_error" : itemConsumed ? "execution_incomplete" : "execution_not_confirmed",
+      message:executionError || (itemConsumed
+        ? "The potion was consumed, but combat did not enter its canonical resolving state."
+        : "The canonical potion action did not consume the requested item.")
+    }
+  };
 }
 
 export function defend(){

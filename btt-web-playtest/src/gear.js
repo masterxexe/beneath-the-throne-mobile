@@ -90,6 +90,22 @@ export function itemUpgradeDelta(item){
   };
 }
 
+export function selectEquipItemAvailability(id,hero = state?.hero){
+  if(!hero)return {allowed:false,reason_code:"no_active_game",reason:"Start a new game or load a save before equipping an item."};
+  if(typeof id !== "string" || !id)return {allowed:false,reason_code:"invalid_item_id",reason:"An exact inventory item ID is required."};
+  const inventory = Array.isArray(hero.inv) ? hero.inv : [];
+  const matches = inventory.filter(item=>item?.id === id);
+  if(!matches.length)return {allowed:false,reason_code:"item_not_found",reason:"That item is not in the current inventory."};
+  if(matches.length !== 1 || Object.values(hero.gear || {}).some(item=>item?.id === id)){
+    return {allowed:false,reason_code:"ambiguous_item_id",reason:"That item ID does not identify exactly one unequipped item."};
+  }
+  const item = matches[0];
+  if(typeof item.slot !== "string" || !SLOTS.includes(item.slot)){
+    return {allowed:false,reason_code:"item_not_equippable",reason:"That inventory entry is not equippable gear."};
+  }
+  return {allowed:true,reason_code:null,reason:"",slot:item.slot};
+}
+
 function qualityText(quality){
   return tx("quality_"+quality) || title(quality);
 }

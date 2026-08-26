@@ -1,4 +1,4 @@
-const APP_VERSION = "2026.08.25-webmcp-54";
+const APP_VERSION = "2026.08.25-webmcp-55";
 const CORE_CACHE = `beneath-throne-core-${APP_VERSION}`;
 const RUNTIME_CACHE = `beneath-throne-runtime-${APP_VERSION}`;
 const CACHE_PREFIX = "beneath-throne-";
@@ -8,7 +8,7 @@ const APP_SHELL = [
   "./index.html",
   "./privacy.html",
   "./terms.html",
-  "./styles.css?v=129",
+  "./styles.css?v=130",
   "./redesign.css?v=20",
   "./combat-animations.css?v=123",
   "./manifest.webmanifest",
@@ -16,7 +16,7 @@ const APP_SHELL = [
   "./icons/icon-512.png",
   "./icons/icon-512-maskable.png",
   "./icons/apple-touch-icon.png",
-  "./src/main.js?v=129",
+  "./src/main.js?v=130",
   "./src/webmcp.js",
   "./src/pwa.js",
   "./assets/ui/generated/title-bg-v19d.png",

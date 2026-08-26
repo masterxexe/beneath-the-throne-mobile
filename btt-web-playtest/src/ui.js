@@ -22,6 +22,16 @@ export function selectUiInteractionContext(){
   };
 }
 
+export function selectMutationSafetyContext(){
+  const blockingInteractionOpen = typeof document !== "undefined" && !!document.querySelector(
+    ".modal-back, .level-up-back, .encounter-transition, .court-crier-overlay"
+  );
+  return {
+    combat_active:!!battle,
+    blocking_interaction_open:blockingInteractionOpen
+  };
+}
+
 export function show(id){
   if(battle && id !== "combat"){
     toast(tx("combatInProgress"));

@@ -1,5 +1,5 @@
 import { getLanguage, setLanguage } from "./language.js";
-import { currentScreen, debugGrantCMXp, debugLevelTo, debugSetHeroHp, grantHeroLevel, state, weaponTypeForItem } from "./state.js";
+import { currentScreen, debugGrantCMXp, debugLevelTo, debugSetHeroHp, getActiveSlot, grantHeroLevel, slotInfo, state, weaponTypeForItem } from "./state.js";
 import { presentLevelUp } from "./levelUp.js";
 import { renderStart } from "./tutorials-v19d.js";
 import { show, showSaveSlots } from "./ui.js";
@@ -120,6 +120,11 @@ void initWebMcp({
       lowerWard.selectLowerWardAvailableActions(state,placeContext)
     ];
   },
+  getMutationSafetyContext:()=>ui.selectMutationSafetyContext(),
+  getSavedHero:()=>slotInfo(getActiveSlot())?.hero || null,
+  executeUseItem:(itemId,options)=>combat.executeSupportedPotionUse(itemId,options),
+  getEquipItemAvailability:itemId=>gear.selectEquipItemAvailability(itemId),
+  equipItem:itemId=>gear.equip(itemId),
   gearSlots:VISUAL_GEAR_SLOTS
 }).then(result=>{
   if(result.failed.length)console.warn("[WebMCP] Some tools could not be registered.",result.failed);
