@@ -1,4 +1,4 @@
-const APP_VERSION = "2026.08.25-webmcp-55";
+const APP_VERSION = "2026.08.25-webmcp-56";
 const CORE_CACHE = `beneath-throne-core-${APP_VERSION}`;
 const RUNTIME_CACHE = `beneath-throne-runtime-${APP_VERSION}`;
 const CACHE_PREFIX = "beneath-throne-";
@@ -8,7 +8,8 @@ const APP_SHELL = [
   "./index.html",
   "./privacy.html",
   "./terms.html",
-  "./styles.css?v=130",
+  "./recovery.html",
+  "./styles.css?v=131",
   "./redesign.css?v=20",
   "./combat-animations.css?v=123",
   "./manifest.webmanifest",
@@ -16,10 +17,56 @@ const APP_SHELL = [
   "./icons/icon-512.png",
   "./icons/icon-512-maskable.png",
   "./icons/apple-touch-icon.png",
-  "./src/main.js?v=130",
-  "./src/webmcp.js",
+  "./src/main.js?v=131",
+  "./src/abilities.js",
+  "./src/audioEngine.js",
+  "./src/audioHooks.js",
+  "./src/battleSceneArt.js",
+  "./src/characterRenderController.js",
+  "./src/combat.js",
+  "./src/combatAnimations.js",
+  "./src/combatSceneDirector.js",
+  "./src/encounterTables.js",
+  "./src/encounterTransition.js",
+  "./src/enemyVisuals.js",
+  "./src/environment.js",
+  "./src/gear.js",
+  "./src/gearVisuals.js",
+  "./src/interiorScenes.js",
+  "./src/language.js",
+  "./src/levelUp.js",
+  "./src/locationArt.js",
+  "./src/locationEvents.js",
+  "./src/lowerWard.js",
+  "./src/mapActivity.js",
+  "./src/npcRegistry.js",
+  "./src/overworld.js",
+  "./src/party.js",
+  "./src/portraitRenderer.js",
+  "./src/progression.js",
   "./src/pwa.js",
+  "./src/roadNodes.js",
+  "./src/routePaths.js",
+  "./src/sceneInteractions.js",
+  "./src/slumPrologue.js",
+  "./src/state.js",
+  "./src/supporterStore.js",
+  "./src/town.js",
+  "./src/travelGraph.js",
+  "./src/traversalController.js",
+  "./src/tutorials-v19d.js",
+  "./src/tutorials.js",
+  "./src/ui.js",
+  "./src/visuals.js",
+  "./src/webmcp.js",
+  "./src/world.js",
+  "./src/worldScenes.js",
+  "./src/worldStateArt.js",
   "./assets/ui/generated/title-bg-v19d.png",
+  "./assets/tutorial/generated/v80/title-bg-mobile-v80.webp",
+  "./assets/portraits/player/poses/base/player-idle-v80.png",
+  "./assets/portraits/story/tutorial-skeleton-painted.png",
+  "./assets/items/icons/weapons/rusted-sword-v16.png",
   "./version.json"
 ];
 
@@ -105,9 +152,7 @@ async function networkFirst(request){
 
 async function precacheAppShell(){
   const cache = await caches.open(CORE_CACHE);
-  await Promise.all(APP_SHELL.map(url => cache.add(url).catch(error => {
-    console.warn("App shell cache skipped", url, error);
-  })));
+  await cache.addAll(APP_SHELL);
 }
 
 function offlineBootResponse(){

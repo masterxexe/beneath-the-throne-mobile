@@ -6,7 +6,18 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import puppeteer from "puppeteer-core";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
+const DEFAULT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
+
+function argumentValue(name){
+  const index = process.argv.indexOf(name);
+  return index >= 0 ? process.argv[index + 1] : null;
+}
+
+const ROOT = path.resolve(argumentValue("--root") || DEFAULT_ROOT);
+const requestedBasePath = argumentValue("--base-path") || "";
+const BASE_PATH = requestedBasePath
+  ? `/${requestedBasePath.replace(/^\/+|\/+$/g,"")}`
+  : "";
 const EXPECTED_TOOLS = [
   "equip_item",
   "get_available_actions",
@@ -25,9 +36,12 @@ const MIME_TYPES = {
   ".js":"text/javascript; charset=utf-8",
   ".json":"application/json; charset=utf-8",
   ".mjs":"text/javascript; charset=utf-8",
+  ".jpeg":"image/jpeg",
+  ".jpg":"image/jpeg",
   ".png":"image/png",
   ".svg":"image/svg+xml",
-  ".webmanifest":"application/manifest+json"
+  ".webmanifest":"application/manifest+json",
+  ".webp":"image/webp"
 };
 
 function browserExecutable(){
@@ -55,7 +69,14 @@ function createStaticServer(){
       response.writeHead(400).end("Bad request");
       return;
     }
-    if(pathname === "/")pathname = "/index.html";
+    if(BASE_PATH){
+      if(pathname === BASE_PATH || pathname === `${BASE_PATH}/`)pathname = "/index.html";
+      else if(pathname.startsWith(`${BASE_PATH}/`))pathname = pathname.slice(BASE_PATH.length);
+      else{
+        response.writeHead(404).end("Not found");
+        return;
+      }
+    }else if(pathname === "/")pathname = "/index.html";
     const target = path.resolve(ROOT,`.${pathname}`);
     if(target !== ROOT && !target.startsWith(`${ROOT}${path.sep}`)){
       response.writeHead(403).end("Forbidden");
@@ -171,10 +192,17 @@ async function testWithoutWebMcp(browser,baseUrl){
   assert.equal(ordinaryMutations.combatVisible,true);
 
   await page.evaluate(async()=>{
-    if("serviceWorker" in navigator)await navigator.serviceWorker.ready;
+    if(!("serviceWorker" in navigator))return;
+    await navigator.serviceWorker.ready;
+    if(navigator.serviceWorker.controller)return;
+    await new Promise((resolve,reject)=>{
+      const timeout = setTimeout(()=>reject(new Error("service worker did not claim the first visit")),15000);
+      navigator.serviceWorker.addEventListener("controllerchange",()=>{
+        clearTimeout(timeout);
+        resolve();
+      },{once:true});
+    });
   });
-  await page.reload({waitUntil:"domcontentloaded",timeout:60000});
-  await page.waitForFunction(()=>window.__BTT_BOOTED === true,{timeout:30000});
   await page.setOfflineMode(true);
   await page.reload({waitUntil:"domcontentloaded",timeout:60000});
   await page.waitForFunction(()=>window.__BTT_BOOTED === true,{timeout:30000});
@@ -187,6 +215,95 @@ async function testWithoutWebMcp(browser,baseUrl){
   assert.equal(offlineBoot.savePresent,true,"the existing local save should survive PWA reloads");
   assert.deepEqual(errors,[],`normal boot produced browser errors: ${errors.join(" | ")}`);
   await page.close();
+}
+
+async function testRecoveryScope(browser,baseUrl){
+  const page = await browser.newPage();
+  await openGame(page,baseUrl);
+  const seeded = await page.evaluate(async()=>{
+    const appRegistration = await navigator.serviceWorker.ready;
+    const siblingScope = new URL("./sibling/",location.href).href;
+    const siblingRegistration = await navigator.serviceWorker.register("./service-worker.js",{scope:"./sibling/"});
+    await siblingRegistration.update();
+    const unrelatedCache = "unrelated-recovery-test-cache";
+    const appCache = "beneath-throne-recovery-test-cache";
+    await caches.open(unrelatedCache);
+    await caches.open(appCache);
+    const save = localStorage.getItem("fallenEmpireSave_1");
+    return {appScope:appRegistration.scope,siblingScope,unrelatedCache,appCache,save};
+  });
+
+  await page.goto(`${baseUrl}/recovery.html?scope-test=${Date.now()}`,{
+    waitUntil:"domcontentloaded",
+    timeout:60000
+  });
+  await page.waitForFunction(()=>document.getElementById("status")?.textContent?.includes("Recovery complete"),{timeout:30000});
+  const recovered = await page.evaluate(async()=>({
+    scopes:(await navigator.serviceWorker.getRegistrations()).map(registration=>registration.scope),
+    caches:await window.caches.keys(),
+    save:localStorage.getItem("fallenEmpireSave_1")
+  }));
+  assert.ok(!recovered.scopes.includes(seeded.appScope),"recovery must unregister the exact app-scope worker");
+  assert.ok(recovered.scopes.includes(seeded.siblingScope),"recovery must preserve sibling service workers");
+  assert.ok(recovered.caches.includes(seeded.unrelatedCache),"recovery must preserve unrelated caches");
+  assert.ok(!recovered.caches.includes(seeded.appCache),"recovery must clear Beneath the Throne caches");
+  assert.equal(recovered.save,seeded.save,"recovery must preserve the active local save");
+  await page.evaluate(async({siblingScope,unrelatedCache})=>{
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.filter(registration=>registration.scope === siblingScope).map(registration=>registration.unregister()));
+    await caches.delete(unrelatedCache);
+  },{siblingScope:seeded.siblingScope,unrelatedCache:seeded.unrelatedCache});
+  await page.close();
+}
+
+async function testDebugGating(browser,baseUrl,port){
+  const localPage = await browser.newPage();
+  await localPage.goto(`${baseUrl}/?debug`,{waitUntil:"domcontentloaded",timeout:60000});
+  await localPage.waitForFunction(()=>window.__BTT_BOOTED === true,{timeout:30000});
+  await localPage.waitForSelector(".debug-boot-controls",{timeout:10000});
+  const localDebug = await localPage.evaluate(()=>(
+    {
+      debugKeys:Object.keys(window.FE).filter(key=>/^debug/i.test(key)).length,
+      forceTravelEncounter:typeof window.FE.forceTravelEncounter,
+      toggleStoreReadiness:typeof window.FE.toggleStoreReadiness
+    }
+  ));
+  assert.ok(localDebug.debugKeys > 0,"loopback ?debug must preserve developer QA helpers");
+  assert.equal(localDebug.forceTravelEncounter,"function");
+  assert.equal(localDebug.toggleStoreReadiness,"function");
+  await localPage.close();
+
+  const publicPage = await browser.newPage();
+  await publicPage.evaluateOnNewDocument(()=>{
+    const tools = {};
+    Object.defineProperty(document,"modelContext",{configurable:true,value:{
+      registerTool(tool){
+        tools[tool.name] = tool;
+        window.__WEBMCP_TEST_TOOLS = tools;
+      }
+    }});
+  });
+  const publicBaseUrl = `http://btt-public.test:${port}${BASE_PATH}`;
+  await publicPage.goto(`${publicBaseUrl}/?debug`,{waitUntil:"domcontentloaded",timeout:60000});
+  await publicPage.waitForFunction(()=>window.__BTT_BOOTED === true,{timeout:30000});
+  await publicPage.waitForFunction(()=>Object.keys(window.__WEBMCP_TEST_TOOLS || {}).length === 8,{timeout:10000});
+  const publicDebug = await publicPage.evaluate(()=>(
+    {
+      bootControls:!!document.querySelector(".debug-boot-controls"),
+      debugKeys:Object.keys(window.FE).filter(key=>/^debug/i.test(key)),
+      forceTravelEncounter:typeof window.FE.forceTravelEncounter,
+      toggleStoreReadiness:typeof window.FE.toggleStoreReadiness,
+      setupVisible:document.getElementById("setup")?.style.display !== "none",
+      toolNames:Object.keys(window.__WEBMCP_TEST_TOOLS || {}).sort()
+    }
+  ));
+  assert.equal(publicDebug.bootControls,false,"public-host ?debug must not render debug controls");
+  assert.deepEqual(publicDebug.debugKeys,[],"public-host ?debug must not expose debug FE methods");
+  assert.equal(publicDebug.forceTravelEncounter,"undefined");
+  assert.equal(publicDebug.toggleStoreReadiness,"undefined");
+  assert.equal(publicDebug.setupVisible,true,"normal gameplay must still boot when public ?debug is ignored");
+  assert.deepEqual(publicDebug.toolNames,EXPECTED_TOOLS,"debug hardening must not change WebMCP discovery");
+  await publicPage.close();
 }
 
 async function testWithWebMcp(browser,baseUrl){
@@ -1245,16 +1362,31 @@ async function main(){
     server.listen(0,"127.0.0.1",resolve);
   });
   const address = server.address();
-  const baseUrl = `http://127.0.0.1:${address.port}`;
+  const baseUrl = `http://127.0.0.1:${address.port}${BASE_PATH}`;
   let browser = null;
   try{
+    const executablePath = browserExecutable();
+    const browserArgs = [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--window-size=1280,900",
+      "--no-proxy-server",
+      "--host-resolver-rules=MAP btt-public.test 127.0.0.1"
+    ];
+    if(path.basename(executablePath).toLowerCase().includes("msedge")){
+      browserArgs.push("--edge-skip-compat-layer-relaunch");
+    }
     browser = await puppeteer.launch({
-      executablePath:browserExecutable(),
+      executablePath,
       headless:true,
-      args:["--no-sandbox","--disable-setuid-sandbox","--window-size=1280,900"]
+      args:browserArgs
     });
     await testWithoutWebMcp(browser,baseUrl);
-    console.log("PASS normal game boot, gameplay navigation, saving, and offline PWA boot without WebMCP");
+    console.log("PASS normal game boot, gameplay navigation, saving, and first-visit offline PWA boot without WebMCP");
+    await testRecoveryScope(browser,baseUrl);
+    console.log("PASS app-scoped service-worker recovery preserves sibling workers, unrelated caches, and saves");
+    await testDebugGating(browser,baseUrl,address.port);
+    console.log("PASS local-only debug gate and public-host WebMCP discovery");
     await testWithWebMcp(browser,baseUrl);
     console.log(`PASS ${EXPECTED_TOOLS.join(", ")}`);
     console.log("PASS use_item/equip_item rules, persistence, UI synchronization, EN/ES, and failure immutability");

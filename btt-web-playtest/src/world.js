@@ -17,6 +17,7 @@ import { TRAVERSAL_TUNING, cinematicEase, createMapTraversalPresence, createWorl
 import { renderSlumProloguePanel } from "./slumPrologue.js";
 import { renderLowerWardPanel } from "./lowerWard.js";
 import { startActualGame } from "./tutorials.js";
+import { isLocalDebugEnabled } from "./environment.js";
 
 export const START_LOCATION = "ashen_slums";
 
@@ -447,7 +448,7 @@ function preloadWorldSceneTraversalAssets(){
 
 function travelDebug(message, detail = {}){
   if(typeof location === "undefined")return;
-  if(!new URLSearchParams(location.search).has("debug"))return;
+  if(!isLocalDebugEnabled())return;
   console.log(`[travel] ${message}`, detail);
 }
 
@@ -937,7 +938,7 @@ function roadStopArtPath(node){
 }
 
 function debugHTML(){
-  if(!new URLSearchParams(location.search).has("debug"))return "";
+  if(!isLocalDebugEnabled())return "";
   return `
     <div class="panel">
       <h2>Debug</h2>
@@ -1650,9 +1651,11 @@ function travelArrivalEvent(from,to){
 }
 
 export function forceTravelEncounter(type = "battle"){
+  if(!isLocalDebugEnabled())return false;
   forceNextTravelEncounter(type);
   travelDebug("forced encounter armed", {type});
   toast(tx("forceTravelEncounterReady"));
+  return true;
 }
 
 export function continueJourney(){

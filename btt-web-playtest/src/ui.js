@@ -7,6 +7,7 @@ import { renderProgression, showPendingAbilityChoice, showPendingGrowthHint } fr
 import { renderCombat, battle } from "./combat.js";
 import { renderWorldHome, renderWorldKingdoms, renderWorldMap } from "./world.js";
 import { renderPlayerHudPortrait } from "./portraitRenderer.js";
+import { isLocalDebugOverlaysEnabled } from "./environment.js";
 
 export function byId(id){return document.getElementById(id);}
 export function esc(value){return String(value ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
@@ -168,7 +169,7 @@ function applyUiTheme(hero){
   body.dataset.uiTier = hero?.level >= 20 ? "advanced" : hero?.level >= 10 ? "growing" : "initial";
   body.dataset.alignment = hero?.alignment || "neutral";
   body.dataset.kingdomProgression = state?.world?.kingdomProgression || "fallen";
-  body.dataset.debugOverlays = typeof location !== "undefined" && new URLSearchParams(location.search).has("debugOverlays") ? "true" : "false";
+  body.dataset.debugOverlays = isLocalDebugOverlaysEnabled() ? "true" : "false";
 }
 
 function updateNavLabels(){

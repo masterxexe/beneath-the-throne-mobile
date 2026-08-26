@@ -5,6 +5,7 @@ import { renderStart } from "./tutorials-v19d.js";
 import { show, showSaveSlots } from "./ui.js";
 import { VISUAL_GEAR_SLOTS } from "./gearVisuals.js";
 import { initWebMcp } from "./webmcp.js";
+import { isLocalDebugEnabled } from "./environment.js";
 import * as tutorials from "./tutorials-v19d.js";
 import * as combat from "./combat.js";
 import * as town from "./town.js";
@@ -23,7 +24,8 @@ import * as audio from "./audioEngine.js";
 
 setLanguage(getLanguage());
 
-const debugMode = new URLSearchParams(location.search).has("debug");
+const debugMode = isLocalDebugEnabled();
+const NON_PREFIXED_DEV_FE_KEYS = new Set(["forceTravelEncounter","toggleStoreReadiness"]);
 
 window.FE = {
   ...tutorials,
@@ -46,7 +48,7 @@ window.FE = {
 
 if(!debugMode){
   for(const key of Object.keys(window.FE)){
-    if(/^debug/i.test(key))delete window.FE[key];
+    if(/^debug/i.test(key) || NON_PREFIXED_DEV_FE_KEYS.has(key))delete window.FE[key];
   }
 }
 

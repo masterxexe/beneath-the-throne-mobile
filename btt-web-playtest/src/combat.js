@@ -13,6 +13,7 @@ import { presentLevelUp } from "./levelUp.js";
 import { debugEnemyVisualRegistry, enemyVisualHTML, resolveEnemyPoseAsset, stampEnemyVisualClass } from "./enemyVisuals.js";
 import { actorDirectorAttributes, createBattlefieldComposition, directorStageAttributes } from "./combatSceneDirector.js";
 import { companionActorPath } from "./npcRegistry.js";
+import { isLocalDebugEnabled } from "./environment.js";
 
 export let battle = null;
 let targetIndex = 0;
@@ -45,7 +46,7 @@ const COMBAT_NUMBER_PHASE_PAUSE = 640;
 
 function combatDebug(message, detail = {}){
   if(typeof location === "undefined")return;
-  if(!new URLSearchParams(location.search).has("debug"))return;
+  if(!isLocalDebugEnabled())return;
   console.log(`[combat] ${message}`, detail);
 }
 
@@ -265,7 +266,7 @@ export function renderCombat(){
 }
 
 function debugEnemyCombatControlsHTML(){
-  if(typeof location === "undefined" || !new URLSearchParams(location.search).has("debug"))return "";
+  if(!isLocalDebugEnabled())return "";
   if(battle?.meta?.source !== "enemy-visual-debug")return "";
   return `
     <div class="panel enemy-visual-debug-panel">
@@ -282,7 +283,7 @@ function debugEnemyCombatControlsHTML(){
 }
 
 function debugCompanionMotionControlsHTML(){
-  if(typeof location === "undefined" || !new URLSearchParams(location.search).has("debug"))return "";
+  if(!isLocalDebugEnabled())return "";
   if(!battle || !liveComps().length)return "";
   return `
     <div class="panel companion-motion-debug-panel">
@@ -298,7 +299,7 @@ function debugCompanionMotionControlsHTML(){
 }
 
 function debugAttackStudioHTML(){
-  if(typeof location === "undefined" || !new URLSearchParams(location.search).has("debug"))return "";
+  if(!isLocalDebugEnabled())return "";
   const heroButtons = allPlayerStyleIds().map(style=>`<button onclick="FE.debugPlayAttackStyle('${style}','hero')">${esc(styleDisplayName(style))}</button>`).join("");
   const enemyButtons = allEnemyStyleIds().map(style=>`<button onclick="FE.debugPlayAttackStyle('${style}','enemy')">${esc(styleDisplayName(style))}</button>`).join("");
   return `
@@ -1728,7 +1729,7 @@ export function debugTriggerEnemyHurtMotion(){
 
 export function debugTriggerCompanionMotion(mode = "attack"){
   if(!battle || !liveComps().length){
-    if(typeof location !== "undefined" && new URLSearchParams(location.search).has("debug"))debugStartCombatLayoutTest(2,2);
+    if(isLocalDebugEnabled())debugStartCombatLayoutTest(2,2);
     else startBattle([makeEnemy(false)], "Debug companion motion.", {source:"debug"});
   }
   const c = liveComps()[0];
@@ -1814,7 +1815,7 @@ function debugEnemyTemplate(enemyVisualClass = "skeleton"){
 }
 
 export function debugStartEnemyVisualTest(enemyVisualClass = "skeleton"){
-  if(typeof location === "undefined" || !new URLSearchParams(location.search).has("debug"))return {ok:false,reason:"debug only"};
+  if(!isLocalDebugEnabled())return {ok:false,reason:"debug only"};
   debugEnemyVisualPoseOverride = "idle";
   startBattle([debugEnemyTemplate(enemyVisualClass)], `Debug enemy visual test: ${enemyVisualClass}.`, {source:"enemy-visual-debug"});
   battle.resolving = false;
@@ -1824,7 +1825,7 @@ export function debugStartEnemyVisualTest(enemyVisualClass = "skeleton"){
 }
 
 export function debugForceEnemyVisualPose(pose = "idle"){
-  if(typeof location === "undefined" || !new URLSearchParams(location.search).has("debug"))return {ok:false,reason:"debug only"};
+  if(!isLocalDebugEnabled())return {ok:false,reason:"debug only"};
   if(!["idle","attack","hurt","defeated"].includes(pose))pose = "idle";
   if(!battle || battle.meta?.source !== "enemy-visual-debug")debugStartEnemyVisualTest("skeleton");
   debugEnemyVisualPoseOverride = pose;
@@ -1851,7 +1852,7 @@ export function debugResetEnemyVisualTest(){
 }
 
 export function debugStartCombatLayoutTest(enemyCount = 3, companionCount = 2){
-  if(typeof location === "undefined" || !new URLSearchParams(location.search).has("debug"))return {ok:false,reason:"debug only"};
+  if(!isLocalDebugEnabled())return {ok:false,reason:"debug only"};
   if(!state?.hero)return {ok:false,reason:"no hero"};
   const desiredCompanions = Math.max(0,Math.min(3,Number(companionCount) || 0));
   const templates = [

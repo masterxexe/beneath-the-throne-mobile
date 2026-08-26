@@ -77,7 +77,7 @@
       background:linear-gradient(180deg,#30302c,#111);
     }
   </style>
-  <link rel="stylesheet" href="./styles.css?v=130" />
+  <link rel="stylesheet" href="./styles.css?v=131" />
   <link rel="stylesheet" href="./redesign.css?v=20" />
   <link rel="stylesheet" href="./combat-animations.css?v=123" />
   <script>
@@ -119,8 +119,11 @@
             await Promise.all(keys.filter(key => key.startsWith("beneath-throne-")).map(key => caches.delete(key)));
           }
           if(navigator.serviceWorker?.getRegistrations){
+            const appScope = new URL("./", location.href).href;
             const registrations = await navigator.serviceWorker.getRegistrations();
-            await Promise.all(registrations.map(registration => registration.unregister()));
+            await Promise.all(registrations
+              .filter(registration => registration.scope === appScope)
+              .map(registration => registration.unregister()));
           }
         }catch(error){
           console.warn("Boot cache clear failed", error);
@@ -185,6 +188,6 @@
       </nav>
     </div>
   </div>
-  <script type="module" src="./src/main.js?v=130"></script>
+  <script type="module" src="./src/main.js?v=131"></script>
 </body>
 </html>

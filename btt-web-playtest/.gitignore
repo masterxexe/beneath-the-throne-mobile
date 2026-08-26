@@ -4,6 +4,9 @@ node_modules/
 # Agent / QA artifacts (Puppeteer screenshots, ship-readiness reports)
 agent-tools/
 
+# Reproducible public deployment artifact
+dist/
+
 # Python art pipeline
 __pycache__/
 *.pyc

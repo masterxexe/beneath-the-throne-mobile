@@ -73,8 +73,11 @@
           await Promise.all(keys.filter(key => key.startsWith("beneath-throne-")).map(key => caches.delete(key)));
         }
         if(navigator.serviceWorker?.getRegistrations){
+          const appScope = new URL("./", location.href).href;
           const registrations = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(registrations.map(registration => registration.unregister()));
+          await Promise.all(registrations
+            .filter(registration => registration.scope === appScope)
+            .map(registration => registration.unregister()));
         }
         const next = new URL("./index.html", location.href);
         next.searchParams.set("fresh", Date.now());

@@ -1,34 +1,93 @@
 # Beneath the Throne
 
-Mobile-first dark fantasy RPG (browser PWA). The playable game lives in **`btt-web-playtest/`**.
+Beneath the Throne is an existing mobile-first dark-fantasy browser RPG. The playable game lives in `btt-web-playtest/` and remains a vanilla JavaScript, native ES-module PWA with no framework, bundler, backend, or second state store.
 
-## Quick start
+The `webmcp-challenge` branch adds a thin WebMCP adapter over the existing game systems. This cleanup checkpoint does **not** publish the repository, configure hosting, merge into `main`, or submit a Devpost entry. There is no public live URL yet.
+
+## WebMCP Challenge scope
+
+The game registers exactly eight tools when `document.modelContext.registerTool` or `navigator.modelContext.registerTool` is available:
+
+| Tool | Mode | Existing source of truth |
+|---|---|---|
+| `get_player_status` | Read-only | Live hero state plus canonical combat-derived totals |
+| `get_inventory` | Read-only | Hero backpack and existing consumable/resource counts |
+| `get_equipment` | Read-only | Existing equipment slots and derived combat totals |
+| `get_current_location` | Read-only | Canonical world/current-place selector |
+| `get_quest_log` | Read-only | Existing Cinderhook and Lower Ward quest selectors |
+| `get_available_actions` | Read-only | Existing combat, world, Cinderhook, Lower Ward, and UI availability selectors |
+| `use_item` | Guarded mutation | Canonical combat potion functions; only `health_potion` and `mana_potion` |
+| `equip_item` | Guarded mutation | Canonical `gear.equip(id)` using an exact ID from the latest inventory read |
+
+WebMCP does not expose travel, combat commands, abilities, dialogue, NPC interaction, quest acceptance or claiming, story events, autonomous play, arbitrary JavaScript, or arbitrary `FE.*` execution. Browsers without WebMCP continue running the normal game without registering tools.
+
+The adapter uses fixed schemas and routes, revalidates mutations at execution time, and returns detached JSON-safe projections. It does not change the save schema or replace existing gameplay rules.
+
+## Install, run, and test
+
+Requirements: Node.js 18+ and a modern browser. Chrome or Edge is required for browser-backed QA.
 
 ```bash
 cd btt-web-playtest
-npm install
+npm ci
 npm run dev
 ```
 
-Open **http://127.0.0.1:43123** in your browser.
+Open `http://127.0.0.1:43123`.
 
-Append **`?debug`** for developer cheats on `window.FE`.
+```bash
+# Complete normal-game, PWA, WebMCP, and mutation regression suite
+npm run qa:webmcp
+
+# Build the allowlisted static artifact
+npm run prepare:deployment
+
+# Rebuild and test that artifact at a nested URL path
+npm run qa:public
+```
+
+Set `CHROME` or `EDGE` to the browser executable if it is not installed in a standard location.
+
+WebMCP can be tested in the ChatGPT in-app browser, where support is available out of the box, or in Google Chrome using the WebMCP experimental flag or origin trial. These paths are documented on the [official OpenAI WebMCP Challenge page](https://openai.com/webmcp-challenge/). Service-worker and installable-PWA features require HTTPS or localhost. Other modern browsers can still play the game normally when WebMCP is unavailable.
+
+Local developer cheats require both a loopback host and `?debug`. A public hostname ignores `?debug`, strips debug helpers and non-prefixed development helpers from `window.FE`, and does not render debug controls.
+
+## Deployment artifact
+
+`npm run prepare:deployment` creates a provider-neutral static artifact at `btt-web-playtest/dist/public/` plus a deterministic SHA-256 manifest at `btt-web-playtest/dist/deployment-manifest.json`.
+
+The artifact is allowlisted to contain only:
+
+- Runtime HTML, CSS, manifest, service worker, and version files.
+- `src/**/*.js` native browser modules.
+- Runtime images under `assets/` and PWA icons under `icons/`.
+
+It excludes QA and art-generation scripts, `agent-tools`, dependencies, package metadata, READMEs, environment files, logs, and local filesystem paths. `dist/` is ignored and should be regenerated instead of committed. No hosting provider or deployment workflow is configured.
+
+## Challenge review lineage
+
+GitHub review commits on `webmcp-challenge`:
+
+| Checkpoint | Commit |
+|---|---|
+| Pre-WebMCP baseline / current `main` | `33ddfab87e052e01c6d49c16dcd5d36e77b6c9a2` |
+| Four read-only WebMCP tools | `70acab60c2ed8b48f3cba50b06af9fb4cadd1370` |
+| Six read-only WebMCP tools | `32b31d5bde2f405d2579eeb40c064e63ef70c73a` |
+| Approved eight-tool checkpoint | `2425895704f1d6cb2dbf908d3eb7a65061c96b81` |
+
+The equivalent local commits have different object IDs because the checkpoints were mirrored to GitHub: `67b0c16`, `a9e11f6`, `c2f5c8b`, and `32c8018`.
 
 ## Repository layout
 
 | Path | Purpose |
-|------|---------|
-| `btt-web-playtest/` | Full game — static ES-module PWA, no bundler |
-| `btt-web-playtest/src/` | All game logic (combat, world, saves, UI) |
-| `btt-web-playtest/assets/` | Art, audio hooks, item icons |
-| `btt-web-playtest/scripts/` | Optional QA (Puppeteer) and art regeneration (Python) |
+|---|---|
+| `btt-web-playtest/` | Static ES-module PWA |
+| `btt-web-playtest/src/` | Gameplay, state, UI, and thin WebMCP adapter |
+| `btt-web-playtest/assets/` | Artwork and item/portrait/location media |
+| `btt-web-playtest/scripts/` | Local QA, artifact preparation, and art tooling |
 
-See **`btt-web-playtest/README.md`** for architecture, save format, systems map, and Codex handoff notes.
+See `btt-web-playtest/README.md` for the detailed architecture, save model, systems map, WebMCP routing, and QA notes.
 
-## Requirements
+## Licensing status
 
-- **Node.js 18+** (for the static file server and optional QA scripts)
-- **Python 3** (optional — only for regenerating art via `scripts/*.py`)
-- **Chrome/Chromium** (optional — only for Puppeteer QA scripts)
-
-There is **no production build step**. The game runs as static files over HTTP.
+Licensing is not yet ready for public release. `btt-web-playtest/package.json` currently declares ISC while `btt-web-playtest/terms.html` restricts copying, reverse engineering, and redistribution, and the repository has no root license file. No licensing terms are changed by this checkpoint. The code, embedded narrative data, artwork, icons, trademarks, and third-party/generated asset provenance must be scoped explicitly and approved by the owner before the repository is made public.

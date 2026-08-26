@@ -1,6 +1,7 @@
 import { title, tx } from "./language.js";
 import { GENERATED_CHARACTER_APPEARANCES, PAPER_DOLL_BASE, PAPER_DOLL_LAYER_ORDER, PLAYER_COMPOSITE_ASSETS, PLAYER_POSE_ASSETS, PLAYER_POSE_STATES, applyGearVisuals, visualForItem } from "./gearVisuals.js";
 import { resolveCharacterRenderState, resolveOffhandCategory, resolvePlayerCombatPresentation, resolvePlayerVisualFlags, resolveWeaponCategory } from "./characterRenderController.js";
+import { isLocalDebugOverlaysEnabled } from "./environment.js";
 
 function esc(value){
   return String(value ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
@@ -35,7 +36,7 @@ function layerHTML(id, src, quality="base"){
 }
 
 function debugOverlaysEnabled(){
-  return typeof location !== "undefined" && new URLSearchParams(location.search).has("debugOverlays");
+  return isLocalDebugOverlaysEnabled();
 }
 
 function isTraversalPoseState(state){

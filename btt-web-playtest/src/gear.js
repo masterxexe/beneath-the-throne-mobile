@@ -4,6 +4,7 @@ import { byId, esc, modal, toast, updateTop } from "./ui.js";
 import { VISUAL_GEAR_SLOTS, applyGearVisuals } from "./gearVisuals.js";
 import { resolvePlayerCombatPresentation } from "./characterRenderController.js";
 import { characterOverlayForVisual, itemIconHTML, itemQuality, paperDollLayerDebug, playerPoseAssetDebug, playerVisualDebug, renderPlayerPaperDoll, resolvePlayerAttackPose } from "./portraitRenderer.js";
+import { isLocalDebugEnabled } from "./environment.js";
 
 const SLOTS = VISUAL_GEAR_SLOTS;
 let debugPlayerPoseState = null;
@@ -292,7 +293,7 @@ export function debugEquippedVisuals(){
 }
 
 function debugVisualReportHTML(){
-  if(typeof location === "undefined" || !new URLSearchParams(location.search).has("debug"))return "";
+  if(!isLocalDebugEnabled())return "";
   const rows = debugEquippedVisuals().filter(row=>row.equipped).map(row=>`
     <tr>
       <td>${esc(row.itemId)}</td>

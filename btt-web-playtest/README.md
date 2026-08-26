@@ -2,7 +2,7 @@
 
 Mobile-first dark fantasy RPG playtest (static PWA). **No bundler or compile step** — vanilla ES modules served over HTTP.
 
-**Cache version:** v130 (`2026.08.25-webmcp-55`)
+**Cache version:** v131 (`2026.08.25-webmcp-56`)
 
 ---
 
@@ -11,7 +11,7 @@ Mobile-first dark fantasy RPG playtest (static PWA). **No bundler or compile ste
 From this directory (`btt-web-playtest/`):
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -21,6 +21,9 @@ Open **http://127.0.0.1:43123** in your browser.
 |---------|----------------|
 | `npm run dev` | Serves the game on port **43123** via [`serve`](https://www.npmjs.com/package/serve) |
 | `npm start` | Alias for `npm run dev` |
+| `npm run qa:webmcp` | Runs normal-game, PWA, and all eight WebMCP regression tests |
+| `npm run prepare:deployment` | Rebuilds the provider-neutral allowlisted artifact in `dist/public/` |
+| `npm run qa:public` | Builds, audits, and browser-tests the artifact at a nested URL path |
 
 ### Requirements
 
@@ -29,9 +32,32 @@ Open **http://127.0.0.1:43123** in your browser.
 - **Python 3** — optional; only for art regeneration scripts
 - **Chrome/Chromium** — optional; only for Puppeteer QA in `scripts/`
 
+## WebMCP Challenge integration
+
+`src/webmcp.js` is a thin adapter over the live game. It registers exactly eight tools when a browser provides `document.modelContext.registerTool` or `navigator.modelContext.registerTool`:
+
+| Tool | Mode | Canonical routing |
+|---|---|---|
+| `get_player_status` | Read-only | `state.hero` plus canonical combat totals |
+| `get_inventory` | Read-only | `state.hero.inv` and existing consumable/resource fields |
+| `get_equipment` | Read-only | `state.hero.gear` plus canonical combat totals |
+| `get_current_location` | Read-only | `world.getCurrentPlaceContext({repairWorld:false})` |
+| `get_quest_log` | Read-only | Cinderhook and Lower Ward quest selectors |
+| `get_available_actions` | Read-only | Existing combat/world/quest/UI availability selectors |
+| `use_item` | Guarded mutation | `combat.executeSupportedPotionUse`; health and mana potions only |
+| `equip_item` | Guarded mutation | Availability check plus canonical `gear.equip(id)` |
+
+All responses are detached JSON-safe projections. Mutations use fixed schemas, accept no function names or arbitrary objects, revalidate immediately before execution, and require observed live/save postconditions before reporting success. The adapter does not introduce a save schema, state store, backend, or alternate gameplay rules.
+
+`get_available_actions` explicitly separates WebMCP-invocable tools from valid actions that remain player/UI controlled. No WebMCP tool can travel, fight, use abilities, talk to NPCs, accept or claim quests, trigger story events, run arbitrary JavaScript, or invoke arbitrary `FE.*` functions.
+
+Browsers without WebMCP still run the full game normally. For WebMCP testing, use the ChatGPT in-app browser or Google Chrome with the experimental WebMCP flag/origin trial, as described on the [official OpenAI WebMCP Challenge page](https://openai.com/webmcp-challenge/). Service-worker/PWA behavior requires HTTPS or localhost.
+
+Challenge review lineage on GitHub: pre-WebMCP baseline `33ddfab87e052e01c6d49c16dcd5d36e77b6c9a2`; four reads `70acab60c2ed8b48f3cba50b06af9fb4cadd1370`; six reads `32b31d5bde2f405d2579eeb40c064e63ef70c73a`; approved eight-tool checkpoint `2425895704f1d6cb2dbf908d3eb7a65061c96b81` on `webmcp-challenge`.
+
 ### Debug mode
 
-Append `?debug` to the URL. Exposes dev helpers on `window.FE` (combat layout tests, scene jumps, level-up cheats, Attack Studio).
+Append `?debug` while serving from a loopback host such as `localhost` or `127.0.0.1`. This exposes dev helpers on `window.FE` (combat layout tests, scene jumps, level-up cheats, Attack Studio). Public hostnames ignore the flag and remove debug helpers, `forceTravelEncounter`, and `toggleStoreReadiness` from `window.FE`.
 
 **Title screen (`?debug`):** combat layout tests, jump to Cinderhook/Lower Ward, cultist visual test.
 
@@ -80,7 +106,7 @@ btt-web-playtest/
 ├── icons/                  # PWA icons
 ├── assets/                 # All art (actors, towns, battlebacks, items, UI)
 ├── scripts/                # Puppeteer QA + Python art pipeline
-└── src/                    # Game logic (43 modules)
+└── src/                    # Game logic (45 modules)
     ├── main.js             # Boot, window.FE assembly, debug gating
     ├── state.js            # Save schema, hero/world/kingdoms, loot, XP
     ├── ui.js               # Screens, modals, HUD, navigation dock
@@ -263,9 +289,20 @@ Playtest checkout grants items locally without charging when Stripe URLs are not
 
 ## PWA and caching
 
-- Bump **`?v=`** query strings in `index.html` CSS links, **`CACHE_VERSION`** in `service-worker.js`, and **`version.json`** together when shipping changes.
-- Current: **v130**
+- Bump the synchronized `?v=` query strings, service-worker/`src/pwa.js` build identifiers, and `version.json` together when shipping changes.
+- Current: **v131** (`2026.08.25-webmcp-56`)
+- The install event precaches the complete static runtime module graph plus the required boot/recovery assets, so the first successful online visit can reload offline without a second online refresh.
+- Boot and recovery controls delete only `beneath-throne-*` caches and unregister only the worker whose scope exactly matches this app; sibling workers and saves are preserved.
 - Users can clear cache via boot fallback button or browser devtools.
+
+### Provider-neutral deployment artifact
+
+```bash
+npm run prepare:deployment
+npm run qa:public
+```
+
+The builder writes `dist/public/` and `dist/deployment-manifest.json`. Its allowlist contains runtime HTML/CSS/PWA files, native `src/**/*.js` modules, runtime images, and PWA icons. It excludes scripts, package/dependency files, QA output, `agent-tools`, logs, environment files, READMEs, and local filesystem paths. `dist/` is gitignored and no hosting provider is configured.
 
 ---
 
@@ -277,6 +314,12 @@ node scripts/ship-readiness.mjs
 
 # Combat screenshot QA
 node scripts/test-combat-debug.mjs
+
+# Complete WebMCP/PWA regression suite
+npm run qa:webmcp
+
+# Build and verify the production artifact
+npm run qa:public
 
 # Regenerate polish-pass art
 python3 scripts/polish-game-art.py
@@ -322,7 +365,7 @@ Enemy visual “kits” (rat, bailiff, knife, captain, court) are **CSS tints** 
 
 1. **Circular imports** exist (combat ↔ ui ↔ world ↔ slum/ward). Pattern: export functions, call at runtime — do not add top-level cross-import side effects.
 2. **CRLF line endings** in several core files (`combat.js`, `state.js`, `language.js`, `ui.js`, `main.js`, `world.js`, …). Prefer content-only diffs; avoid mass reformat.
-3. **`window.FE`** is the public debug/console surface. Production strips `debug*` keys unless `?debug`.
+3. **`window.FE`** is the local QA/console surface. Developer keys are available only when `?debug` is used on a loopback host; public hosts strip them.
 4. **No build step** — every file is loaded directly; cache-bust via query strings + service worker version.
 5. **Do not git-add** `agent-tools/`.
 
@@ -363,6 +406,12 @@ localStorage.setItem("btt_checkout_urls", JSON.stringify({
   ash_patron: "https://buy.stripe.com/..."
 }));
 ```
+
+---
+
+## Licensing status before public release
+
+No license change is made by the public-readiness cleanup. `package.json` currently declares ISC, while `terms.html` limits the build to personal, non-commercial use and prohibits redistribution; there is also no root `LICENSE` file. Those signals conflict and must be resolved before making the repository public. Artwork, icons, embedded narrative text/data, trademarks, generated/third-party asset provenance, and source code need an owner-approved scope rather than an automatic repo-wide license.
 
 ---
 
