@@ -14,6 +14,8 @@ function argumentValue(name){
 }
 
 const ROOT = path.resolve(argumentValue("--root") || DEFAULT_ROOT);
+const BUILD_INFO = JSON.parse(fs.readFileSync(path.join(ROOT,"version.json"),"utf8"));
+const HACKATHON_PROFILE = BUILD_INFO.build_profile === "hackathon";
 const requestedBasePath = argumentValue("--base-path") || "";
 const BASE_PATH = requestedBasePath
   ? `/${requestedBasePath.replace(/^\/+|\/+$/g,"")}`
@@ -270,7 +272,11 @@ async function testDebugGating(browser,baseUrl,port){
   ));
   assert.ok(localDebug.debugKeys > 0,"loopback ?debug must preserve developer QA helpers");
   assert.equal(localDebug.forceTravelEncounter,"function");
-  assert.equal(localDebug.toggleStoreReadiness,"function");
+  assert.equal(
+    localDebug.toggleStoreReadiness,
+    HACKATHON_PROFILE ? "undefined" : "function",
+    "the artifact must omit the store helper while normal development retains it"
+  );
   await localPage.close();
 
   const publicPage = await browser.newPage();
@@ -304,6 +310,118 @@ async function testDebugGating(browser,baseUrl,port){
   assert.equal(publicDebug.setupVisible,true,"normal gameplay must still boot when public ?debug is ignored");
   assert.deepEqual(publicDebug.toolNames,EXPECTED_TOOLS,"debug hardening must not change WebMCP discovery");
   await publicPage.close();
+}
+
+async function testCourtLedgerProfile(browser,baseUrl){
+  const page = await browser.newPage();
+  const errors = trackPageErrors(page);
+  await page.evaluateOnNewDocument((hackathonProfile)=>{
+    const tools = {};
+    Object.defineProperty(document,"modelContext",{configurable:true,value:{
+      registerTool(tool){
+        tools[tool.name] = tool;
+        window.__WEBMCP_TEST_TOOLS = tools;
+      }
+    }});
+    if(!hackathonProfile)return;
+    window.__BTT_MONETIZATION_GUARD = {checkoutReads:0,openCalls:0};
+    try{
+      localStorage.setItem("btt_checkout_urls",JSON.stringify({founder_pack:"https://checkout.example.test/founder"}));
+      const originalGetItem = Storage.prototype.getItem;
+      Storage.prototype.getItem = function(key){
+        if(String(key).toLowerCase() === "btt_checkout_urls")window.__BTT_MONETIZATION_GUARD.checkoutReads += 1;
+        return originalGetItem.call(this,key);
+      };
+    }catch{}
+    window.BTT_CHECKOUT_URLS = {founder_pack:"https://checkout.example.test/founder"};
+    window.open = ()=>{
+      window.__BTT_MONETIZATION_GUARD.openCalls += 1;
+      return null;
+    };
+  },HACKATHON_PROFILE);
+  await openGame(page,baseUrl);
+  await page.waitForFunction(()=>Object.keys(window.__WEBMCP_TEST_TOOLS || {}).length === 8,{timeout:10000});
+
+  let result = await page.evaluate(async(hackathonProfile)=>{
+    window.FE.startActualGame("Artifact Profile Tester","warrior");
+    await new Promise(resolve=>setTimeout(resolve,350));
+    window.FE.closeModals();
+
+    if(!hackathonProfile){
+      const ledgerButton = document.querySelector("[data-action='court-ledger']");
+      ledgerButton?.click();
+      return {
+        ledgerButton:!!ledgerButton,
+        supportScreen:!!document.getElementById("support"),
+        apiTypes:Object.fromEntries([
+          "renderSupport","buySupporterOffer","previewSupporterOffer","watchCourtCrier","offerById","supporterState","toggleStoreReadiness"
+        ].map(name=>[name,typeof window.FE[name]])),
+        toolNames:Object.keys(window.__WEBMCP_TEST_TOOLS || {}).sort()
+      };
+    }
+
+    window.FE.show("support");
+    await new Promise(resolve=>setTimeout(resolve,50));
+    const englishText = document.body.innerText;
+    window.FE.changeGameLanguage("es");
+    await new Promise(resolve=>setTimeout(resolve,50));
+    const spanishText = document.body.innerText;
+    window.FE.changeGameLanguage("en");
+    await new Promise(resolve=>setTimeout(resolve,50));
+    const guard = {...window.__BTT_MONETIZATION_GUARD};
+    localStorage.removeItem("btt_checkout_urls");
+    return {
+      ledgerButton:!!document.querySelector("[data-action='court-ledger']"),
+      supportScreen:!!document.getElementById("support"),
+      homeActive:document.getElementById("home")?.classList.contains("active") === true,
+      monetizationText:/Court Ledger|Libro de la corte|Stripe|checkout|payment|pago|purchase|comprar/i.test(`${englishText}\n${spanishText}`),
+      apiTypes:Object.fromEntries([
+        "renderSupport","buySupporterOffer","previewSupporterOffer","watchCourtCrier","offerById","supporterState","toggleStoreReadiness"
+      ].map(name=>[name,typeof window.FE[name]])),
+      checkoutReads:guard.checkoutReads,
+      openCalls:guard.openCalls,
+      toolNames:Object.keys(window.__WEBMCP_TEST_TOOLS || {}).sort()
+    };
+  },HACKATHON_PROFILE);
+
+  if(!HACKATHON_PROFILE){
+    await page.waitForFunction(()=>document.getElementById("support")?.classList.contains("active") === true,{timeout:10000});
+    result = {...result,...await page.evaluate(()=>(
+      {
+        supportActive:document.getElementById("support")?.classList.contains("active") === true,
+        supporterShell:!!document.querySelector("#support .supporter-shell"),
+        offerCards:document.querySelectorAll("#support .supporter-card").length
+      }
+    ))};
+  }
+
+  assert.deepEqual(result.toolNames,EXPECTED_TOOLS,"the deployment profile must preserve exactly the approved eight WebMCP tools");
+  if(HACKATHON_PROFILE){
+    assert.equal(result.ledgerButton,false,"hackathon artifact must not render a Court Ledger action");
+    assert.equal(result.supportScreen,false,"hackathon artifact must not contain a Court Ledger screen");
+    assert.equal(result.homeActive,true,"attempting the disabled support route must safely stay on Home");
+    assert.equal(result.monetizationText,false,"hackathon artifact must not render monetization copy in EN or ES");
+    assert.deepEqual(Object.values(result.apiTypes),Array(Object.keys(result.apiTypes).length).fill("undefined"),"hackathon artifact must not expose store or mock-payment functions through FE");
+    assert.equal(result.checkoutReads,0,"hackathon artifact must not read browser-provided checkout configuration");
+    assert.equal(result.openCalls,0,"hackathon artifact must not open a checkout window");
+  }else{
+    assert.equal(result.ledgerButton,true,"normal development must retain the Court Ledger action");
+    assert.equal(result.supportScreen,true,"normal development must retain the Court Ledger screen");
+    assert.equal(result.supportActive,true,"the normal Court Ledger action must still open its screen");
+    assert.equal(result.supporterShell,true,"normal development must still render the Court Ledger UI");
+    assert.equal(result.offerCards,5,"normal development must retain all existing Court Ledger offers");
+    assert.deepEqual(result.apiTypes,{
+      renderSupport:"function",
+      buySupporterOffer:"function",
+      previewSupporterOffer:"function",
+      watchCourtCrier:"function",
+      offerById:"function",
+      supporterState:"function",
+      toggleStoreReadiness:"undefined"
+    },"normal development must retain its existing Court Ledger functions while keeping the QA helper debug-gated");
+  }
+  assert.deepEqual(errors,[],`deployment-profile browser test produced errors: ${errors.join(" | ")}`);
+  await page.close();
 }
 
 async function testWithWebMcp(browser,baseUrl){
@@ -1387,6 +1505,10 @@ async function main(){
     console.log("PASS app-scoped service-worker recovery preserves sibling workers, unrelated caches, and saves");
     await testDebugGating(browser,baseUrl,address.port);
     console.log("PASS local-only debug gate and public-host WebMCP discovery");
+    await testCourtLedgerProfile(browser,baseUrl);
+    console.log(HACKATHON_PROFILE
+      ? "PASS hackathon artifact omits Court Ledger/payment UI and functions while preserving exactly eight WebMCP tools"
+      : "PASS normal development retains the existing Court Ledger UI and functions");
     await testWithWebMcp(browser,baseUrl);
     console.log(`PASS ${EXPECTED_TOOLS.join(", ")}`);
     console.log("PASS use_item/equip_item rules, persistence, UI synchronization, EN/ES, and failure immutability");

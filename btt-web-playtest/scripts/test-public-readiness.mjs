@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { lstat, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
@@ -21,6 +22,27 @@ const topLevelFiles = new Set([
   "version.json"
 ]);
 const topLevelDirectories = new Set(["assets","icons","src"]);
+const artifactTextExtensions = new Set([".css",".html",".js",".json",".svg",".webmanifest"]);
+const forbiddenHackathonPatterns = [
+  [/supporterStore/i,"Court Ledger module identifier"],
+  [/btt_checkout_urls/i,"checkout localStorage key"],
+  [/BTT_CHECKOUT_URLS/,"checkout global configuration"],
+  [/Stripe Payment Link/i,"Stripe setup copy"],
+  [/checkoutMockBody/,"mock-checkout copy"],
+  [/checkoutOpensTab/,"checkout-tab copy"],
+  [/payPlaytest/,"playtest payment action"],
+  [/buySupporterOffer/,"supporter purchase action"],
+  [/completePurchase/,"purchase completion action"],
+  [/grantOffer/,"mock grant action"],
+  [/realMoney(?:Body|Stripe)/,"real-money setup copy"],
+  [/Court Ledger/i,"Court Ledger UI copy"],
+  [/Libro de la corte/i,"Spanish Court Ledger UI copy"],
+  [/Court Crier/i,"mock advertising copy"],
+  [/Playtest checkout/i,"playtest checkout copy"],
+  [/Paid offers/i,"paid-offer terms copy"],
+  [/optional cosmetic purchases/i,"purchase description"],
+  [/Ko-fi|Patreon/i,"external monetization link"]
+];
 
 async function read(relativePath,root = appRoot){
   return readFile(path.join(root,...relativePath.split("/")),"utf8");
@@ -84,16 +106,16 @@ async function testDebugGate(){
   assert.match(world,/function forceTravelEncounter[\s\S]*?if\(!isLocalDebugEnabled\(\)\)return false;/);
 }
 
-async function testModulePrecache(){
-  const sourceRoot = path.join(appRoot,"src");
+async function testModulePrecache(root = appRoot){
+  const sourceRoot = path.join(root,"src");
   const graph = new Set();
   const pending = [path.join(sourceRoot,"main.js")];
   while(pending.length){
     const absolute = pending.pop();
-    const relative = path.relative(appRoot,absolute).split(path.sep).join("/");
+    const relative = path.relative(root,absolute).split(path.sep).join("/");
     if(graph.has(relative))continue;
     graph.add(relative);
-    const source = await read(relative);
+    const source = await read(relative,root);
     assert.doesNotMatch(source,/\bimport\s*\(/,`${relative} uses a dynamic import that is not statically precached`);
     const imports = [...source.matchAll(/\b(?:from\s*|import\s*)["'](\.[^"']+)["']/g)].map(match=>match[1]);
     for(const specifier of imports){
@@ -108,7 +130,7 @@ async function testModulePrecache(){
   const allSourceFiles = (await listFiles(sourceRoot)).map(relative=>`src/${relative}`).sort();
   assert.deepEqual([...graph].sort(),allSourceFiles,"every shipped source module should be reachable from main.js");
 
-  const serviceWorker = await read("service-worker.js");
+  const serviceWorker = await read("service-worker.js",root);
   const shellBlock = serviceWorker.match(/const APP_SHELL = \[([\s\S]*?)\];/)?.[1];
   assert.ok(shellBlock,"service worker APP_SHELL was not found");
   const shell = new Set([...shellBlock.matchAll(/["']([^"']+)["']/g)].map(match=>normalizeShellUrl(match[1])));
@@ -125,9 +147,9 @@ async function testModulePrecache(){
   assert.doesNotMatch(serviceWorker,/App shell cache skipped/);
 }
 
-async function testRecoveryAndVersions(){
+async function testRecoveryAndVersions(root = appRoot){
   const [index,recovery,serviceWorker,pwa,versionText] = await Promise.all([
-    read("index.html"),read("recovery.html"),read("service-worker.js"),read("src/pwa.js"),read("version.json")
+    read("index.html",root),read("recovery.html",root),read("service-worker.js",root),read("src/pwa.js",root),read("version.json",root)
   ]);
   for(const [name,source] of Object.entries({index,recovery})){
     assert.match(source,/const appScope = new URL\("\.\/", location\.href\)\.href;/,`${name} does not derive the exact app scope`);
@@ -142,6 +164,62 @@ async function testRecoveryAndVersions(){
   assert.match(index,new RegExp(`src/main\\.js\\?v=${cacheNumber}`));
   assert.match(serviceWorker,new RegExp(`styles\\.css\\?v=${cacheNumber}`));
   assert.match(serviceWorker,new RegExp(`src/main\\.js\\?v=${cacheNumber}`));
+}
+
+async function testHackathonProfile(){
+  const [
+    sourceIndex,sourceMain,sourceServiceWorker,sourceTerms,sourceWebMcp,
+    artifactIndex,artifactMain,artifactServiceWorker,artifactTerms,artifactWebMcp,
+    artifactVersionText,manifestText
+  ] = await Promise.all([
+    read("index.html"),read("src/main.js"),read("service-worker.js"),read("terms.html"),read("src/webmcp.js"),
+    read("index.html",publicRoot),read("src/main.js",publicRoot),read("service-worker.js",publicRoot),read("terms.html",publicRoot),read("src/webmcp.js",publicRoot),
+    read("version.json",publicRoot),readFile(manifestPath,"utf8")
+  ]);
+
+  assert.equal((await lstat(path.join(appRoot,"src","supporterStore.js"))).isFile(),true,"normal development must retain the Court Ledger module");
+  assert.match(sourceIndex,/data-action="court-ledger"/,"normal development must retain the Court Ledger HUD action");
+  assert.match(sourceIndex,/id="support"/,"normal development must retain the Court Ledger screen");
+  assert.match(sourceMain,/import \* as supporterStore from "\.\/supporterStore\.js";/,"normal development must retain the Court Ledger module route");
+  assert.match(sourceServiceWorker,/\.\/src\/supporterStore\.js/,"normal development must retain the Court Ledger offline module");
+
+  const artifactFiles = await listFiles(publicRoot);
+  assert.equal(artifactFiles.includes("src/supporterStore.js"),false,"hackathon artifact must omit the Court Ledger module");
+  assert.doesNotMatch(artifactIndex,/data-action="court-ledger"|id="support"/i);
+  assert.match(artifactIndex,/<meta name="application-name" content="Beneath the Throne" \/>/);
+  assert.match(artifactIndex,/<meta name="btt-build-profile" content="hackathon" \/>/);
+  assert.doesNotMatch(artifactIndex,/\$1/,"artifact HTML contains an unexpanded replacement token");
+  assert.doesNotMatch(artifactMain,/supporterStore|court-ledger|toggleStoreReadiness/i);
+  assert.doesNotMatch(artifactServiceWorker,/supporterStore/i);
+  assert.equal(artifactWebMcp,sourceWebMcp,"the hackathon profile must not rewrite any WebMCP tool");
+  for(const relative of [
+    "service-worker.js","src/main.js","src/ui.js","src/levelUp.js","src/slumPrologue.js","src/language.js","src/pwa.js"
+  ]){
+    execFileSync(process.execPath,["--check","--input-type=module"],{
+      input:await read(relative,publicRoot),
+      stdio:["pipe","pipe","pipe"]
+    });
+  }
+
+  const artifactVersion = JSON.parse(artifactVersionText);
+  const manifest = JSON.parse(manifestText);
+  assert.equal(artifactVersion.build_profile,"hackathon");
+  assert.deepEqual(artifactVersion.features,{court_ledger:false,payments:false,mock_purchases:false});
+  assert.equal(manifest.build_profile,"hackathon");
+  assert.deepEqual(manifest.excluded_features,["court_ledger","payments","mock_purchases"]);
+  assert.equal(manifest.files.some(file=>file.path === "src/supporterStore.js"),false);
+
+  const licensePattern = /    <h2>License<\/h2>\r?\n    <p>[^\r\n]+<\/p>/;
+  assert.equal(artifactTerms.match(licensePattern)?.[0],sourceTerms.match(licensePattern)?.[0],"artifact preparation must not alter licensing text");
+
+  for(const relative of artifactFiles){
+    const extension = path.extname(relative).toLowerCase();
+    if(!artifactTextExtensions.has(extension))continue;
+    const contents = await read(relative,publicRoot);
+    for(const [pattern,label] of forbiddenHackathonPatterns){
+      assert.doesNotMatch(contents,pattern,`${label} leaked into ${relative}`);
+    }
+  }
 }
 
 async function testArtifact(){
@@ -166,13 +244,16 @@ async function testArtifact(){
       || (relative.startsWith("icons/") && extension === ".png");
     assert.equal(allowed,true,`file is outside the deployment allowlist: ${relative}`);
     assert.doesNotMatch(relative,/(^|\/)(scripts|agent-tools|node_modules)(\/|$)|(^|\/)\.env|readme|package(?:-lock)?\.json/i);
-    if([".css",".html",".js",".json",".svg",".webmanifest"].includes(extension)){
+    if(artifactTextExtensions.has(extension)){
       const contents = await readFile(path.join(publicRoot,...relative.split("/")),"utf8");
       assert.doesNotMatch(contents,/file:\/\/|[A-Za-z]:\\Users\\|\/Users\/[^/]+\/|\/home\/[^/]+\//i,`local filesystem path leaked in ${relative}`);
     }
   }
 
   const manifest = JSON.parse(await readFile(manifestPath,"utf8"));
+  const version = JSON.parse(await read("version.json",publicRoot));
+  assert.equal(manifest.artifact_version,version.version);
+  assert.equal(manifest.build_profile,"hackathon");
   assert.equal(manifest.file_count,files.length);
   assert.deepEqual(manifest.files.map(file=>file.path),[...files].sort((a,b)=>a.localeCompare(b,"en")));
   let totalBytes = 0;
@@ -188,8 +269,13 @@ async function testArtifact(){
 await testDebugGate();
 console.log("PASS loopback-only debug and debug-overlay gates");
 await testModulePrecache();
-console.log("PASS complete static module graph and required offline shell precache");
+console.log("PASS complete development module graph and required offline shell precache");
+await testModulePrecache(publicRoot);
+console.log("PASS complete hackathon artifact module graph and required offline shell precache");
 await testRecoveryAndVersions();
-console.log("PASS app-scoped recovery and synchronized build/cache versions");
+await testRecoveryAndVersions(publicRoot);
+console.log("PASS app-scoped recovery and synchronized development/artifact build-cache versions");
+await testHackathonProfile();
+console.log("PASS artifact-only Court Ledger, payment, and mock-purchase exclusion with unchanged WebMCP and licensing text");
 await testArtifact();
 console.log("PASS allowlisted deployment artifact and deterministic integrity manifest");

@@ -39,7 +39,7 @@ Open `http://127.0.0.1:43123`.
 # Complete normal-game, PWA, WebMCP, and mutation regression suite
 npm run qa:webmcp
 
-# Build the allowlisted static artifact
+# Build the allowlisted hackathon artifact
 npm run prepare:deployment
 
 # Rebuild and test that artifact at a nested URL path
@@ -54,7 +54,7 @@ Local developer cheats require both a loopback host and `?debug`. A public hostn
 
 ## Deployment artifact
 
-`npm run prepare:deployment` creates a provider-neutral static artifact at `btt-web-playtest/dist/public/` plus a deterministic SHA-256 manifest at `btt-web-playtest/dist/deployment-manifest.json`.
+`npm run prepare:deployment` invokes the explicit `hackathon` deployment profile and creates a provider-neutral static artifact at `btt-web-playtest/dist/public/` plus a deterministic SHA-256 manifest at `btt-web-playtest/dist/deployment-manifest.json`. The builder refuses to create a public artifact if the profile is omitted or unknown.
 
 The artifact is allowlisted to contain only:
 
@@ -62,7 +62,9 @@ The artifact is allowlisted to contain only:
 - `src/**/*.js` native browser modules.
 - Runtime images under `assets/` and PWA icons under `icons/`.
 
-It excludes QA and art-generation scripts, `agent-tools`, dependencies, package metadata, READMEs, environment files, logs, and local filesystem paths. `dist/` is ignored and should be regenerated instead of committed. No hosting provider or deployment workflow is configured.
+It excludes QA and art-generation scripts, `agent-tools`, dependencies, package metadata, READMEs, environment files, logs, and local filesystem paths. For judge-facing hackathon builds it also omits the Court Ledger module, UI/routes, checkout configuration, mock grants, payment copy, and monetization setup while preserving the normal game and all eight WebMCP tools. The normal development source still contains the existing Court Ledger; only generated copies under `dist/public/` are transformed. A profile-specific build/cache suffix prevents a prior full-build cache from being reused.
+
+`npm run qa:public` verifies that the source still has the development Ledger, the artifact has no Ledger/payment implementation or UI in EN/ES, its module graph is completely precached, WebMCP remains byte-for-byte unchanged, and the artifact still passes normal-game, offline-PWA, and exact-eight-tool browser tests. `dist/` is ignored and should be regenerated instead of committed. No hosting provider or deployment workflow is configured.
 
 ## Challenge review lineage
 
@@ -74,6 +76,7 @@ GitHub review commits on `webmcp-challenge`:
 | Four read-only WebMCP tools | `70acab60c2ed8b48f3cba50b06af9fb4cadd1370` |
 | Six read-only WebMCP tools | `32b31d5bde2f405d2579eeb40c064e63ef70c73a` |
 | Approved eight-tool checkpoint | `2425895704f1d6cb2dbf908d3eb7a65061c96b81` |
+| Public-readiness cleanup | `8ea8c92925d352068e2db559add336eab20bdabe` |
 
 The equivalent local commits have different object IDs because the checkpoints were mirrored to GitHub: `67b0c16`, `a9e11f6`, `c2f5c8b`, and `32c8018`.
 

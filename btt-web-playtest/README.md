@@ -22,7 +22,7 @@ Open **http://127.0.0.1:43123** in your browser.
 | `npm run dev` | Serves the game on port **43123** via [`serve`](https://www.npmjs.com/package/serve) |
 | `npm start` | Alias for `npm run dev` |
 | `npm run qa:webmcp` | Runs normal-game, PWA, and all eight WebMCP regression tests |
-| `npm run prepare:deployment` | Rebuilds the provider-neutral allowlisted artifact in `dist/public/` |
+| `npm run prepare:deployment` | Rebuilds the explicit `hackathon` allowlisted artifact in `dist/public/` |
 | `npm run qa:public` | Builds, audits, and browser-tests the artifact at a nested URL path |
 
 ### Requirements
@@ -302,7 +302,9 @@ npm run prepare:deployment
 npm run qa:public
 ```
 
-The builder writes `dist/public/` and `dist/deployment-manifest.json`. Its allowlist contains runtime HTML/CSS/PWA files, native `src/**/*.js` modules, runtime images, and PWA icons. It excludes scripts, package/dependency files, QA output, `agent-tools`, logs, environment files, READMEs, and local filesystem paths. `dist/` is gitignored and no hosting provider is configured.
+The builder writes `dist/public/` and `dist/deployment-manifest.json`. `npm run prepare:deployment` passes the required `--profile hackathon` flag; a direct invocation without that explicit profile fails closed. Its allowlist contains runtime HTML/CSS/PWA files, native runtime modules, images, and PWA icons. It excludes scripts, package/dependency files, QA output, `agent-tools`, logs, environment files, READMEs, and local filesystem paths.
+
+The `hackathon` profile transforms only the generated artifact. It omits `src/supporterStore.js`, removes the Court Ledger screen/routes and payment/mock-grant copy, and gives the artifact a distinct version and service-worker cache suffix. Normal development keeps the Court Ledger unchanged. The profile does not alter `src/webmcp.js`, the save schema, gameplay rules, or licensing text. `npm run qa:public` proves both halves, audits the artifact module/precache graph, and runs the complete browser-backed game/PWA/eight-tool regression suite at a nested URL path. `dist/` is gitignored and no hosting provider is configured.
 
 ---
 
@@ -393,7 +395,7 @@ Enemy visual “kits” (rat, bailiff, knife, captain, court) are **CSS tints** 
 
 ## Court Ledger (real-money path)
 
-The **Court Ledger** (scales icon next to Save) sells looks and convenience only.
+The **Court Ledger** (scales icon next to Save) is retained for normal development and sells looks and convenience only. It is intentionally absent from the generated `hackathon` deployment artifact so judges are not exposed to payment setup, mock grants, or monetization UI.
 
 Playtest checkout grants on this save without charging a card. To take real money, paste Stripe Payment Links:
 
