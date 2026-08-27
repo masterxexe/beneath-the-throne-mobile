@@ -7,9 +7,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const appRoot = path.resolve(fileURLToPath(new URL("..",import.meta.url)));
+const repoRoot = path.resolve(appRoot,"..");
 const publicRoot = path.join(appRoot,"dist","public");
 const manifestPath = path.join(appRoot,"dist","deployment-manifest.json");
 const topLevelFiles = new Set([
+  "LICENSE",
+  "THIRD_PARTY_NOTICES.md",
   "combat-animations.css",
   "index.html",
   "manifest.webmanifest",
@@ -22,7 +25,7 @@ const topLevelFiles = new Set([
   "version.json"
 ]);
 const topLevelDirectories = new Set(["assets","icons","src"]);
-const artifactTextExtensions = new Set([".css",".html",".js",".json",".svg",".webmanifest"]);
+const artifactTextExtensions = new Set([".css",".html",".js",".json",".md",".svg",".webmanifest"]);
 const forbiddenHackathonPatterns = [
   [/supporterStore/i,"Court Ledger module identifier"],
   [/btt_checkout_urls/i,"checkout localStorage key"],
@@ -170,11 +173,15 @@ async function testHackathonProfile(){
   const [
     sourceIndex,sourceMain,sourceServiceWorker,sourceTerms,sourceWebMcp,
     artifactIndex,artifactMain,artifactServiceWorker,artifactTerms,artifactWebMcp,
-    artifactVersionText,manifestText
+    artifactVersionText,manifestText,rootLicense,appLicense,artifactLicense,
+    appThirdPartyNotices,artifactThirdPartyNotices,packageText,lockText
   ] = await Promise.all([
     read("index.html"),read("src/main.js"),read("service-worker.js"),read("terms.html"),read("src/webmcp.js"),
     read("index.html",publicRoot),read("src/main.js",publicRoot),read("service-worker.js",publicRoot),read("terms.html",publicRoot),read("src/webmcp.js",publicRoot),
-    read("version.json",publicRoot),readFile(manifestPath,"utf8")
+    read("version.json",publicRoot),readFile(manifestPath,"utf8"),
+    readFile(path.join(repoRoot,"LICENSE"),"utf8"),read("LICENSE"),read("LICENSE",publicRoot),
+    read("THIRD_PARTY_NOTICES.md"),read("THIRD_PARTY_NOTICES.md",publicRoot),
+    read("package.json"),read("package-lock.json")
   ]);
 
   assert.equal((await lstat(path.join(appRoot,"src","supporterStore.js"))).isFile(),true,"normal development must retain the Court Ledger module");
@@ -211,6 +218,16 @@ async function testHackathonProfile(){
 
   const licensePattern = /    <h2>License<\/h2>\r?\n    <p>[^\r\n]+<\/p>/;
   assert.equal(artifactTerms.match(licensePattern)?.[0],sourceTerms.match(licensePattern)?.[0],"artifact preparation must not alter licensing text");
+  assert.equal(appLicense,rootLicense,"application and repository ISC licenses must be byte-identical");
+  assert.equal(artifactLicense,appLicense,"deployment artifact must preserve the ISC license");
+  assert.equal(artifactThirdPartyNotices,appThirdPartyNotices,"deployment artifact must preserve third-party notices");
+  assert.match(rootLicense,/Permission to use, copy, modify, and\/or distribute this software/);
+  assert.match(sourceTerms,/href="\.\/LICENSE"/);
+  assert.match(sourceTerms,/href="\.\/THIRD_PARTY_NOTICES\.md"/);
+  assert.match(sourceTerms,/including commercially/);
+  assert.doesNotMatch(sourceTerms,/personal, non-commercial|may not .*reverse-engineer|may not .*redistribute/i);
+  assert.equal(JSON.parse(packageText).license,"ISC","package metadata must declare ISC");
+  assert.equal(JSON.parse(lockText).packages?.[""]?.license,"ISC","lockfile root metadata must declare ISC");
 
   for(const relative of artifactFiles){
     const extension = path.extname(relative).toLowerCase();

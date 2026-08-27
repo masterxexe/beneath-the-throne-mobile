@@ -60,7 +60,7 @@ The event modal's buttons remain exclusively human-controlled. WebMCP cannot sup
 
 Browsers without WebMCP still run the full game normally. For WebMCP testing, use the ChatGPT in-app browser or Google Chrome with the experimental WebMCP flag/origin trial, as described on the [official OpenAI WebMCP Challenge page](https://openai.com/webmcp-challenge/). Service-worker/PWA behavior requires HTTPS or localhost.
 
-Challenge review lineage on GitHub: pre-WebMCP baseline `33ddfab87e052e01c6d49c16dcd5d36e77b6c9a2`; four reads `70acab60c2ed8b48f3cba50b06af9fb4cadd1370`; six reads `32b31d5bde2f405d2579eeb40c064e63ef70c73a`; approved eight-tool checkpoint `2425895704f1d6cb2dbf908d3eb7a65061c96b81`. The local Storyteller read/eligibility checkpoint is `128e6f19d7f44b52633f85693c23e8ebe74f371e` on `webmcp-challenge`.
+Challenge review lineage on GitHub: pre-WebMCP baseline `33ddfab87e052e01c6d49c16dcd5d36e77b6c9a2`; four reads `70acab60c2ed8b48f3cba50b06af9fb4cadd1370`; six reads `32b31d5bde2f405d2579eeb40c064e63ef70c73a`; approved eight-tool checkpoint `2425895704f1d6cb2dbf908d3eb7a65061c96b81`. The Storyteller read/eligibility checkpoint is `128e6f19d7f44b52633f85693c23e8ebe74f371e`, and the guarded Storyteller trigger release candidate is `ccd17872dd869e5304d304f86dd5d5536cd3da36` on `webmcp-challenge`.
 
 ### Debug mode
 
@@ -311,7 +311,7 @@ npm run qa:public
 
 The builder writes `dist/public/` and `dist/deployment-manifest.json`. `npm run prepare:deployment` passes the required `--profile hackathon` flag; a direct invocation without that explicit profile fails closed. Its allowlist contains runtime HTML/CSS/PWA files, native runtime modules, images, and PWA icons. It excludes scripts, package/dependency files, QA output, `agent-tools`, logs, environment files, READMEs, and local filesystem paths.
 
-The `hackathon` profile transforms only the generated artifact. It omits `src/supporterStore.js`, removes the Court Ledger screen/routes and payment/mock-grant copy, and gives the artifact a distinct version and service-worker cache suffix. Normal development keeps the Court Ledger unchanged. The profile does not alter `src/webmcp.js`, the save schema, gameplay rules, or licensing text. `npm run qa:public` proves both halves, audits the artifact module/precache graph, and runs the complete browser-backed game/PWA/ten-tool regression suite at a nested URL path. `dist/` is gitignored and no hosting provider is configured.
+The `hackathon` profile transforms only the generated artifact. It omits `src/supporterStore.js`, removes the Court Ledger screen/routes and payment/mock-grant copy, and gives the artifact a distinct version and service-worker cache suffix. Normal development keeps the Court Ledger unchanged. The profile does not alter `src/webmcp.js`, the save schema, gameplay rules, or licensing text. `npm run qa:public` proves both halves, audits the artifact module/precache graph, and runs the complete browser-backed game/PWA/ten-tool regression suite at a nested URL path. `dist/` is gitignored. A manual-only GitHub Pages workflow is prepared at the repository root, but Pages is not enabled, pushes do not deploy the game, and GitHub will not expose the manual dispatch while the workflow exists only outside the default branch.
 
 ---
 
@@ -421,9 +421,11 @@ localStorage.setItem("btt_checkout_urls", JSON.stringify({
 
 ---
 
-## Licensing status before public release
+## License
 
-No license change is made by the public-readiness cleanup. `package.json` currently declares ISC, while `terms.html` limits the build to personal, non-commercial use and prohibits redistribution; there is also no root `LICENSE` file. Those signals conflict and must be resolved before making the repository public. Artwork, icons, embedded narrative text/data, trademarks, generated/third-party asset provenance, and source code need an owner-approved scope rather than an automatic repo-wide license.
+Unless otherwise noted, the owner-created contents of this mobile/web repository—including source code, artwork, icons, narrative text, game data, and documentation—are available under the [ISC License](LICENSE). Third-party components retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and the root `ASSET_PROVENANCE.md`.
+
+This license applies only to this Beneath the Throne mobile/web repository. It does not license or grant rights to any separate Beneath the Throne Unreal Engine project, and it does not grant trademark rights or imply endorsement.
 
 ---
 

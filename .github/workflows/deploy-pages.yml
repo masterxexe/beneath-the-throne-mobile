@@ -1,0 +1,87 @@
+name: Deploy hackathon build to GitHub Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_deploy:
+        description: Confirm only after Pages activation and release approval
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Require the approved release branch
+        shell: bash
+        env:
+          CONFIRM_DEPLOY: ${{ inputs.confirm_deploy }}
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF}" = "refs/heads/webmcp-challenge"
+          test "${CONFIRM_DEPLOY}" = "true"
+
+      - name: Check out the release candidate
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: btt-web-playtest/package-lock.json
+
+      - name: Install locked QA dependencies
+        working-directory: btt-web-playtest
+        run: npm ci
+
+      - name: Run source Storyteller and WebMCP regression suites
+        working-directory: btt-web-playtest
+        run: |
+          npm run qa:storyteller
+          npm run qa:webmcp
+
+      - name: Generate and test the explicit hackathon artifact
+        working-directory: btt-web-playtest
+        run: npm run qa:public
+
+      - name: Verify the upload target and profile
+        working-directory: btt-web-playtest
+        run: |
+          node --input-type=module -e "
+            import { readFileSync, statSync } from 'node:fs';
+            const version = JSON.parse(readFileSync('dist/public/version.json', 'utf8'));
+            if (version.build_profile !== 'hackathon') throw new Error('Refusing to deploy a non-hackathon artifact.');
+            if (!statSync('dist/public').isDirectory()) throw new Error('Missing dist/public deployment directory.');
+          "
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload only the allowlisted public artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: btt-web-playtest/dist/public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

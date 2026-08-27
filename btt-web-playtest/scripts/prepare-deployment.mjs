@@ -26,6 +26,8 @@ if(path.resolve(publicRoot) !== expectedPublicRoot || path.dirname(publicRoot) !
 }
 
 const TOP_LEVEL_FILES = [
+  "LICENSE",
+  "THIRD_PARTY_NOTICES.md",
   "index.html",
   "privacy.html",
   "terms.html",

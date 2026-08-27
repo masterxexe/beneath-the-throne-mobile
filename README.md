@@ -71,7 +71,9 @@ The artifact is allowlisted to contain only:
 
 It excludes QA and art-generation scripts, `agent-tools`, dependencies, package metadata, READMEs, environment files, logs, and local filesystem paths. For judge-facing hackathon builds it also omits the Court Ledger module, UI/routes, checkout configuration, mock grants, payment copy, and monetization setup while preserving the normal game and all ten WebMCP tools. The normal development source still contains the existing Court Ledger; only generated copies under `dist/public/` are transformed. A profile-specific build/cache suffix prevents a prior full-build cache from being reused.
 
-`npm run qa:public` verifies that the source still has the development Ledger, the artifact has no Ledger/payment implementation or UI in EN/ES, its module graph is completely precached, WebMCP remains byte-for-byte unchanged, and the artifact still passes normal-game, offline-PWA, and exact-ten-tool browser tests. `dist/` is ignored and should be regenerated instead of committed. No hosting provider or deployment workflow is configured.
+`npm run qa:public` verifies that the source still has the development Ledger, the artifact has no Ledger/payment implementation or UI in EN/ES, its module graph is completely precached, WebMCP remains byte-for-byte unchanged, and the artifact still passes normal-game, offline-PWA, and exact-ten-tool browser tests. `dist/` is ignored and should be regenerated instead of committed.
+
+The manual-only GitHub Pages workflow at `.github/workflows/deploy-pages.yml` runs the source and public regression suites, requires the `webmcp-challenge` branch and an explicit deployment confirmation, and uploads only `btt-web-playtest/dist/public`. It has no push trigger, does not enable Pages, and cannot deploy until an owner deliberately configures Pages and dispatches it. GitHub exposes manual-dispatch workflows only after the workflow file exists on the repository's default branch, so this branch-only preparation remains intentionally inactive.
 
 ## Challenge review lineage
 
@@ -85,6 +87,7 @@ GitHub review commits on `webmcp-challenge`:
 | Approved eight-tool checkpoint | `2425895704f1d6cb2dbf908d3eb7a65061c96b81` |
 | Public-readiness cleanup | `8ea8c92925d352068e2db559add336eab20bdabe` |
 | Storyteller read/eligibility checkpoint | `128e6f19d7f44b52633f85693c23e8ebe74f371e` |
+| Guarded Storyteller trigger / release candidate | `ccd17872dd869e5304d304f86dd5d5536cd3da36` |
 
 The equivalent local commits have different object IDs because the checkpoints were mirrored to GitHub: `67b0c16`, `a9e11f6`, `c2f5c8b`, and `32c8018`.
 
@@ -99,6 +102,8 @@ The equivalent local commits have different object IDs because the checkpoints w
 
 See `btt-web-playtest/README.md` for the detailed architecture, save model, systems map, WebMCP routing, and QA notes.
 
-## Licensing status
+## License
 
-Licensing is not yet ready for public release. `btt-web-playtest/package.json` currently declares ISC while `btt-web-playtest/terms.html` restricts copying, reverse engineering, and redistribution, and the repository has no root license file. No licensing terms are changed by this checkpoint. The code, embedded narrative data, artwork, icons, trademarks, and third-party/generated asset provenance must be scoped explicitly and approved by the owner before the repository is made public.
+Unless otherwise noted, the owner-created contents of this repository—including source code, artwork, icons, narrative text, game data, and documentation—are available under the [ISC License](LICENSE). Third-party components retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [ASSET_PROVENANCE.md](ASSET_PROVENANCE.md).
+
+This license applies only to this Beneath the Throne mobile/web repository. It does not license or grant rights to any separate Beneath the Throne Unreal Engine project, and it does not grant trademark rights or imply endorsement.
