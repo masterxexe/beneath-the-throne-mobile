@@ -20,11 +20,13 @@ const WEBMCP_TOOL_CAPABILITIES = [
   {name:"get_quest_log",type:"read_only_tool",modifiesGameState:false},
   {name:"get_available_actions",type:"read_only_tool",modifiesGameState:false},
   {name:"get_storyteller_options",type:"read_only_tool",modifiesGameState:false},
+  {name:"trigger_story_event",type:"mutation_tool",modifiesGameState:true},
   {name:"use_item",type:"mutation_tool",modifiesGameState:true},
   {name:"equip_item",type:"mutation_tool",modifiesGameState:true}
 ];
 const WEBMCP_TOOL_NAMES = WEBMCP_TOOL_CAPABILITIES.map(tool=>tool.name);
-const STORYTELLER_READ_NOTE = "These are advisory, game-defined options. No WebMCP tool can trigger a Storyteller event in this checkpoint.";
+const STORYTELLER_READ_NOTE = "Each issued token is valid only for its exact game-defined event. trigger_story_event can present one event, while every event choice remains player-controlled in the game UI.";
+const STORYTELLER_TRIGGER_UNAVAILABLE_NOTE = "Storyteller options are advisory because trigger_story_event is unavailable. Every event choice remains player-controlled in the game UI.";
 
 function numberValue(value){
   const number = Number(value);
@@ -146,6 +148,18 @@ function itemInputSchema(allowedIds = null){
   };
 }
 
+function storytellerTriggerInputSchema(allowedEventIds){
+  return {
+    type:"object",
+    properties:{
+      event_id:{type:"string",enum:[...allowedEventIds]},
+      token:{type:"string",minLength:20,maxLength:128}
+    },
+    required:["event_id","token"],
+    additionalProperties:false
+  };
+}
+
 function exactItemArgument(input){
   if(!input || typeof input !== "object" || Array.isArray(input)){
     return {ok:false,error:{code:"invalid_arguments",message:"Expected an object containing only item_id."}};
@@ -158,6 +172,31 @@ function exactItemArgument(input){
     return {ok:false,error:{code:"invalid_item_id",message:"item_id must be an exact non-empty string."}};
   }
   return {ok:true,itemId:input.item_id};
+}
+
+function exactStorytellerTriggerArgument(input,allowedEventIds){
+  if(!input || typeof input !== "object" || Array.isArray(input)){
+    return {ok:false,error:{code:"invalid_arguments",message:"Expected an object containing only event_id and token."}};
+  }
+  const keys = Object.keys(input).sort();
+  if(keys.length !== 2 || keys[0] !== "event_id" || keys[1] !== "token"){
+    return {ok:false,error:{code:"invalid_arguments",message:"Only the event_id and token fields are accepted."}};
+  }
+  if(typeof input.event_id !== "string" || !input.event_id){
+    return {ok:false,error:{code:"invalid_event_id",message:"event_id must be an exact non-empty string."}};
+  }
+  if(!allowedEventIds.has(input.event_id)){
+    return {ok:false,error:{code:"unknown_event_id",message:"event_id must match a predefined Storyteller event."}};
+  }
+  if(
+    typeof input.token !== "string"
+    || input.token.length < 20
+    || input.token.length > 128
+    || !/^story-[A-Za-z0-9-]+$/.test(input.token)
+  ){
+    return {ok:false,error:{code:"invalid_token",message:"token must be an exact Storyteller token returned for this event."}};
+  }
+  return {ok:true,eventId:input.event_id,token:input.token};
 }
 
 function mutationFailure(itemId,code,message,extra = {}){
@@ -367,6 +406,155 @@ function projectStorytellerSnapshot(source){
   };
 }
 
+const STORYTELLER_ELIGIBILITY_FAILURE_CODES = new Set([
+  "no_active_game",
+  "context_unavailable",
+  "combat_active",
+  "blocking_interaction",
+  "world_interaction_active",
+  "travel_in_progress",
+  "wrong_screen",
+  "unsupported_location_context",
+  "location_mismatch",
+  "pending_story_event",
+  "global_cooldown",
+  "location_not_supported",
+  "required_action_unavailable",
+  "progression_requirement_unmet",
+  "max_occurrences_reached",
+  "event_cooldown"
+]);
+
+const STORYTELLER_TRIGGER_FAILURE_MESSAGES = Object.freeze({
+  no_active_game:"Start a new game or load a save before triggering a Storyteller event.",
+  context_unavailable:"The game could not safely evaluate the current Storyteller context.",
+  combat_active:"Storyteller events cannot interrupt active combat.",
+  blocking_interaction:"Finish the current dialog or interaction before triggering a Storyteller event.",
+  world_interaction_active:"Wait for the current world-scene movement to finish.",
+  travel_in_progress:"This Storyteller event requires a stable location, not an active journey.",
+  wrong_screen:"Storyteller events can be presented from the Home screen only.",
+  unsupported_location_context:"This Storyteller event is not available in the current location context.",
+  location_mismatch:"The current location could not be verified safely.",
+  pending_story_event:"Resolve the currently presented Storyteller event first.",
+  global_cooldown:"The Storyteller is waiting before presenting another event.",
+  location_not_supported:"That Storyteller event is not supported at the current location.",
+  required_action_unavailable:"The game action required by that Storyteller event is no longer available.",
+  progression_requirement_unmet:"The progression requirement for that Storyteller event is no longer met.",
+  max_occurrences_reached:"That Storyteller event has already reached its occurrence limit.",
+  event_cooldown:"That Storyteller event is still on cooldown.",
+  storyteller_options_required:"Call get_storyteller_options and use a current event-specific token first.",
+  decision_token_mismatch:"The supplied token is not a current Storyteller token.",
+  event_token_mismatch:"The supplied token was issued for a different Storyteller event.",
+  stale_decision:"The live game context changed after these Storyteller options were observed.",
+  storyteller_context_unavailable:"The game could not safely determine current Storyteller eligibility.",
+  execution_rejected:"The canonical Storyteller runtime rejected this event.",
+  execution_error:"The canonical Storyteller runtime could not present this event.",
+  execution_not_confirmed:"The canonical Storyteller runtime did not provide a verifiable result.",
+  save_not_confirmed:"The Storyteller event changed live state, but its pending save could not be confirmed.",
+  presentation_not_confirmed:"The Storyteller event could not be confirmed as awaiting the player's choice."
+});
+
+function storytellerTriggerFailure(eventId,code,message,{
+  accepted = false,
+  tokenConsumed = false,
+  presentationStatus = "not_presented",
+  pendingSequence = null,
+  eventTitle = null,
+  eventPresented = false,
+  awaitingPlayerChoice = false,
+  humanChoiceIds = [],
+  savePersisted = false
+} = {}){
+  return {
+    ok:false,
+    accepted,
+    success:false,
+    event_id:typeof eventId === "string" ? eventId : null,
+    event_title:nullableString(eventTitle),
+    event_presented:eventPresented === true,
+    token_consumed:tokenConsumed,
+    presentation_status:presentationStatus,
+    awaiting_player_choice:awaitingPlayerChoice === true,
+    human_action_required:awaitingPlayerChoice === true,
+    interaction_owner:"player_ui",
+    available_human_choice_ids:Array.isArray(humanChoiceIds)
+      ? humanChoiceIds.filter(value=>typeof value === "string" && value)
+      : [],
+    pending_sequence:nullableNumber(pendingSequence),
+    save_persisted:savePersisted === true,
+    error:{
+      code,
+      message:stringValue(message) || STORYTELLER_TRIGGER_FAILURE_MESSAGES[code] || STORYTELLER_TRIGGER_FAILURE_MESSAGES.execution_rejected
+    }
+  };
+}
+
+function storytellerEventEligibilityFailure(source,eventId){
+  if(!Array.isArray(source?.eventEligibilityStates)){
+    return {
+      code:"storyteller_context_unavailable",
+      message:STORYTELLER_TRIGGER_FAILURE_MESSAGES.storyteller_context_unavailable
+    };
+  }
+  const states = source.eventEligibilityStates;
+  const eventState = states.find(entry=>entry?.eventId === eventId);
+  if(!eventState){
+    return {code:"stale_decision",message:STORYTELLER_TRIGGER_FAILURE_MESSAGES.stale_decision};
+  }
+  if(eventState.eligible === true)return null;
+  const reasonCode = STORYTELLER_ELIGIBILITY_FAILURE_CODES.has(eventState.reasonCode)
+    ? eventState.reasonCode
+    : "stale_decision";
+  return {
+    code:reasonCode,
+    message:STORYTELLER_TRIGGER_FAILURE_MESSAGES[reasonCode]
+  };
+}
+
+function storytellerRuntimeFailureCode(code){
+  if(STORYTELLER_ELIGIBILITY_FAILURE_CODES.has(code))return code;
+  if(code === "invalid_selection")return "storyteller_context_unavailable";
+  if(code === "event_not_eligible")return "stale_decision";
+  if(code === "save_failed")return "save_not_confirmed";
+  if(code === "presentation_failed")return "presentation_not_confirmed";
+  return "execution_rejected";
+}
+
+function projectedStorytellerPending(source){
+  const root = source?.world?.storyteller || source?.storyteller || source;
+  const pending = root?.pending || (
+    root && typeof root === "object" && (root.eventId || root.event_id) && root.sequence !== undefined
+      ? root
+      : null
+  );
+  if(!pending || typeof pending !== "object")return null;
+  const eventId = nullableString(pending.eventId ?? pending.event_id);
+  const sequence = nullableNumber(pending.sequence);
+  if(!eventId || sequence === null || !Number.isInteger(sequence) || sequence < 1)return null;
+  return {
+    sequence,
+    event_id:eventId,
+    status:nullableString(pending.status)
+  };
+}
+
+function projectStorytellerExecutionResult(result){
+  if(!result || typeof result !== "object")return null;
+  const errorCode = nullableString(result.error?.code);
+  return {
+    accepted:result.accepted === true,
+    success:result.success === true,
+    event_id:nullableString(result.eventId ?? result.event_id),
+    presentation_status:nullableString(result.status ?? result.presentationStatus ?? result.presentation_status),
+    awaiting_player_choice:result.awaitingPlayerChoice === true || result.awaiting_player_choice === true,
+    pending:projectedStorytellerPending(result.pending),
+    error:errorCode ? {
+      code:errorCode,
+      message:stringValue(result.error?.message)
+    } : null
+  };
+}
+
 function noActiveStorytellerResult(language,currentScreen){
   return {
     ok:true,
@@ -376,6 +564,7 @@ function noActiveStorytellerResult(language,currentScreen){
       mutation_available:false,
       trigger_tool:null,
       decision_token:null,
+      decision_event_id:null,
       decision_token_status:"not_applicable",
       context:{
         current_screen:nullableString(currentScreen),
@@ -414,7 +603,11 @@ export function createWebMcpTools({
   getUiInteractionContext = ()=>null,
   getActionSnapshots = ()=>[],
   getStorytellerOptions = ()=>null,
+  storytellerEventIds = [],
   createStorytellerDecisionToken = secureStorytellerDecisionToken,
+  getActiveSaveSlot = ()=>null,
+  executeStorytellerEvent = ()=>null,
+  getSavedStorytellerState = ()=>null,
   getMutationSafetyContext = ()=>null,
   getSavedHero = ()=>null,
   executeUseItem = ()=>null,
@@ -424,9 +617,14 @@ export function createWebMcpTools({
   gearSlots = []
 } = {}){
   const slots = [...gearSlots];
+  const allowedStorytellerEventIds = [...new Set(
+    (Array.isArray(storytellerEventIds) ? storytellerEventIds : [])
+      .filter(eventId=>typeof eventId === "string" && eventId)
+  )];
+  const allowedStorytellerEvents = new Set(allowedStorytellerEventIds);
   let observedInventoryHero = null;
   const observedInventoryItemIds = new Set();
-  let latestStorytellerReceipt = null;
+  const latestStorytellerReceipts = new Map();
 
   const syncObservedInventoryHero = hero=>{
     if(hero !== observedInventoryHero){
@@ -642,9 +840,9 @@ export function createWebMcpTools({
     readOnlyTool(
       "get_storyteller_options",
       "Get Storyteller options",
-      "Return a detached snapshot of currently eligible, game-defined Storyteller events. This tool cannot trigger events or modify game state.",
+      "Return a detached snapshot of currently eligible, game-defined Storyteller events and event-specific trigger tokens when the guarded trigger tool is available.",
       ()=>{
-        latestStorytellerReceipt = null;
+        latestStorytellerReceipts.clear();
         const gameState = safeCall(getState,null);
         if(!gameState?.hero){
           return noActiveStorytellerResult(
@@ -664,46 +862,315 @@ export function createWebMcpTools({
           };
         }
         const eligibilityKey = nullableString(selected?.eligibilityKey);
-        const candidateToken = snapshot.status === "ready"
+        const rawActiveSaveSlot = safeCall(getActiveSaveSlot,null);
+        const activeSaveSlot = rawActiveSaveSlot === null || rawActiveSaveSlot === undefined || rawActiveSaveSlot === ""
+          ? null
+          : String(rawActiveSaveSlot);
+        const registered = safeCall(getRegisteredWebMcpTools,WEBMCP_TOOL_NAMES);
+        const triggerRegistered = Array.isArray(registered) && registered.includes("trigger_story_event");
+        const catalogMatchesSnapshot = snapshot.eligibleEvents.every(event=>allowedStorytellerEvents.has(event.event_id));
+        const eligibilityStates = Array.isArray(selected?.eventEligibilityStates) ? selected.eventEligibilityStates : [];
+        const eligibilityStatesMatch = snapshot.eligibleEvents.every(event=>eligibilityStates.some(entry=>(
+          entry?.eventId === event.event_id && entry.eligible === true && entry.reasonCode === null
+        )));
+        const canIssueTokens = triggerRegistered
+          && snapshot.status === "ready"
           && snapshot.blocked_reason === null
-          && snapshot.eligibleEvents.length
+          && snapshot.eligibleEvents.length > 0
           && eligibilityKey
-          ? nullableString(safeCall(createStorytellerDecisionToken,null))
-          : null;
-        const decisionToken = candidateToken && candidateToken.length >= 20 ? candidateToken : null;
-        const decisionTokenStatus = !snapshot.eligibleEvents.length
+          && activeSaveSlot
+          && catalogMatchesSnapshot
+          && eligibilityStatesMatch;
+        const tokensByEvent = new Map();
+        if(canIssueTokens){
+          for(const event of snapshot.eligibleEvents){
+            let token = null;
+            for(let attempt = 0;attempt < 3 && !token;attempt += 1){
+              const candidate = nullableString(safeCall(createStorytellerDecisionToken,null));
+              if(
+                candidate
+                && candidate.length >= 20
+                && candidate.length <= 128
+                && /^story-[A-Za-z0-9-]+$/.test(candidate)
+                && ![...tokensByEvent.values()].includes(candidate)
+              )token = candidate;
+            }
+            if(token)tokensByEvent.set(event.event_id,token);
+          }
+          if(tokensByEvent.size !== snapshot.eligibleEvents.length)tokensByEvent.clear();
+        }
+        const eligibleEvents = snapshot.eligibleEvents.map(event=>{
+          const token = tokensByEvent.get(event.event_id) || null;
+          if(token){
+            latestStorytellerReceipts.set(token,{
+              token,
+              eventId:event.event_id,
+              hero:gameState.hero,
+              activeSaveSlot,
+              eligibilityKey
+            });
+          }
+          return {
+            ...event,
+            token,
+            token_status:token
+              ? "issued"
+              : !triggerRegistered
+                ? "trigger_unavailable"
+                : !eligibilityKey || !activeSaveSlot || !catalogMatchesSnapshot || !eligibilityStatesMatch
+                  ? "snapshot_unavailable"
+                  : "secure_random_unavailable"
+          };
+        });
+        const firstEvent = eligibleEvents[0] || null;
+        const decisionToken = firstEvent?.token || null;
+        const decisionEventId = decisionToken ? firstEvent.event_id : null;
+        const decisionTokenStatus = !eligibleEvents.length
           ? "not_applicable"
+          : !triggerRegistered
+            ? "trigger_unavailable"
           : !eligibilityKey
             ? "snapshot_unavailable"
-            : decisionToken
+            : !activeSaveSlot
+              ? "snapshot_unavailable"
+            : !catalogMatchesSnapshot || !eligibilityStatesMatch
+              ? "snapshot_unavailable"
+            : latestStorytellerReceipts.size > 0
               ? "issued"
               : "secure_random_unavailable";
-        if(decisionToken){
-          latestStorytellerReceipt = {
-            token:decisionToken,
-            hero:gameState?.hero || null,
-            eligibilityKey,
-            eligibleEventIds:snapshot.eligibleEvents.map(event=>event.event_id)
-          };
-        }
+        const mutationAvailable = triggerRegistered && latestStorytellerReceipts.size > 0;
         return {
           ok:true,
           storyteller:{
             status:snapshot.status,
             language:snapshot.language,
-            mutation_available:false,
-            trigger_tool:null,
+            mutation_available:mutationAvailable,
+            trigger_tool:mutationAvailable ? "trigger_story_event" : null,
             decision_token:decisionToken,
+            decision_event_id:decisionEventId,
             decision_token_status:decisionTokenStatus,
             context:snapshot.context,
             cooldown:snapshot.cooldown,
-            eligible_event_count:snapshot.eligibleEvents.length,
-            eligible_events:snapshot.eligibleEvents,
+            eligible_event_count:eligibleEvents.length,
+            eligible_events:eligibleEvents,
             blocked_reason:snapshot.blocked_reason
           },
-          note:STORYTELLER_READ_NOTE
+          note:triggerRegistered ? STORYTELLER_READ_NOTE : STORYTELLER_TRIGGER_UNAVAILABLE_NOTE
         };
       }
+    ),
+    mutationTool(
+      "trigger_story_event",
+      "Trigger Storyteller event",
+      "Present one exact game-defined Storyteller event using the event-specific token returned by get_storyteller_options. The human player retains control of every event choice.",
+      storytellerTriggerInputSchema(allowedStorytellerEventIds),
+      input=>{
+        const initialGameState = safeCall(getState,null);
+        if(!initialGameState?.hero){
+          latestStorytellerReceipts.clear();
+          return storytellerTriggerFailure(
+            null,
+            "no_active_game",
+            STORYTELLER_TRIGGER_FAILURE_MESSAGES.no_active_game
+          );
+        }
+        const argument = exactStorytellerTriggerArgument(input,allowedStorytellerEvents);
+        if(!argument.ok){
+          return storytellerTriggerFailure(
+            typeof input?.event_id === "string" ? input.event_id : null,
+            argument.error.code,
+            argument.error.message
+          );
+        }
+        const receipt = latestStorytellerReceipts.get(argument.token) || null;
+        if(!receipt){
+          const code = latestStorytellerReceipts.size
+            ? "decision_token_mismatch"
+            : "storyteller_options_required";
+          return storytellerTriggerFailure(argument.eventId,code,STORYTELLER_TRIGGER_FAILURE_MESSAGES[code]);
+        }
+        if(receipt.eventId !== argument.eventId){
+          return storytellerTriggerFailure(
+            argument.eventId,
+            "event_token_mismatch",
+            STORYTELLER_TRIGGER_FAILURE_MESSAGES.event_token_mismatch
+          );
+        }
+
+        latestStorytellerReceipts.delete(argument.token);
+        const consumedFailure = (code,message,extra = {})=>storytellerTriggerFailure(
+          argument.eventId,
+          code,
+          message,
+          {tokenConsumed:true,...extra}
+        );
+        const gameState = safeCall(getState,null);
+        if(!gameState?.hero){
+          return consumedFailure("no_active_game",STORYTELLER_TRIGGER_FAILURE_MESSAGES.no_active_game);
+        }
+        const rawActiveSaveSlot = safeCall(getActiveSaveSlot,null);
+        const activeSaveSlot = rawActiveSaveSlot === null || rawActiveSaveSlot === undefined || rawActiveSaveSlot === ""
+          ? null
+          : String(rawActiveSaveSlot);
+        if(!activeSaveSlot || activeSaveSlot !== receipt.activeSaveSlot || gameState.hero !== receipt.hero){
+          return consumedFailure("stale_decision",STORYTELLER_TRIGGER_FAILURE_MESSAGES.stale_decision);
+        }
+
+        const freshSelection = safeCall(getStorytellerOptions,null);
+        const freshSnapshot = projectStorytellerSnapshot(freshSelection);
+        if(!freshSnapshot){
+          return consumedFailure(
+            "storyteller_context_unavailable",
+            STORYTELLER_TRIGGER_FAILURE_MESSAGES.storyteller_context_unavailable
+          );
+        }
+        if(freshSnapshot.status !== "ready"){
+          const requestedCode = freshSnapshot.blocked_reason?.code;
+          const code = STORYTELLER_ELIGIBILITY_FAILURE_CODES.has(requestedCode)
+            ? requestedCode
+            : "storyteller_context_unavailable";
+          return consumedFailure(
+            code,
+            freshSnapshot.blocked_reason?.message || STORYTELLER_TRIGGER_FAILURE_MESSAGES[code]
+          );
+        }
+        const eventEligibilityFailure = storytellerEventEligibilityFailure(freshSelection,argument.eventId);
+        if(eventEligibilityFailure){
+          return consumedFailure(eventEligibilityFailure.code,eventEligibilityFailure.message);
+        }
+        const freshEligibilityKey = nullableString(freshSelection?.eligibilityKey);
+        if(!freshEligibilityKey){
+          return consumedFailure(
+            "storyteller_context_unavailable",
+            STORYTELLER_TRIGGER_FAILURE_MESSAGES.storyteller_context_unavailable
+          );
+        }
+        if(freshEligibilityKey !== receipt.eligibilityKey){
+          return consumedFailure("stale_decision",STORYTELLER_TRIGGER_FAILURE_MESSAGES.stale_decision);
+        }
+        const freshEvent = freshSnapshot.eligibleEvents.find(event=>event.event_id === argument.eventId) || null;
+        if(!freshEvent){
+          return consumedFailure(
+            "stale_decision",
+            "That Storyteller event is no longer eligible in the live game context."
+          );
+        }
+
+        let canonicalResult;
+        try{
+          canonicalResult = executeStorytellerEvent(argument.eventId,freshSelection);
+        }catch{
+          return consumedFailure(
+            "execution_error",
+            STORYTELLER_TRIGGER_FAILURE_MESSAGES.execution_error,
+            {accepted:true}
+          );
+        }
+        const projectedResult = projectStorytellerExecutionResult(canonicalResult);
+        if(!projectedResult){
+          return consumedFailure(
+            "execution_not_confirmed",
+            STORYTELLER_TRIGGER_FAILURE_MESSAGES.execution_not_confirmed,
+            {accepted:true}
+          );
+        }
+        if(!projectedResult.accepted || !projectedResult.success){
+          const code = storytellerRuntimeFailureCode(projectedResult.error?.code);
+          return consumedFailure(
+            code,
+            code === "execution_rejected"
+              ? STORYTELLER_TRIGGER_FAILURE_MESSAGES.execution_rejected
+              : projectedResult.error?.message || STORYTELLER_TRIGGER_FAILURE_MESSAGES[code],
+            {
+              accepted:projectedResult.accepted,
+              presentationStatus:projectedResult.presentation_status || "blocked",
+              pendingSequence:projectedResult.pending?.sequence
+            }
+          );
+        }
+
+        const resultPending = projectedResult.pending;
+        const livePending = projectedStorytellerPending(safeCall(getState,null));
+        const savedPending = projectedStorytellerPending(
+          safeCall(()=>getSavedStorytellerState(receipt.activeSaveSlot),null)
+        );
+        const humanChoiceIds = freshEvent.human_choices.map(choice=>choice.choice_id);
+        const resultConfirmed = projectedResult.event_id === argument.eventId
+          && projectedResult.presentation_status === "presented"
+          && projectedResult.awaiting_player_choice === true
+          && resultPending?.event_id === argument.eventId
+          && resultPending.sequence !== null;
+        const liveConfirmed = livePending?.event_id === argument.eventId
+          && livePending.sequence === resultPending?.sequence;
+        const saveConfirmed = savedPending?.event_id === argument.eventId
+          && savedPending.sequence === resultPending?.sequence;
+        if(!resultConfirmed){
+          return consumedFailure(
+            "presentation_not_confirmed",
+            STORYTELLER_TRIGGER_FAILURE_MESSAGES.presentation_not_confirmed,
+            {
+              accepted:true,
+              presentationStatus:projectedResult.presentation_status || "not_presented",
+              pendingSequence:resultPending?.sequence,
+              eventTitle:freshEvent.title,
+              eventPresented:projectedResult.presentation_status === "presented",
+              awaitingPlayerChoice:projectedResult.awaiting_player_choice,
+              humanChoiceIds,
+              savePersisted:saveConfirmed
+            }
+          );
+        }
+        if(!liveConfirmed){
+          return consumedFailure(
+            "execution_not_confirmed",
+            STORYTELLER_TRIGGER_FAILURE_MESSAGES.execution_not_confirmed,
+            {
+              accepted:true,
+              presentationStatus:projectedResult.presentation_status,
+              pendingSequence:resultPending.sequence,
+              eventTitle:freshEvent.title,
+              eventPresented:true,
+              awaitingPlayerChoice:true,
+              humanChoiceIds,
+              savePersisted:saveConfirmed
+            }
+          );
+        }
+        if(!saveConfirmed){
+          return consumedFailure(
+            "save_not_confirmed",
+            STORYTELLER_TRIGGER_FAILURE_MESSAGES.save_not_confirmed,
+            {
+              accepted:true,
+              presentationStatus:projectedResult.presentation_status,
+              pendingSequence:resultPending.sequence,
+              eventTitle:freshEvent.title,
+              eventPresented:true,
+              awaitingPlayerChoice:true,
+              humanChoiceIds,
+              savePersisted:false
+            }
+          );
+        }
+        return {
+          ok:true,
+          accepted:true,
+          success:true,
+          event_id:argument.eventId,
+          event_title:freshEvent.title,
+          event_presented:true,
+          token_consumed:true,
+          presentation_status:"presented",
+          awaiting_player_choice:true,
+          human_action_required:true,
+          interaction_owner:"player_ui",
+          available_human_choice_ids:freshEvent.human_choices.map(choice=>choice.choice_id),
+          pending_sequence:resultPending.sequence,
+          save_persisted:true,
+          error:null
+        };
+      },
+      {destructive:true}
     ),
     mutationTool(
       "use_item",
@@ -896,6 +1363,13 @@ export async function initWebMcp(dependencies = {}){
   const failed = [];
   const tools = createWebMcpTools({...dependencies,getRegisteredWebMcpTools:()=>[...registered]});
   for(const tool of tools){
+    if(tool.name === "trigger_story_event" && !registered.includes("get_storyteller_options")){
+      failed.push({
+        name:tool.name,
+        message:"Required tool get_storyteller_options was not registered."
+      });
+      continue;
+    }
     try{
       await modelContext.registerTool(tool);
       registered.push(tool.name);

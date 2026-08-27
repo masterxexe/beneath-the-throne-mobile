@@ -18,6 +18,7 @@ import * as mapActivity from "./mapActivity.js";
 import * as slumPrologue from "./slumPrologue.js";
 import * as lowerWard from "./lowerWard.js";
 import * as storyteller from "./storyteller.js";
+import * as storytellerRuntime from "./storytellerRuntime.js";
 import * as pwa from "./pwa.js";
 import * as supporterStore from "./supporterStore.js";
 import { initAudioEngine } from "./audioEngine.js";
@@ -101,6 +102,40 @@ document.addEventListener("click", event => {
   }
 });
 
+let storytellerResumeTimer = null;
+function scheduleStorytellerResume(){
+  if(storytellerResumeTimer !== null)clearTimeout(storytellerResumeTimer);
+  storytellerResumeTimer = setTimeout(()=>{
+    storytellerResumeTimer = null;
+    storytellerRuntime.resumePendingStorytellerEvent();
+  },0);
+}
+window.addEventListener("btt:game-started",scheduleStorytellerResume);
+window.addEventListener("btt:modals-closed",scheduleStorytellerResume);
+
+function selectLiveStorytellerOptions(){
+  const placeContext = world.getCurrentPlaceContext({repairWorld:false});
+  return storyteller.selectStorytellerOptions({
+    gameState:state,
+    language:getLanguage(),
+    activeSaveSlot:getActiveSlot(),
+    placeContext,
+    uiContext:ui.selectUiInteractionContext(),
+    safetyContext:ui.selectMutationSafetyContext(),
+    worldInteractionContext:world.selectWorldInteractionSafety(),
+    questSections:[
+      slumPrologue.selectCinderhookQuestLog(),
+      lowerWard.selectLowerWardQuestLog()
+    ],
+    actionSnapshots:[
+      combat.selectCombatAvailableActions(),
+      world.selectWorldAvailableActions(),
+      slumPrologue.selectCinderhookAvailableActions(state,placeContext),
+      lowerWard.selectLowerWardAvailableActions(state,placeContext)
+    ]
+  });
+}
+
 void initWebMcp({
   getState:()=>state,
   getCurrentScreen:()=>currentScreen,
@@ -123,27 +158,11 @@ void initWebMcp({
       lowerWard.selectLowerWardAvailableActions(state,placeContext)
     ];
   },
-  getStorytellerOptions:()=>{
-    const placeContext = world.getCurrentPlaceContext({repairWorld:false});
-    return storyteller.selectStorytellerOptions({
-      gameState:state,
-      language:getLanguage(),
-      placeContext,
-      uiContext:ui.selectUiInteractionContext(),
-      safetyContext:ui.selectMutationSafetyContext(),
-      worldInteractionContext:world.selectWorldInteractionSafety(),
-      questSections:[
-        slumPrologue.selectCinderhookQuestLog(),
-        lowerWard.selectLowerWardQuestLog()
-      ],
-      actionSnapshots:[
-        combat.selectCombatAvailableActions(),
-        world.selectWorldAvailableActions(),
-        slumPrologue.selectCinderhookAvailableActions(state,placeContext),
-        lowerWard.selectLowerWardAvailableActions(state,placeContext)
-      ]
-    });
-  },
+  getStorytellerOptions:selectLiveStorytellerOptions,
+  storytellerEventIds:storyteller.getStorytellerEventIds(),
+  getActiveSaveSlot:()=>getActiveSlot(),
+  executeStorytellerEvent:(eventId,freshSelection)=>storytellerRuntime.presentStorytellerEvent(eventId,freshSelection),
+  getSavedStorytellerState:slot=>slotInfo(slot)?.world?.storyteller || null,
   getMutationSafetyContext:()=>ui.selectMutationSafetyContext(),
   getSavedHero:()=>slotInfo(getActiveSlot())?.hero || null,
   executeUseItem:(itemId,options)=>combat.executeSupportedPotionUse(itemId,options),

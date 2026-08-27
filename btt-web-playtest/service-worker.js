@@ -1,4 +1,4 @@
-const APP_VERSION = "2026.08.26-webmcp-57";
+const APP_VERSION = "2026.08.27-webmcp-58";
 const CORE_CACHE = `beneath-throne-core-${APP_VERSION}`;
 const RUNTIME_CACHE = `beneath-throne-runtime-${APP_VERSION}`;
 const CACHE_PREFIX = "beneath-throne-";
@@ -9,7 +9,7 @@ const APP_SHELL = [
   "./privacy.html",
   "./terms.html",
   "./recovery.html",
-  "./styles.css?v=132",
+  "./styles.css?v=133",
   "./redesign.css?v=20",
   "./combat-animations.css?v=123",
   "./manifest.webmanifest",
@@ -17,7 +17,7 @@ const APP_SHELL = [
   "./icons/icon-512.png",
   "./icons/icon-512-maskable.png",
   "./icons/apple-touch-icon.png",
-  "./src/main.js?v=132",
+  "./src/main.js?v=133",
   "./src/abilities.js",
   "./src/audioEngine.js",
   "./src/audioHooks.js",
@@ -51,6 +51,7 @@ const APP_SHELL = [
   "./src/slumPrologue.js",
   "./src/state.js",
   "./src/storyteller.js",
+  "./src/storytellerRuntime.js",
   "./src/supporterStore.js",
   "./src/town.js",
   "./src/travelGraph.js",

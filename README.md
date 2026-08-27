@@ -6,7 +6,7 @@ The `webmcp-challenge` branch adds a thin WebMCP adapter over the existing game 
 
 ## WebMCP Challenge scope
 
-The game registers exactly nine tools—seven read-only and two guarded mutations—when `document.modelContext.registerTool` or `navigator.modelContext.registerTool` is available:
+The game registers exactly ten tools—seven read-only and three guarded mutations—when `document.modelContext.registerTool` or `navigator.modelContext.registerTool` is available:
 
 | Tool | Mode | Existing source of truth |
 |---|---|---|
@@ -19,12 +19,13 @@ The game registers exactly nine tools—seven read-only and two guarded mutation
 | `get_storyteller_options` | Read-only | Pure game-owned eligibility selector for three predefined non-combat Storyteller events |
 | `use_item` | Guarded mutation | Canonical combat potion functions; only `health_potion` and `mana_potion` |
 | `equip_item` | Guarded mutation | Canonical `gear.equip(id)` using an exact ID from the latest inventory read |
+| `trigger_story_event` | Guarded mutation | Presents one freshly eligible predefined event using its exact one-use observation token |
 
-`get_storyteller_options` can inspect only the game-defined `cinderhook_warning_messenger`, `tavern_suspicious_stranger`, and `market_cutpurse` events when their canonical eligibility conditions are met. It returns fixed EN/ES copy and an in-memory observation token but cannot present, trigger, save, or resolve an event. No `trigger_story_event` tool exists.
+`get_storyteller_options` can inspect only the game-defined `cinderhook_warning_messenger`, `tavern_suspicious_stranger`, and `market_cutpurse` events when their canonical eligibility conditions are met. Each offered event receives its own in-memory one-use token. `trigger_story_event` revalidates that exact event and context, then presents the fixed EN/ES event to the human player. It cannot choose or resolve any response.
 
-WebMCP does not expose travel, combat commands, abilities, dialogue, NPC interaction, quest acceptance or claiming, Storyteller mutation, autonomous play, arbitrary JavaScript, or arbitrary `FE.*` execution. Browsers without WebMCP continue running the normal game without registering tools.
+WebMCP does not expose travel, combat commands, abilities, dialogue choices, NPC interaction choices, quest acceptance or claiming, Storyteller resolution, autonomous play, arbitrary JavaScript, or arbitrary `FE.*` execution. Browsers without WebMCP continue running the normal game without registering tools.
 
-The adapter uses fixed schemas and routes, revalidates mutations at execution time, and returns detached JSON-safe projections. It does not change the save schema or replace existing gameplay rules.
+The adapter uses fixed schemas and routes, revalidates mutations at execution time, and returns detached JSON-safe projections. Storyteller history is a lazy, backward-compatible addition inside the existing save; there is no second save system or state store.
 
 ## Install, run, and test
 
@@ -68,9 +69,9 @@ The artifact is allowlisted to contain only:
 - `src/**/*.js` native browser modules.
 - Runtime images under `assets/` and PWA icons under `icons/`.
 
-It excludes QA and art-generation scripts, `agent-tools`, dependencies, package metadata, READMEs, environment files, logs, and local filesystem paths. For judge-facing hackathon builds it also omits the Court Ledger module, UI/routes, checkout configuration, mock grants, payment copy, and monetization setup while preserving the normal game and all nine WebMCP tools. The normal development source still contains the existing Court Ledger; only generated copies under `dist/public/` are transformed. A profile-specific build/cache suffix prevents a prior full-build cache from being reused.
+It excludes QA and art-generation scripts, `agent-tools`, dependencies, package metadata, READMEs, environment files, logs, and local filesystem paths. For judge-facing hackathon builds it also omits the Court Ledger module, UI/routes, checkout configuration, mock grants, payment copy, and monetization setup while preserving the normal game and all ten WebMCP tools. The normal development source still contains the existing Court Ledger; only generated copies under `dist/public/` are transformed. A profile-specific build/cache suffix prevents a prior full-build cache from being reused.
 
-`npm run qa:public` verifies that the source still has the development Ledger, the artifact has no Ledger/payment implementation or UI in EN/ES, its module graph is completely precached, WebMCP remains byte-for-byte unchanged, and the artifact still passes normal-game, offline-PWA, and exact-nine-tool browser tests. `dist/` is ignored and should be regenerated instead of committed. No hosting provider or deployment workflow is configured.
+`npm run qa:public` verifies that the source still has the development Ledger, the artifact has no Ledger/payment implementation or UI in EN/ES, its module graph is completely precached, WebMCP remains byte-for-byte unchanged, and the artifact still passes normal-game, offline-PWA, and exact-ten-tool browser tests. `dist/` is ignored and should be regenerated instead of committed. No hosting provider or deployment workflow is configured.
 
 ## Challenge review lineage
 
@@ -83,6 +84,7 @@ GitHub review commits on `webmcp-challenge`:
 | Six read-only WebMCP tools | `32b31d5bde2f405d2579eeb40c064e63ef70c73a` |
 | Approved eight-tool checkpoint | `2425895704f1d6cb2dbf908d3eb7a65061c96b81` |
 | Public-readiness cleanup | `8ea8c92925d352068e2db559add336eab20bdabe` |
+| Storyteller read/eligibility checkpoint | `128e6f19d7f44b52633f85693c23e8ebe74f371e` |
 
 The equivalent local commits have different object IDs because the checkpoints were mirrored to GitHub: `67b0c16`, `a9e11f6`, `c2f5c8b`, and `32c8018`.
 

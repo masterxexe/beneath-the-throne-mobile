@@ -78,6 +78,7 @@ export function startGame(){
   byId("setup").style.display = "none";
   byId("game").style.display = "block";
   show("home");
+  window.dispatchEvent(new Event("btt:game-started"));
 }
 
 export function render(){
@@ -250,10 +251,13 @@ export function modal(titleText, body, buttons=[{label:"Close",cls:"secondary"}]
     });
     root.appendChild(el);
   });
+  return div;
 }
 
 export function closeModals(){
-  document.querySelectorAll(".modal-back").forEach(x=>x.remove());
+  const modals = [...document.querySelectorAll(".modal-back")];
+  modals.forEach(x=>x.remove());
+  if(modals.length)window.dispatchEvent(new Event("btt:modals-closed"));
 }
 
 export function toast(text){

@@ -1,5 +1,6 @@
 import { dictionary, getLanguage } from "./language.js";
 import { applyGearVisuals, normalizeGearObject } from "./gearVisuals.js";
+import { normalizeStorytellerState } from "./storyteller.js";
 
 export const SAVE_PREFIX = "fallenEmpireSave_";
 export const ACTIVE_SLOT = "fallenEmpireActiveSlot";
@@ -457,6 +458,9 @@ export function normalize(){
   state.world.hardAreas.attempts ||= {};
   state.world.hardAreas.clears ||= {};
   ensureLowerWardState(num);
+  if(Object.prototype.hasOwnProperty.call(state.world,"storyteller")){
+    state.world.storyteller = normalizeStorytellerState(state.world.storyteller);
+  }
   state.world.story ||= [];
   state.kingdoms ||= createKingdoms();
   state.market ||= {items:[],day:0};

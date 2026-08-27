@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.26-webmcp-57",
-  "build": 57,
-  "cache": "v132",
-  "notes": "Adds the read-only AI Storyteller eligibility catalog and ninth WebMCP discovery tool"
+  "version": "2026.08.27-webmcp-58",
+  "build": 58,
+  "cache": "v133",
+  "notes": "Adds guarded Storyteller event presentation with one-use event-bound WebMCP tokens and human-owned choices"
 }

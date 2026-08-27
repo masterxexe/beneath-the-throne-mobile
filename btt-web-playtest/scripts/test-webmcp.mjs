@@ -29,9 +29,15 @@ const EXPECTED_TOOLS = [
   "get_player_status",
   "get_quest_log",
   "get_storyteller_options",
+  "trigger_story_event",
   "use_item"
 ];
-const READ_ONLY_TOOLS = new Set(EXPECTED_TOOLS.filter(name=>!['equip_item','use_item'].includes(name)));
+const STORYTELLER_EVENT_IDS = [
+  "cinderhook_warning_messenger",
+  "tavern_suspicious_stranger",
+  "market_cutpurse"
+];
+const READ_ONLY_TOOLS = new Set(EXPECTED_TOOLS.filter(name=>!["equip_item","trigger_story_event","use_item"].includes(name)));
 
 const MIME_TYPES = {
   ".css":"text/css; charset=utf-8",
@@ -327,7 +333,7 @@ async function testStorytellerRegistrationFailure(browser,baseUrl){
     }});
   });
   await openGame(page,baseUrl);
-  await page.waitForFunction(expected=>Object.keys(window.__WEBMCP_TEST_TOOLS || {}).length === expected,{timeout:10000},EXPECTED_TOOLS.length - 1);
+  await page.waitForFunction(expected=>Object.keys(window.__WEBMCP_TEST_TOOLS || {}).length === expected,{timeout:10000},EXPECTED_TOOLS.length - 2);
   const result = await page.evaluate(async()=>{
     window.FE.startActualGame("Partial Registration Tester","warrior");
     await new Promise(resolve=>setTimeout(resolve,350));
@@ -341,13 +347,51 @@ async function testStorytellerRegistrationFailure(browser,baseUrl){
       gameVisible:document.getElementById("game")?.style.display === "block"
     };
   });
-  const originalEight = EXPECTED_TOOLS.filter(name=>name !== "get_storyteller_options");
-  assert.deepEqual(result.toolNames,originalEight,"failure of the ninth tool must not remove any approved existing tool");
+  const originalEight = EXPECTED_TOOLS.filter(name=>!["get_storyteller_options","trigger_story_event"].includes(name));
+  assert.deepEqual(result.toolNames,originalEight,"failure of Storyteller discovery must skip its dependent trigger without removing any approved existing tool");
   assert.deepEqual(result.registeredActions,originalEight,"available actions must report only tools that actually registered");
   assert.equal(result.status.ok,true);
   assert.equal(result.gameVisible,true);
   assert.deepEqual(errors,[],`partial Storyteller registration produced browser errors: ${errors.join(" | ")}`);
   await page.close();
+
+  const triggerPage = await browser.newPage();
+  const triggerErrors = trackPageErrors(triggerPage);
+  await triggerPage.evaluateOnNewDocument(()=>{
+    const tools = {};
+    Object.defineProperty(document,"modelContext",{configurable:true,value:{
+      registerTool(tool){
+        if(tool?.name === "trigger_story_event")throw new Error("Intentional Storyteller trigger registration failure");
+        tools[tool.name] = tool;
+        window.__WEBMCP_TEST_TOOLS = tools;
+      }
+    }});
+  });
+  await openGame(triggerPage,baseUrl);
+  await triggerPage.waitForFunction(expected=>Object.keys(window.__WEBMCP_TEST_TOOLS || {}).length === expected,{timeout:10000},EXPECTED_TOOLS.length - 1);
+  const triggerResult = await triggerPage.evaluate(async()=>{
+    window.FE.startActualGame("Trigger Registration Tester","warrior");
+    await new Promise(resolve=>setTimeout(resolve,350));
+    window.FE.closeModals();
+    const options = await window.__WEBMCP_TEST_TOOLS.get_storyteller_options.execute({});
+    const actions = await window.__WEBMCP_TEST_TOOLS.get_available_actions.execute({});
+    return {
+      toolNames:Object.keys(window.__WEBMCP_TEST_TOOLS).sort(),
+      options,
+      registeredActions:actions.actions.webmcp_invocable.map(action=>action.id).sort()
+    };
+  });
+  const withoutTrigger = EXPECTED_TOOLS.filter(name=>name !== "trigger_story_event");
+  assert.deepEqual(triggerResult.toolNames,withoutTrigger,"a failed trigger registration must preserve discovery and every existing tool");
+  assert.deepEqual(triggerResult.registeredActions,withoutTrigger,"available actions must omit a trigger that did not register");
+  assert.equal(triggerResult.options.ok,true);
+  assert.equal(triggerResult.options.storyteller.mutation_available,false);
+  assert.equal(triggerResult.options.storyteller.trigger_tool,null);
+  assert.equal(triggerResult.options.storyteller.decision_token,null);
+  assert.equal(triggerResult.options.storyteller.decision_token_status,"trigger_unavailable");
+  assert.ok(triggerResult.options.storyteller.eligible_events.every(event=>event.token === null && event.token_status === "trigger_unavailable"));
+  assert.deepEqual(triggerErrors,[],`isolated trigger registration failure produced browser errors: ${triggerErrors.join(" | ")}`);
+  await triggerPage.close();
 }
 
 async function testCourtLedgerProfile(browser,baseUrl){
@@ -433,7 +477,7 @@ async function testCourtLedgerProfile(browser,baseUrl){
     ))};
   }
 
-  assert.deepEqual(result.toolNames,EXPECTED_TOOLS,"the deployment profile must preserve exactly the approved nine WebMCP tools");
+  assert.deepEqual(result.toolNames,EXPECTED_TOOLS,"the deployment profile must preserve exactly the approved ten WebMCP tools");
   if(HACKATHON_PROFILE){
     assert.equal(result.ledgerButton,false,"hackathon artifact must not render a Court Ledger action");
     assert.equal(result.supportScreen,false,"hackathon artifact must not contain a Court Ledger screen");
@@ -489,6 +533,7 @@ async function testWithWebMcp(browser,baseUrl){
     properties:Object.keys(tool.inputSchema?.properties || {}),
     required:tool.inputSchema?.required || [],
     itemEnum:tool.inputSchema?.properties?.item_id?.enum || null,
+    eventEnum:tool.inputSchema?.properties?.event_id?.enum || null,
     additionalProperties:tool.inputSchema?.additionalProperties
   })).sort((a,b)=>a.name.localeCompare(b.name)));
   assert.deepEqual(registration.map(tool=>tool.name),EXPECTED_TOOLS);
@@ -504,6 +549,12 @@ async function testWithWebMcp(browser,baseUrl){
     assert.equal(tool.readOnly,false,`${tool.name} must be marked as a mutation`);
     assert.equal(tool.idempotent,false);
     assert.equal(tool.openWorld,false);
+    if(tool.name === "trigger_story_event"){
+      assert.deepEqual(tool.properties,["event_id","token"]);
+      assert.deepEqual(tool.required,["event_id","token"]);
+      assert.deepEqual(tool.eventEnum,STORYTELLER_EVENT_IDS);
+      continue;
+    }
     assert.deepEqual(tool.properties,["item_id"]);
     assert.deepEqual(tool.required,["item_id"]);
   }
@@ -511,6 +562,8 @@ async function testWithWebMcp(browser,baseUrl){
   assert.deepEqual(registration.find(tool=>tool.name === "use_item").itemEnum,["health_potion","mana_potion"]);
   assert.equal(registration.find(tool=>tool.name === "equip_item").destructive,false);
   assert.equal(registration.find(tool=>tool.name === "equip_item").itemEnum,null);
+  assert.equal(registration.find(tool=>tool.name === "trigger_story_event").destructive,true);
+  assert.equal(registration.find(tool=>tool.name === "trigger_story_event").itemEnum,null);
 
   const titleResponses = await page.evaluate(async()=>{
     const entries = await Promise.all(Object.entries(window.__WEBMCP_TEST_TOOLS).map(async([name,tool])=>[
@@ -650,8 +703,8 @@ async function testWithWebMcp(browser,baseUrl){
   const storyteller = actual.responses.get_storyteller_options;
   assert.equal(storyteller.ok,true);
   assert.equal(storyteller.storyteller.status,"ready");
-  assert.equal(storyteller.storyteller.mutation_available,false);
-  assert.equal(storyteller.storyteller.trigger_tool,null);
+  assert.equal(storyteller.storyteller.mutation_available,true);
+  assert.equal(storyteller.storyteller.trigger_tool,"trigger_story_event");
   assert.equal(storyteller.storyteller.eligible_event_count,3);
   assert.deepEqual(
     storyteller.storyteller.eligible_events.map(event=>event.event_id),
@@ -660,13 +713,17 @@ async function testWithWebMcp(browser,baseUrl){
   assert.equal(new Set(storyteller.storyteller.eligible_events.map(event=>event.event_id)).size,3,"Storyteller options must not contain duplicate event IDs");
   assert.match(storyteller.storyteller.decision_token,/^story-[0-9a-f-]{32,36}$/);
   assert.equal(storyteller.storyteller.decision_token_status,"issued");
+  assert.equal(storyteller.storyteller.decision_event_id,storyteller.storyteller.eligible_events[0].event_id);
+  assert.equal(storyteller.storyteller.decision_token,storyteller.storyteller.eligible_events[0].token,"the legacy top-level token must alias only the first event token");
+  assert.equal(new Set(storyteller.storyteller.eligible_events.map(event=>event.token)).size,3,"each eligible event must receive a distinct token");
+  assert.ok(storyteller.storyteller.eligible_events.every(event=>/^story-[0-9a-f-]{32,36}$/.test(event.token) && event.token_status === "issued"));
   assert.ok(storyteller.storyteller.eligible_events.every(event=>event.human_choices.every(choice=>(
     choice.interaction_owner === "player_ui"
       && choice.currently_presented === false
       && choice.webmcp_invocable === false
   ))));
   assert.doesNotMatch(JSON.stringify(storyteller),/eligibilityKey|eligibility_key|futureRoute|requiredActionId|serviceEventId|callback|predicate|effect|FE\./);
-  assert.ok(!EXPECTED_TOOLS.includes("trigger_story_event"),"no Storyteller mutation tool may be registered in this checkpoint");
+  assert.ok(EXPECTED_TOOLS.includes("trigger_story_event"),"the guarded Storyteller presentation tool must be the only added mutation");
   assert.equal(actual.responses.get_available_actions.ok,true);
   assert.equal(actual.responses.get_available_actions.mutation_tools_enabled,true);
   assert.deepEqual(
@@ -683,7 +740,7 @@ async function testWithWebMcp(browser,baseUrl){
       .filter(action=>action.modifies_game_state)
       .map(action=>action.id)
       .sort(),
-    ["equip_item","use_item"]
+    ["equip_item","trigger_story_event","use_item"]
   );
   assert.doesNotMatch(JSON.stringify(actual.responses.get_quest_log),/FE\./,"quest projections must not expose executable UI strings");
   assert.equal(actual.reread.status.player.name,"WebMCP Tester","player status must be a detached copy");
@@ -701,8 +758,10 @@ async function testWithWebMcp(browser,baseUrl){
     actual.responses.get_storyteller_options.storyteller.decision_token,
     "each eligible read must replace the prior in-memory decision receipt"
   );
-  assert.ok(!actual.before.includes(actual.responses.get_storyteller_options.storyteller.decision_token),"decision tokens must never be stored in live state");
-  assert.ok(!String(actual.saveAfter).includes(actual.responses.get_storyteller_options.storyteller.decision_token),"decision tokens must never be persisted");
+  for(const token of actual.responses.get_storyteller_options.storyteller.eligible_events.map(event=>event.token)){
+    assert.ok(!actual.before.includes(token),"decision tokens must never be stored in live state");
+    assert.ok(!String(actual.saveAfter).includes(token),"decision tokens must never be persisted");
+  }
   assert.deepEqual(
     actual.storytellerReadEffectAfter,
     actual.storytellerReadEffectBefore,
@@ -1387,6 +1446,13 @@ async function testWithWebMcp(browser,baseUrl){
         calendar:{month:2,day:3,ordinal:33}
       },
       cooldown:{globalReady:true,globalDaysRemaining:0},
+      eventEligibilityStates:[{
+        eventId:"fixture_story",
+        eligible:true,
+        reasonCode:null,
+        eligibleAfterOrdinal:null,
+        daysRemaining:0
+      }],
       eligibleEvents:[storytellerEvent],
       privateState:{mustNotEscape:true}
     };
@@ -1462,7 +1528,7 @@ async function testWithWebMcp(browser,baseUrl){
   assert.equal(projection.totalDefense,8);
   assert.deepEqual(projection.registeredReadTools,["get_quest_log","get_available_actions"]);
   assert.deepEqual(projection.storytellerEventKeys,[
-    "category","context","cooldown","eligibility_reason","eligibility_reason_code","event_id","human_choices","setup_text","title"
+    "category","context","cooldown","eligibility_reason","eligibility_reason_code","event_id","human_choices","setup_text","title","token","token_status"
   ]);
   assert.deepEqual(projection.storytellerChoiceKeys,["choice_id","currently_presented","interaction_owner","label","webmcp_invocable"]);
   assert.equal(projection.sourceStoryTitle,"Fixture Story","Storyteller titles must be defensively copied");
@@ -1509,11 +1575,20 @@ async function testWithWebMcp(browser,baseUrl){
         calendar:{month:1,day:1,ordinal:1}
       },
       cooldown:{globalReady:true,globalDaysRemaining:0},
+      eventEligibilityStates:[{
+        eventId:"fixture_story",
+        eligible:true,
+        reasonCode:null,
+        eligibleAfterOrdinal:null,
+        daysRemaining:0
+      }],
       eligibleEvents:[event]
     };
     const execute = (selected,extra = {})=>createWebMcpTools({
       getState:()=>gameState,
       getStorytellerOptions:()=>selected,
+      storytellerEventIds:["fixture_story"],
+      getActiveSaveSlot:()=>1,
       ...extra
     }).find(tool=>tool.name === "get_storyteller_options").execute({});
 
@@ -1739,6 +1814,491 @@ async function testWithWebMcp(browser,baseUrl){
   await page.close();
 }
 
+async function testStorytellerMutation(browser,baseUrl){
+  const page = await browser.newPage();
+  const errors = trackPageErrors(page);
+  await page.evaluateOnNewDocument(()=>{
+    const tools = {};
+    Object.defineProperty(document,"modelContext",{configurable:true,value:{
+      registerTool(tool){
+        if(!tool?.name || typeof tool.execute !== "function")throw new Error("Invalid WebMCP tool");
+        tools[tool.name] = tool;
+        window.__WEBMCP_TEST_TOOLS = tools;
+      }
+    }});
+  });
+  await openGame(page,baseUrl);
+  await page.waitForFunction(expected=>Object.keys(window.__WEBMCP_TEST_TOOLS || {}).length === expected,{timeout:10000},EXPECTED_TOOLS.length);
+
+  const result = await page.evaluate(async()=>{
+    window.FE.startActualGame("Storyteller Mutation Tester","warrior");
+    await new Promise(resolve=>setTimeout(resolve,350));
+    window.FE.closeModals();
+    const stateModule = await import("./src/state.js");
+    const languageModule = await import("./src/language.js");
+    const combatModule = await import("./src/combat.js");
+    const worldModule = await import("./src/world.js");
+    const tools = window.__WEBMCP_TEST_TOOLS;
+    const eventIds = [
+      "cinderhook_warning_messenger",
+      "tavern_suspicious_stranger",
+      "market_cutpurse"
+    ];
+    const baseline = JSON.parse(JSON.stringify(stateModule.state));
+    const saveKey = "fallenEmpireSave_1";
+    const pause = (ms = 30)=>new Promise(resolve=>setTimeout(resolve,ms));
+    const clearUi = ()=>{
+      window.FE.closeModals();
+      document.querySelectorAll(".level-up-back,.encounter-transition,.court-crier-overlay,.toast").forEach(node=>node.remove());
+    };
+    const reset = async(language = "en")=>{
+      if(combatModule.battle)combatModule.runBattle();
+      try{worldModule.cancelTravel();}catch{}
+      clearUi();
+      languageModule.setLanguage(language);
+      stateModule.setState(JSON.parse(JSON.stringify(baseline)));
+      window.FE.show("home");
+      stateModule.save(1);
+      await pause();
+      clearUi();
+    };
+    const storageSnapshot = ()=>JSON.stringify(Object.keys(localStorage).sort().map(key=>[key,localStorage.getItem(key)]));
+    const failureSnapshot = ()=>(
+      {
+        state:JSON.stringify(stateModule.state),
+        storage:storageSnapshot(),
+        pendingMarkers:[...document.querySelectorAll("[data-storyteller-event]")].map(node=>({
+          eventId:node.getAttribute("data-storyteller-event"),
+          sequence:node.getAttribute("data-storyteller-sequence")
+        }))
+      }
+    );
+    const failedAttempt = async(input)=>{
+      const before = failureSnapshot();
+      const response = await tools.trigger_story_event.execute(input);
+      const after = failureSnapshot();
+      return {
+        response,
+        unchanged:{
+          state:before.state === after.state,
+          storage:before.storage === after.storage,
+          pendingMarkers:JSON.stringify(before.pendingMarkers) === JSON.stringify(after.pendingMarkers)
+        }
+      };
+    };
+    const discover = async()=>tools.get_storyteller_options.execute({});
+    const option = (options,eventId)=>options.storyteller.eligible_events.find(event=>event.event_id === eventId);
+    const clickSecondChoice = async(eventId)=>{
+      const marker = document.querySelector(`[data-storyteller-event="${eventId}"]`);
+      const buttons = [...(marker?.closest(".modal-back")?.querySelectorAll("button") || [])];
+      buttons[1]?.click();
+      await pause(50);
+      return buttons[1]?.textContent?.trim() || null;
+    };
+    const present = async(eventId,language = "en")=>{
+      await reset(language);
+      const discovered = await discover();
+      const selected = option(discovered,eventId);
+      const stateBefore = JSON.stringify(stateModule.state);
+      const saveBefore = localStorage.getItem(saveKey);
+      const response = await tools.trigger_story_event.execute({event_id:eventId,token:selected.token});
+      const responseForAssertions = JSON.parse(JSON.stringify(response));
+      const afterExecutionState = JSON.stringify(stateModule.state);
+      const afterExecutionStorage = storageSnapshot();
+      response.event_title = "Changed detached response";
+      response.available_human_choice_ids?.push("fake_choice");
+      const responseDetached = afterExecutionState === JSON.stringify(stateModule.state)
+        && afterExecutionStorage === storageSnapshot();
+      const marker = document.querySelector(`[data-storyteller-event="${eventId}"]`);
+      const modalRoot = marker?.closest(".modal-back") || null;
+      const liveStoryteller = JSON.parse(JSON.stringify(stateModule.state.world.storyteller || null));
+      const savedStoryteller = JSON.parse(localStorage.getItem(saveKey))?.world?.storyteller || null;
+      const whilePresented = await discover();
+      const secondLabel = await clickSecondChoice(eventId);
+      const resolvedStoryteller = JSON.parse(JSON.stringify(stateModule.state.world.storyteller || null));
+      const resolvedSavedStoryteller = JSON.parse(localStorage.getItem(saveKey))?.world?.storyteller || null;
+      const afterResolution = await discover();
+      return {
+        discovered,
+        response:responseForAssertions,
+        responseDetached,
+        modal:{
+          present:!!modalRoot,
+          title:modalRoot?.querySelector("h2")?.textContent?.trim() || null,
+          buttons:[...(modalRoot?.querySelectorAll("button") || [])].map(button=>button.textContent.trim())
+        },
+        stateChanged:stateBefore !== JSON.stringify(stateModule.state),
+        saveChanged:saveBefore !== localStorage.getItem(saveKey),
+        liveStoryteller,
+        savedStoryteller,
+        whilePresented,
+        secondLabel,
+        resolvedStoryteller,
+        resolvedSavedStoryteller,
+        afterResolution
+      };
+    };
+    const followAffirmativeRoute = async(eventId)=>{
+      await reset("en");
+      const discovered = await discover();
+      const selected = option(discovered,eventId);
+      const goldBefore = stateModule.state.hero.gold;
+      const storyCountBefore = stateModule.state.world.story?.length || 0;
+      const gangBefore = JSON.stringify(stateModule.state.prologue?.gang || null);
+      const response = await tools.trigger_story_event.execute({event_id:eventId,token:selected.token});
+      const marker = document.querySelector(`[data-storyteller-event="${eventId}"]`);
+      const firstChoiceLabel = marker?.closest(".modal-back")?.querySelector("button")?.textContent?.trim() || null;
+      marker?.closest(".modal-back")?.querySelector("button")?.click();
+      await pause(100);
+      const activeScreen = document.querySelector(".screen.active")?.id || null;
+      const modalRoot = document.querySelector(".modal-back");
+      const dialogue = document.querySelector("#town .scene-dialogue-panel");
+      const currentStoryteller = JSON.parse(JSON.stringify(stateModule.state.world.storyteller || null));
+      const saved = JSON.parse(localStorage.getItem(saveKey));
+      return {
+        response,
+        firstChoiceLabel,
+        goldBefore,
+        goldAfter:stateModule.state.hero.gold,
+        storyCountBefore,
+        storyCountAfter:stateModule.state.world.story?.length || 0,
+        gangBefore,
+        gangAfter:JSON.stringify(stateModule.state.prologue?.gang || null),
+        combatActive:!!combatModule.battle,
+        activeScreen,
+        modalTitle:modalRoot?.querySelector("h2")?.textContent?.trim() || null,
+        modalButtons:[...(modalRoot?.querySelectorAll("button") || [])].map(button=>button.textContent.trim()),
+        dialogueTitle:dialogue?.querySelector("h2")?.textContent?.trim() || null,
+        dialogueButtons:[...(dialogue?.querySelectorAll("button") || [])].map(button=>button.textContent.trim()),
+        sceneResult:document.querySelector("#town .scene-result")?.textContent?.trim() || null,
+        dailyEvents:{...(stateModule.state.world.dailyLocationEvents || {})},
+        currentStoryteller,
+        savedStoryteller:saved?.world?.storyteller || null,
+        savedGold:saved?.hero?.gold,
+        savedStoryCount:saved?.world?.story?.length || 0
+      };
+    };
+
+    await reset();
+    const tokenOptions = await discover();
+    const tokenRecords = tokenOptions.storyteller.eligible_events.map(event=>(
+      {eventId:event.event_id,token:event.token,tokenStatus:event.token_status}
+    ));
+    const topTokenAlias = {
+      eventId:tokenOptions.storyteller.decision_event_id,
+      token:tokenOptions.storyteller.decision_token
+    };
+
+    const missingToken = await failedAttempt({event_id:eventIds[0]});
+    const extraField = await failedAttempt({event_id:eventIds[0],token:tokenRecords[0].token,choice_id:"send_away"});
+    const malformedToken = await failedAttempt({event_id:eventIds[0],token:"not-a-story-token"});
+    const modifiedTokenValue = `${tokenRecords[0].token.slice(0,-1)}${tokenRecords[0].token.endsWith("a") ? "b" : "a"}`;
+    const modifiedToken = await failedAttempt({event_id:eventIds[0],token:modifiedTokenValue});
+    const unknownEvent = await failedAttempt({event_id:"unknown_story_event",token:tokenRecords[0].token});
+    const mismatchedEvent = await failedAttempt({event_id:eventIds[1],token:tokenRecords[0].token});
+    const validAfterMismatch = await tools.trigger_story_event.execute({event_id:eventIds[0],token:tokenRecords[0].token});
+    const validAfterMismatchPending = JSON.parse(JSON.stringify(stateModule.state.world.storyteller?.pending || null));
+    await clickSecondChoice(eventIds[0]);
+    const replay = await failedAttempt({event_id:eventIds[0],token:tokenRecords[0].token});
+
+    await reset();
+    const supersededOptions = await discover();
+    const supersededToken = option(supersededOptions,eventIds[0]).token;
+    const replacementOptions = await discover();
+    const replacementToken = option(replacementOptions,eventIds[0]).token;
+    const superseded = await failedAttempt({event_id:eventIds[0],token:supersededToken});
+
+    await reset();
+    const staleOptions = await discover();
+    const staleToken = option(staleOptions,eventIds[0]).token;
+    stateModule.state.world.day += 1;
+    const stale = await failedAttempt({event_id:eventIds[0],token:staleToken});
+
+    await reset();
+    const modalOptions = await discover();
+    window.FE.modal("Blocking test","<p>Player interaction remains open.</p>",[{label:"Close"}]);
+    const modalBlocked = await failedAttempt({event_id:eventIds[0],token:option(modalOptions,eventIds[0]).token});
+    clearUi();
+
+    await reset();
+    const travelOptions = await discover();
+    worldModule.debugEnterRoadStopScene("ashen_gate","market_town");
+    const travelBlocked = await failedAttempt({event_id:eventIds[0],token:option(travelOptions,eventIds[0]).token});
+
+    await reset();
+    const combatOptions = await discover();
+    combatModule.startBattle([{
+      name:"Storyteller Test Dummy",role:"test",level:1,hp:500,maxHp:500,attack:1,defense:0,speed:-100,xp:0,gold:0
+    }],"Storyteller blocker test.",{source:"webmcp-storyteller-test"});
+    const combatBlocked = await failedAttempt({event_id:eventIds[0],token:option(combatOptions,eventIds[0]).token});
+
+    await reset();
+    const progressionOptions = await discover();
+    stateModule.state.hero.gold = 0;
+    const progressionBlocked = await failedAttempt({event_id:eventIds[2],token:option(progressionOptions,eventIds[2]).token});
+
+    await reset();
+    const eventCooldownOptions = await discover();
+    stateModule.state.world.storyteller = {
+      version:1,sequence:1,pending:null,globalEligibleAfterOrdinal:0,
+      lastByEvent:{
+        tavern_suspicious_stranger:{seenCount:1,lastOrdinal:1,eligibleAfterOrdinal:5,lastChoiceId:"let_them_leave",status:"resolved"}
+      },
+      history:[]
+    };
+    const eventCooldownBlocked = await failedAttempt({event_id:eventIds[1],token:option(eventCooldownOptions,eventIds[1]).token});
+
+    await reset();
+    const occurrenceOptions = await discover();
+    stateModule.state.world.storyteller = {
+      version:1,sequence:1,pending:null,globalEligibleAfterOrdinal:0,
+      lastByEvent:{
+        cinderhook_warning_messenger:{seenCount:1,lastOrdinal:1,eligibleAfterOrdinal:4,lastChoiceId:"send_away",status:"resolved"}
+      },
+      history:[]
+    };
+    const occurrenceBlocked = await failedAttempt({event_id:eventIds[0],token:option(occurrenceOptions,eventIds[0]).token});
+
+    await reset();
+    const globalCooldownOptions = await discover();
+    stateModule.state.world.storyteller = {
+      version:1,sequence:0,pending:null,globalEligibleAfterOrdinal:2,lastByEvent:{},history:[]
+    };
+    const globalCooldownBlocked = await failedAttempt({event_id:eventIds[1],token:option(globalCooldownOptions,eventIds[1]).token});
+
+    const englishWarning = await present(eventIds[0],"en");
+    const spanishTavern = await present(eventIds[1],"es");
+    const englishMarket = await present(eventIds[2],"en");
+
+    await reset("en");
+    const pendingOptions = await discover();
+    const pendingEvent = option(pendingOptions,eventIds[2]);
+    const pendingResponse = await tools.trigger_story_event.execute({event_id:eventIds[2],token:pendingEvent.token});
+    const pendingBeforeReload = JSON.parse(JSON.stringify(stateModule.state.world.storyteller));
+    window.FE.closeModals();
+    const optionsWithHiddenPending = await discover();
+    window.FE.loadFromSlot(1);
+    await pause(120);
+    const reloadMarker = document.querySelector(`[data-storyteller-event="${eventIds[2]}"]`);
+    const pendingAfterReload = JSON.parse(JSON.stringify(stateModule.state.world.storyteller));
+    const savedAfterReload = JSON.parse(localStorage.getItem(saveKey))?.world?.storyteller || null;
+    const reload = {
+      pendingResponse,
+      pendingBeforeReload,
+      optionsWithHiddenPending,
+      markerPresent:!!reloadMarker,
+      markerSequence:Number(reloadMarker?.getAttribute("data-storyteller-sequence")),
+      modalTitle:reloadMarker?.closest(".modal-back")?.querySelector("h2")?.textContent?.trim() || null,
+      pendingAfterReload,
+      savedAfterReload
+    };
+    await clickSecondChoice(eventIds[2]);
+
+    await reset("en");
+    const bootBlockedOptions = await discover();
+    const bootBlockedEvent = option(bootBlockedOptions,eventIds[1]);
+    const bootBlockedResponse = await tools.trigger_story_event.execute({
+      event_id:eventIds[1],
+      token:bootBlockedEvent.token
+    });
+    const bootBlockedHistoryLength = stateModule.state.world.storyteller.history.length;
+    stateModule.queueAbilityMilestone(5,stateModule.state.hero);
+    stateModule.save(1);
+    window.FE.closeModals();
+    window.FE.loadFromSlot(1);
+    await pause(120);
+    const startupModal = document.querySelector(".modal-back");
+    const startupModalTitle = startupModal?.querySelector("h2")?.textContent?.trim() || null;
+    const storyVisibleBehindStartupModal = !!document.querySelector(`[data-storyteller-event="${eventIds[1]}"]`);
+    startupModal?.querySelector("button")?.click();
+    await pause(160);
+    const resumedAfterStartupMarker = document.querySelector(`[data-storyteller-event="${eventIds[1]}"]`);
+    const bootBlockedReload = {
+      response:bootBlockedResponse,
+      startupModalTitle,
+      storyVisibleBehindStartupModal,
+      resumed:!!resumedAfterStartupMarker,
+      resumedSequence:Number(resumedAfterStartupMarker?.getAttribute("data-storyteller-sequence")),
+      pending:JSON.parse(JSON.stringify(stateModule.state.world.storyteller.pending)),
+      historyLength:stateModule.state.world.storyteller.history.length,
+      originalHistoryLength:bootBlockedHistoryLength,
+      abilityPendingCount:stateModule.state.hero.abilityMilestones.pending.length
+    };
+    await clickSecondChoice(eventIds[1]);
+
+    const affirmativeRoutes = {
+      warning:await followAffirmativeRoute(eventIds[0]),
+      tavern:await followAffirmativeRoute(eventIds[1]),
+      market:await followAffirmativeRoute(eventIds[2])
+    };
+
+    const allFailureCases = {
+      missingToken,extraField,malformedToken,modifiedToken,unknownEvent,mismatchedEvent,replay,
+      superseded,stale,modalBlocked,travelBlocked,combatBlocked,progressionBlocked,
+      eventCooldownBlocked,occurrenceBlocked,globalCooldownBlocked
+    };
+    return {
+      tokenRecords,topTokenAlias,replacementToken,
+      allFailureCases,
+      validAfterMismatch,validAfterMismatchPending,
+      successes:{englishWarning,spanishTavern,englishMarket},
+      reload,
+      bootBlockedReload,
+      affirmativeRoutes,
+      finalState:JSON.stringify(stateModule.state),
+      finalStorage:storageSnapshot()
+    };
+  });
+
+  assert.deepEqual(result.tokenRecords.map(record=>record.eventId),STORYTELLER_EVENT_IDS);
+  assert.equal(new Set(result.tokenRecords.map(record=>record.token)).size,STORYTELLER_EVENT_IDS.length,"each event must have its own token");
+  assert.ok(result.tokenRecords.every(record=>/^story-[A-Za-z0-9-]{14,122}$/.test(record.token) && record.tokenStatus === "issued"));
+  assert.deepEqual(result.topTokenAlias,{eventId:result.tokenRecords[0].eventId,token:result.tokenRecords[0].token});
+  assert.notEqual(result.replacementToken,result.tokenRecords[0].token,"a later discovery must issue a fresh receipt set");
+
+  const expectedFailureCodes = {
+    missingToken:"invalid_arguments",
+    extraField:"invalid_arguments",
+    malformedToken:"invalid_token",
+    modifiedToken:"decision_token_mismatch",
+    unknownEvent:"unknown_event_id",
+    mismatchedEvent:"event_token_mismatch",
+    replay:"decision_token_mismatch",
+    superseded:"decision_token_mismatch",
+    stale:"stale_decision",
+    modalBlocked:"blocking_interaction",
+    travelBlocked:"travel_in_progress",
+    combatBlocked:"combat_active",
+    progressionBlocked:"progression_requirement_unmet",
+    eventCooldownBlocked:"event_cooldown",
+    occurrenceBlocked:"max_occurrences_reached",
+    globalCooldownBlocked:"global_cooldown"
+  };
+  for(const [name,code] of Object.entries(expectedFailureCodes)){
+    const failure = result.allFailureCases[name];
+    assert.equal(failure.response.ok,false,`${name} must fail closed`);
+    assert.equal(failure.response.success,false,`${name} must not claim success`);
+    assert.equal(failure.response.error.code,code,`${name} must report its precise failure reason`);
+    assert.deepEqual(failure.unchanged,{state:true,storage:true,pendingMarkers:true},`${name} must not alter game state, localStorage, or Storyteller UI`);
+  }
+  assert.equal(result.allFailureCases.missingToken.response.token_consumed,false);
+  assert.equal(result.allFailureCases.mismatchedEvent.response.token_consumed,false,"an event/token mismatch must not consume the valid event receipt");
+  assert.equal(result.allFailureCases.stale.response.token_consumed,true,"a matching one-use token must be consumed before execution-time revalidation");
+  assert.equal(result.validAfterMismatch.success,true,"event/token mismatch must leave the token usable for its exact event");
+  assert.equal(result.validAfterMismatch.event_id,STORYTELLER_EVENT_IDS[0]);
+  assert.equal(result.validAfterMismatchPending.eventId,STORYTELLER_EVENT_IDS[0]);
+
+  const expectedPresentations = {
+    englishWarning:{eventId:STORYTELLER_EVENT_IDS[0],title:"A Warning at the Door",buttons:["Hear the warning","Send the messenger away"],second:"Send the messenger away"},
+    spanishTavern:{eventId:STORYTELLER_EVENT_IDS[1],title:"El desconocido encapuchado",buttons:["Seguirlo dentro de la taberna","Dejar que se marche"],second:"Dejar que se marche"},
+    englishMarket:{eventId:STORYTELLER_EVENT_IDS[2],title:"A Hand in the Crowd",buttons:["Enter the market","Guard your purse and move on"],second:"Guard your purse and move on"}
+  };
+  for(const [name,expected] of Object.entries(expectedPresentations)){
+    const success = result.successes[name];
+    assert.equal(success.response.ok,true,`${name} must be accepted`);
+    assert.equal(success.response.accepted,true);
+    assert.equal(success.response.success,true);
+    assert.equal(success.response.event_id,expected.eventId);
+    assert.equal(success.response.event_title,expected.title);
+    assert.equal(success.response.event_presented,true);
+    assert.equal(success.response.token_consumed,true);
+    assert.equal(success.response.presentation_status,"presented");
+    assert.equal(success.response.awaiting_player_choice,true);
+    assert.equal(success.response.human_action_required,true);
+    assert.equal(success.response.interaction_owner,"player_ui");
+    assert.equal(success.response.save_persisted,true);
+    assert.equal(success.response.error,null);
+    assert.equal(success.responseDetached,true,"mutating the returned trigger projection must not alter live or saved game state");
+    assert.deepEqual(success.response.available_human_choice_ids,success.discovered.storyteller.eligible_events.find(event=>event.event_id === expected.eventId).human_choices.map(choice=>choice.choice_id));
+    assert.equal(success.modal.present,true);
+    assert.equal(success.modal.title,expected.title);
+    assert.deepEqual(success.modal.buttons,expected.buttons);
+    assert.equal(success.secondLabel,expected.second);
+    assert.equal(success.liveStoryteller.pending.eventId,expected.eventId);
+    assert.equal(success.liveStoryteller.pending.sequence,success.response.pending_sequence);
+    assert.deepEqual(success.savedStoryteller.pending,success.liveStoryteller.pending,"pending presentation must be saved before the tool reports success");
+    assert.equal(success.liveStoryteller.history.at(-1).status,"presented","WebMCP must not auto-select a human choice");
+    assert.equal(success.liveStoryteller.history.at(-1).choiceId,null);
+    assert.equal(success.liveStoryteller.history.at(-1).outcomeId,null);
+    assert.equal(success.whilePresented.storyteller.status,"blocked");
+    assert.equal(success.whilePresented.storyteller.blocked_reason.code,"blocking_interaction");
+    assert.equal(success.whilePresented.storyteller.decision_token,null);
+    assert.equal(success.resolvedStoryteller.pending,null);
+    assert.equal(success.resolvedStoryteller.history.at(-1).status,"resolved");
+    assert.equal(success.resolvedStoryteller.history.at(-1).choiceId,success.response.available_human_choice_ids[1]);
+    assert.equal(success.resolvedSavedStoryteller.history.at(-1).choiceId,success.response.available_human_choice_ids[1]);
+    assert.equal(success.afterResolution.storyteller.status,"blocked");
+    assert.equal(success.afterResolution.storyteller.blocked_reason.code,"global_cooldown");
+    assert.equal(success.stateChanged,true);
+    assert.equal(success.saveChanged,true);
+    assert.doesNotMatch(JSON.stringify(success.response),/eligibilityKey|eligibility_key|callback|route|effect|FE\./);
+  }
+
+  assert.equal(result.reload.pendingResponse.success,true);
+  assert.equal(result.reload.optionsWithHiddenPending.storyteller.blocked_reason.code,"pending_story_event","a persisted pending event must block new discovery even when its modal is manually closed");
+  assert.equal(result.reload.markerPresent,true,"loading a save with a pending event must re-present the human-choice modal");
+  assert.equal(result.reload.markerSequence,result.reload.pendingBeforeReload.pending.sequence);
+  assert.equal(result.reload.modalTitle,"A Hand in the Crowd");
+  assert.deepEqual(result.reload.pendingAfterReload.pending,result.reload.pendingBeforeReload.pending);
+  assert.deepEqual(result.reload.savedAfterReload.pending,result.reload.pendingBeforeReload.pending);
+  assert.equal(result.reload.pendingAfterReload.history.length,result.reload.pendingBeforeReload.history.length,"reload must not append a second presentation history row");
+
+  assert.equal(result.bootBlockedReload.response.success,true);
+  assert.match(result.bootBlockedReload.startupModalTitle,/Ability Milestone/i,"the canonical startup progression modal must retain priority");
+  assert.equal(result.bootBlockedReload.storyVisibleBehindStartupModal,false,"Storyteller must not replace a startup progression choice");
+  assert.equal(result.bootBlockedReload.resumed,true,"the saved Storyteller event must retry after the startup modal closes");
+  assert.equal(result.bootBlockedReload.resumedSequence,result.bootBlockedReload.pending.sequence);
+  assert.equal(result.bootBlockedReload.historyLength,result.bootBlockedReload.originalHistoryLength,"retrying a saved pending event must not duplicate history");
+  assert.equal(result.bootBlockedReload.abilityPendingCount,0);
+
+  const warningRoute = result.affirmativeRoutes.warning;
+  assert.equal(warningRoute.response.success,true);
+  assert.equal(warningRoute.firstChoiceLabel,"Hear the warning");
+  assert.equal(warningRoute.currentStoryteller.pending,null);
+  assert.equal(warningRoute.currentStoryteller.history.at(-1).choiceId,"hear_warning");
+  assert.equal(warningRoute.modalTitle,"Gang Pressure","the affirmative warning choice must route to the canonical Dock Rats decision UI");
+  assert.deepEqual(warningRoute.modalButtons,["Pay 12 Gold","Refuse Enforcer","Close"]);
+  assert.equal(warningRoute.goldAfter,warningRoute.goldBefore,"presenting the gang decision must not pay the Dock Rats automatically");
+  assert.equal(warningRoute.combatActive,false,"presenting the gang decision must not fight the enforcer automatically");
+  assert.equal(warningRoute.gangAfter,warningRoute.gangBefore,"the gang state must remain untouched until the player chooses Pay or Refuse");
+  assert.equal(warningRoute.storyCountAfter,warningRoute.storyCountBefore + 1,"only the fixed Storyteller outcome should be logged before the next player choice");
+  assert.equal(warningRoute.savedGold,warningRoute.goldBefore);
+  assert.equal(warningRoute.savedStoryCount,warningRoute.storyCountAfter);
+
+  const tavernRoute = result.affirmativeRoutes.tavern;
+  assert.equal(tavernRoute.response.success,true);
+  assert.equal(tavernRoute.firstChoiceLabel,"Follow them into the tavern");
+  assert.equal(tavernRoute.currentStoryteller.pending,null);
+  assert.equal(tavernRoute.currentStoryteller.history.at(-1).choiceId,"enter_tavern");
+  assert.equal(tavernRoute.activeScreen,"town");
+  assert.equal(tavernRoute.dialogueTitle,"Stranger","the tavern route must select the canonical suspicious_stranger scene anchor");
+  assert.ok(tavernRoute.dialogueButtons.includes("Investigate"),"investigation must remain an explicit player UI action");
+  assert.equal(tavernRoute.sceneResult,null,"the Storyteller route must not investigate the stranger automatically");
+  assert.equal(tavernRoute.dailyEvents["ashen_slums:tavern:1"],"suspicious_stranger");
+  assert.equal(tavernRoute.goldAfter,tavernRoute.goldBefore);
+  assert.equal(tavernRoute.storyCountAfter,tavernRoute.storyCountBefore + 1,"opening the tavern scene must not execute its Investigate action");
+  assert.equal(tavernRoute.savedStoryCount,tavernRoute.storyCountAfter);
+  assert.deepEqual(tavernRoute.savedStoryteller,tavernRoute.currentStoryteller);
+
+  const marketRoute = result.affirmativeRoutes.market;
+  assert.equal(marketRoute.response.success,true);
+  assert.equal(marketRoute.firstChoiceLabel,"Enter the market");
+  assert.equal(marketRoute.currentStoryteller.pending,null);
+  assert.equal(marketRoute.currentStoryteller.history.at(-1).choiceId,"enter_market");
+  assert.equal(marketRoute.activeScreen,"town");
+  assert.equal(marketRoute.dialogueTitle,"Cutpurse","the market route must select the canonical market_thief scene anchor");
+  assert.ok(marketRoute.dialogueButtons.includes("Chase"),"the chase must remain an explicit player UI action");
+  assert.equal(marketRoute.sceneResult,null,"the Storyteller route must not chase the cutpurse automatically");
+  assert.equal(marketRoute.dailyEvents["ashen_slums:market:1"],"market_thief");
+  assert.equal(marketRoute.goldAfter,marketRoute.goldBefore,"opening the cutpurse scene must not lose or award gold");
+  assert.equal(marketRoute.storyCountAfter,marketRoute.storyCountBefore + 1,"opening the market scene must not execute its Chase action");
+  assert.equal(marketRoute.savedGold,marketRoute.goldBefore);
+  assert.equal(marketRoute.savedStoryCount,marketRoute.storyCountAfter);
+  assert.deepEqual(marketRoute.savedStoryteller,marketRoute.currentStoryteller);
+  assert.deepEqual(errors,[],`Storyteller mutation browser test produced errors: ${errors.join(" | ")}`);
+  await page.close();
+}
+
 async function main(){
   const server = createStaticServer();
   await new Promise((resolve,reject)=>{
@@ -1772,14 +2332,16 @@ async function main(){
     await testDebugGating(browser,baseUrl,address.port);
     console.log("PASS local-only debug gate and public-host WebMCP discovery");
     await testStorytellerRegistrationFailure(browser,baseUrl);
-    console.log("PASS original eight tools and normal gameplay survive isolated Storyteller registration failure");
+    console.log("PASS original eight tools survive isolated Storyteller discovery/trigger registration failures");
     await testCourtLedgerProfile(browser,baseUrl);
     console.log(HACKATHON_PROFILE
-      ? "PASS hackathon artifact omits Court Ledger/payment UI and functions while preserving exactly nine WebMCP tools"
+      ? "PASS hackathon artifact omits Court Ledger/payment UI and functions while preserving exactly ten WebMCP tools"
       : "PASS normal development retains the existing Court Ledger UI and functions");
     await testWithWebMcp(browser,baseUrl);
     console.log(`PASS ${EXPECTED_TOOLS.join(", ")}`);
     console.log("PASS use_item/equip_item rules, persistence, UI synchronization, EN/ES, and failure immutability");
+    await testStorytellerMutation(browser,baseUrl);
+    console.log("PASS trigger_story_event tokens, guards, presentations, persistence, reload behavior, EN/ES UI, and failure immutability");
     console.log("PASS tool responses are whitelisted detached JSON snapshots");
   }finally{
     if(browser)await browser.close();

@@ -2,7 +2,7 @@
 
 Mobile-first dark fantasy RPG playtest (static PWA). **No bundler or compile step** — vanilla ES modules served over HTTP.
 
-**Cache version:** v132 (`2026.08.26-webmcp-57`)
+**Cache version:** v133 (`2026.08.27-webmcp-58`)
 
 ---
 
@@ -21,8 +21,8 @@ Open **http://127.0.0.1:43123** in your browser.
 |---------|----------------|
 | `npm run dev` | Serves the game on port **43123** via [`serve`](https://www.npmjs.com/package/serve) |
 | `npm start` | Alias for `npm run dev` |
-| `npm run qa:storyteller` | Runs the pure Storyteller catalog and eligibility tests |
-| `npm run qa:webmcp` | Runs normal-game, PWA, and all nine WebMCP regression tests |
+| `npm run qa:storyteller` | Runs the pure Storyteller catalog, eligibility, and save-transition tests |
+| `npm run qa:webmcp` | Runs normal-game, PWA, and all ten WebMCP regression tests |
 | `npm run prepare:deployment` | Rebuilds the explicit `hackathon` allowlisted artifact in `dist/public/` |
 | `npm run qa:public` | Builds, audits, and browser-tests the artifact at a nested URL path |
 
@@ -35,7 +35,7 @@ Open **http://127.0.0.1:43123** in your browser.
 
 ## WebMCP Challenge integration
 
-`src/webmcp.js` is a thin adapter over the live game. It registers exactly nine tools—seven read-only and two guarded mutations—when a browser provides `document.modelContext.registerTool` or `navigator.modelContext.registerTool`:
+`src/webmcp.js` is a thin adapter over the live game. It registers exactly ten tools—seven read-only and three guarded mutations—when a browser provides `document.modelContext.registerTool` or `navigator.modelContext.registerTool`:
 
 | Tool | Mode | Canonical routing |
 |---|---|---|
@@ -48,16 +48,19 @@ Open **http://127.0.0.1:43123** in your browser.
 | `get_storyteller_options` | Read-only | Pure game-owned eligibility selector for three predefined non-combat Storyteller events |
 | `use_item` | Guarded mutation | `combat.executeSupportedPotionUse`; health and mana potions only |
 | `equip_item` | Guarded mutation | Availability check plus canonical `gear.equip(id)` |
+| `trigger_story_event` | Guarded mutation | Exact event/token revalidation followed by the game-owned Storyteller presentation runtime |
 
 All responses are detached JSON-safe projections. Mutations use fixed schemas, accept no function names or arbitrary objects, revalidate immediately before execution, and require observed live/save postconditions before reporting success. The adapter does not introduce a save schema, state store, backend, or alternate gameplay rules.
 
-`get_storyteller_options` can only inspect eligible predefined IDs: `cinderhook_warning_messenger`, `tavern_suspicious_stranger`, and `market_cutpurse`. It returns fixed EN/ES setup and human-choice copy plus an in-memory observation token. It does not present, trigger, queue, save, or resolve an event, and no `trigger_story_event` tool exists.
+`get_storyteller_options` can only inspect eligible predefined IDs: `cinderhook_warning_messenger`, `tavern_suspicious_stranger`, and `market_cutpurse`. Each eligible event receives its own secure, in-memory token. `trigger_story_event` accepts only an exact offered event ID and its matching token, revalidates the live save slot and complete eligibility snapshot, and presents the fixed EN/ES event modal.
 
-`get_available_actions` explicitly separates WebMCP-invocable tools from valid actions that remain player/UI controlled. No WebMCP tool can travel, fight, use abilities, talk to NPCs, accept or claim quests, trigger Storyteller events, run arbitrary JavaScript, or invoke arbitrary `FE.*` functions.
+The event modal's buttons remain exclusively human-controlled. WebMCP cannot supply a choice ID, click a choice, resolve the event, travel, fight, use abilities, choose dialogue, interact with NPCs, accept or claim quests, run arbitrary JavaScript, or invoke arbitrary `FE.*` functions. A lazily created `world.storyteller` subtree stores only bounded pending/history/cooldown identifiers inside the existing save system; legacy saves without that subtree remain valid.
+
+`get_available_actions` explicitly separates WebMCP-invocable tools from valid actions that remain player/UI controlled.
 
 Browsers without WebMCP still run the full game normally. For WebMCP testing, use the ChatGPT in-app browser or Google Chrome with the experimental WebMCP flag/origin trial, as described on the [official OpenAI WebMCP Challenge page](https://openai.com/webmcp-challenge/). Service-worker/PWA behavior requires HTTPS or localhost.
 
-Challenge review lineage on GitHub: pre-WebMCP baseline `33ddfab87e052e01c6d49c16dcd5d36e77b6c9a2`; four reads `70acab60c2ed8b48f3cba50b06af9fb4cadd1370`; six reads `32b31d5bde2f405d2579eeb40c064e63ef70c73a`; approved eight-tool checkpoint `2425895704f1d6cb2dbf908d3eb7a65061c96b81` on `webmcp-challenge`.
+Challenge review lineage on GitHub: pre-WebMCP baseline `33ddfab87e052e01c6d49c16dcd5d36e77b6c9a2`; four reads `70acab60c2ed8b48f3cba50b06af9fb4cadd1370`; six reads `32b31d5bde2f405d2579eeb40c064e63ef70c73a`; approved eight-tool checkpoint `2425895704f1d6cb2dbf908d3eb7a65061c96b81`. The local Storyteller read/eligibility checkpoint is `128e6f19d7f44b52633f85693c23e8ebe74f371e` on `webmcp-challenge`.
 
 ### Debug mode
 
@@ -294,7 +297,7 @@ Playtest checkout grants items locally without charging when Stripe URLs are not
 ## PWA and caching
 
 - Bump the synchronized `?v=` query strings, service-worker/`src/pwa.js` build identifiers, and `version.json` together when shipping changes.
-- Current: **v132** (`2026.08.26-webmcp-57`)
+- Current: **v133** (`2026.08.27-webmcp-58`)
 - The install event precaches the complete static runtime module graph plus the required boot/recovery assets, so the first successful online visit can reload offline without a second online refresh.
 - Boot and recovery controls delete only `beneath-throne-*` caches and unregister only the worker whose scope exactly matches this app; sibling workers and saves are preserved.
 - Users can clear cache via boot fallback button or browser devtools.
@@ -308,7 +311,7 @@ npm run qa:public
 
 The builder writes `dist/public/` and `dist/deployment-manifest.json`. `npm run prepare:deployment` passes the required `--profile hackathon` flag; a direct invocation without that explicit profile fails closed. Its allowlist contains runtime HTML/CSS/PWA files, native runtime modules, images, and PWA icons. It excludes scripts, package/dependency files, QA output, `agent-tools`, logs, environment files, READMEs, and local filesystem paths.
 
-The `hackathon` profile transforms only the generated artifact. It omits `src/supporterStore.js`, removes the Court Ledger screen/routes and payment/mock-grant copy, and gives the artifact a distinct version and service-worker cache suffix. Normal development keeps the Court Ledger unchanged. The profile does not alter `src/webmcp.js`, the save schema, gameplay rules, or licensing text. `npm run qa:public` proves both halves, audits the artifact module/precache graph, and runs the complete browser-backed game/PWA/nine-tool regression suite at a nested URL path. `dist/` is gitignored and no hosting provider is configured.
+The `hackathon` profile transforms only the generated artifact. It omits `src/supporterStore.js`, removes the Court Ledger screen/routes and payment/mock-grant copy, and gives the artifact a distinct version and service-worker cache suffix. Normal development keeps the Court Ledger unchanged. The profile does not alter `src/webmcp.js`, the save schema, gameplay rules, or licensing text. `npm run qa:public` proves both halves, audits the artifact module/precache graph, and runs the complete browser-backed game/PWA/ten-tool regression suite at a nested URL path. `dist/` is gitignored and no hosting provider is configured.
 
 ---
 

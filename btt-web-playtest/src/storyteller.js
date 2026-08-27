@@ -47,8 +47,22 @@ const EVENT_DEFINITIONS = deepFreeze([
       }
     },
     choices:[
-      {id:"hear_warning",label:{en:"Hear the warning",es:"Escuchar la advertencia"}},
-      {id:"send_away",label:{en:"Send the messenger away",es:"Despedir al mensajero"}}
+      {
+        id:"hear_warning",
+        label:{en:"Hear the warning",es:"Escuchar la advertencia"},
+        outcome:{
+          en:"The warning is plain: pay the Dock Rats, break them, or never reach the gate unseen.",
+          es:"La advertencia es clara: paga a las Ratas del Muelle, acaba con ellas o nunca llegarás a la puerta sin que te vean."
+        }
+      },
+      {
+        id:"send_away",
+        label:{en:"Send the messenger away",es:"Despedir al mensajero"},
+        outcome:{
+          en:"You send the messenger away. The warning remains in the soot on your door.",
+          es:"Despides al mensajero. La advertencia permanece en el hollín de tu puerta."
+        }
+      }
     ]
   },
   {
@@ -74,8 +88,22 @@ const EVENT_DEFINITIONS = deepFreeze([
       }
     },
     choices:[
-      {id:"enter_tavern",label:{en:"Follow them into the tavern",es:"Seguirlo dentro de la taberna"}},
-      {id:"let_them_leave",label:{en:"Let them leave",es:"Dejar que se marche"}}
+      {
+        id:"enter_tavern",
+        label:{en:"Follow them into the tavern",es:"Seguirlo dentro de la taberna"},
+        outcome:{
+          en:"You follow the stranger into the tavern, where the crowd swallows their trail.",
+          es:"Sigues al desconocido hasta la taberna, donde la multitud se traga su rastro."
+        }
+      },
+      {
+        id:"let_them_leave",
+        label:{en:"Let them leave",es:"Dejar que se marche"},
+        outcome:{
+          en:"You let the stranger disappear into the street.",
+          es:"Dejas que el desconocido desaparezca entre las calles."
+        }
+      }
     ]
   },
   {
@@ -101,13 +129,31 @@ const EVENT_DEFINITIONS = deepFreeze([
       }
     },
     choices:[
-      {id:"enter_market",label:{en:"Enter the market",es:"Entrar al mercado"}},
-      {id:"guard_purse",label:{en:"Guard your purse and move on",es:"Proteger tu bolsa y seguir adelante"}}
+      {
+        id:"enter_market",
+        label:{en:"Enter the market",es:"Entrar al mercado"},
+        outcome:{
+          en:"You enter the market with one hand near your coin purse.",
+          es:"Entras al mercado con una mano cerca de la bolsa de monedas."
+        }
+      },
+      {
+        id:"guard_purse",
+        label:{en:"Guard your purse and move on",es:"Proteger tu bolsa y seguir adelante"},
+        outcome:{
+          en:"You secure your purse and leave the cutpurse searching for an easier mark.",
+          es:"Aseguras tu bolsa y dejas que el carterista busque una presa más fácil."
+        }
+      }
     ]
   }
 ]);
 
 export const STORYTELLER_EVENT_IDS = Object.freeze(EVENT_DEFINITIONS.map(event=>event.id));
+
+const STORYTELLER_STATE_VERSION = 1;
+const STORYTELLER_HISTORY_LIMIT = 20;
+const STORYTELLER_GLOBAL_COOLDOWN_DAYS = 1;
 
 const BLOCKED_COPY = deepFreeze({
   no_active_game:{
@@ -181,6 +227,267 @@ function calendarContext(world){
   return valid
     ? {month,day,ordinal:(month - 1) * 30 + day,valid:true}
     : {month:null,day:null,ordinal:null,valid:false};
+}
+
+function nonNegativeInteger(value,fallback = 0){
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 0 ? number : fallback;
+}
+
+function positiveOrdinal(value){
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 1 ? number : null;
+}
+
+function eventById(eventId){
+  return typeof eventId === "string" ? EVENT_DEFINITIONS.find(event=>event.id === eventId) || null : null;
+}
+
+function choiceById(event,choiceId){
+  return event && typeof choiceId === "string"
+    ? event.choices.find(choice=>choice.id === choiceId) || null
+    : null;
+}
+
+function normalizedPending(value){
+  if(!value || typeof value !== "object" || Array.isArray(value))return null;
+  const event = eventById(value.eventId ?? value.event_id);
+  const sequence = nonNegativeInteger(value.sequence,0);
+  const locationId = typeof (value.locationId ?? value.location_id) === "string"
+    ? String(value.locationId ?? value.location_id)
+    : "";
+  const calendarOrdinal = positiveOrdinal(value.calendarOrdinal ?? value.calendar_ordinal);
+  const status = value.status === "pending" ? "presented" : value.status;
+  if(!event || sequence < 1 || !locationId || calendarOrdinal === null || status !== "presented")return null;
+  return {sequence,eventId:event.id,status:"presented",locationId,calendarOrdinal};
+}
+
+function normalizedHistoryRow(value){
+  if(!value || typeof value !== "object" || Array.isArray(value))return null;
+  const event = eventById(value.eventId ?? value.event_id);
+  const sequence = nonNegativeInteger(value.sequence,0);
+  const locationId = typeof (value.locationId ?? value.location_id) === "string"
+    ? String(value.locationId ?? value.location_id)
+    : "";
+  const calendarOrdinal = positiveOrdinal(value.calendarOrdinal ?? value.calendar_ordinal);
+  const status = value.status === "pending" ? "presented" : value.status;
+  if(!event || sequence < 1 || !locationId || calendarOrdinal === null || !["presented","resolved"].includes(status))return null;
+  const choice = choiceById(event,value.choiceId ?? value.choice_id ?? value.outcomeId ?? value.outcome_id);
+  if(status === "resolved" && !choice)return null;
+  return {
+    sequence,
+    eventId:event.id,
+    status,
+    choiceId:choice?.id || null,
+    outcomeId:choice?.id || null,
+    locationId,
+    calendarOrdinal,
+    resolvedOrdinal:status === "resolved"
+      ? positiveOrdinal(value.resolvedOrdinal ?? value.resolved_ordinal) || calendarOrdinal
+      : null
+  };
+}
+
+function normalizedLastEventRecord(value,event,history){
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const rows = history.filter(row=>row.eventId === event.id);
+  const lastHistoryOrdinal = rows.length ? Math.max(...rows.map(row=>row.calendarOrdinal)) : null;
+  const explicitLastOrdinal = positiveOrdinal(
+    source.lastOrdinal ?? source.calendarOrdinal ?? source.calendar_ordinal
+  );
+  const lastOrdinal = explicitLastOrdinal ?? lastHistoryOrdinal;
+  const explicitEligibleAfter = positiveOrdinal(
+    source.eligibleAfterOrdinal ?? source.eligible_after_ordinal
+  );
+  const lastChoice = choiceById(event,source.lastChoiceId ?? source.last_choice_id ?? source.outcomeId ?? source.outcome_id);
+  return {
+    seenCount:Math.max(nonNegativeInteger(
+      source.seenCount ?? source.seen_count ?? source.occurrenceCount ?? source.occurrence_count,
+      0
+    ),rows.length),
+    lastOrdinal,
+    eligibleAfterOrdinal:explicitEligibleAfter ?? (lastOrdinal === null ? null : lastOrdinal + event.cooldownDays),
+    lastChoiceId:lastChoice?.id || null,
+    status:source.status === "presented"
+      ? "presented"
+      : source.status === "resolved"
+        ? "resolved"
+        : rows[rows.length - 1]?.status || null
+  };
+}
+
+export function createStorytellerState(){
+  return {
+    version:STORYTELLER_STATE_VERSION,
+    sequence:0,
+    pending:null,
+    globalEligibleAfterOrdinal:0,
+    lastByEvent:{},
+    history:[]
+  };
+}
+
+export function normalizeStorytellerState(value){
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  let history = (Array.isArray(source.history) ? source.history : [])
+    .map(normalizedHistoryRow)
+    .filter(Boolean)
+    .slice(-STORYTELLER_HISTORY_LIMIT);
+  let pending = normalizedPending(source.pending ?? source.active);
+  if(pending){
+    const rowsAtSequence = history.filter(row=>row.sequence === pending.sequence);
+    const exactPresentedRow = rowsAtSequence.length === 1
+      && rowsAtSequence[0].eventId === pending.eventId
+      && rowsAtSequence[0].status === "presented"
+      && rowsAtSequence[0].locationId === pending.locationId
+      && rowsAtSequence[0].calendarOrdinal === pending.calendarOrdinal;
+    if(!rowsAtSequence.length){
+      history = [...history,{
+        sequence:pending.sequence,
+        eventId:pending.eventId,
+        status:"presented",
+        choiceId:null,
+        outcomeId:null,
+        locationId:pending.locationId,
+        calendarOrdinal:pending.calendarOrdinal,
+        resolvedOrdinal:null
+      }].slice(-STORYTELLER_HISTORY_LIMIT);
+    }else if(!exactPresentedRow){
+      pending = null;
+    }
+  }
+  const lastSource = source.lastByEvent && typeof source.lastByEvent === "object" && !Array.isArray(source.lastByEvent)
+    ? source.lastByEvent
+    : {};
+  const lastByEvent = Object.fromEntries(EVENT_DEFINITIONS.flatMap(event=>{
+    const record = normalizedLastEventRecord(lastSource[event.id],event,history);
+    return record.seenCount || record.lastOrdinal !== null || record.eligibleAfterOrdinal !== null || record.lastChoiceId || record.status
+      ? [[event.id,record]]
+      : [];
+  }));
+  const highestSequence = Math.max(
+    nonNegativeInteger(source.sequence,0),
+    pending?.sequence || 0,
+    ...history.map(row=>row.sequence)
+  );
+  return {
+    version:STORYTELLER_STATE_VERSION,
+    sequence:highestSequence,
+    pending,
+    globalEligibleAfterOrdinal:nonNegativeInteger(
+      source.globalEligibleAfterOrdinal ?? source.global_eligible_after_ordinal,
+      0
+    ),
+    lastByEvent,
+    history
+  };
+}
+
+export function ensureStorytellerState(world){
+  return normalizeStorytellerState(world?.storyteller);
+}
+
+function transitionFailure(code,message,state){
+  return {ok:false,state:normalizeStorytellerState(state),error:{code,message}};
+}
+
+export function beginStorytellerPresentation(storyState,{eventId,locationId,calendarOrdinal} = {}){
+  const current = normalizeStorytellerState(storyState);
+  const event = eventById(eventId);
+  const ordinal = positiveOrdinal(calendarOrdinal);
+  if(!event)return transitionFailure("unknown_event","The Storyteller event ID is not defined by the game.",current);
+  if(current.pending)return transitionFailure("pending_story_event","A Storyteller event is already awaiting a player choice.",current);
+  if(typeof locationId !== "string" || !locationId)return transitionFailure("location_mismatch","The Storyteller event location is unavailable.",current);
+  if(ordinal === null)return transitionFailure("context_unavailable","The Storyteller calendar context is unavailable.",current);
+  const sequence = current.sequence + 1;
+  const pending = {sequence,eventId:event.id,status:"presented",locationId,calendarOrdinal:ordinal};
+  const historyRow = {
+    sequence,
+    eventId:event.id,
+    status:"presented",
+    choiceId:null,
+    outcomeId:null,
+    locationId,
+    calendarOrdinal:ordinal,
+    resolvedOrdinal:null
+  };
+  const previous = current.lastByEvent[event.id] || {
+    seenCount:0,
+    lastOrdinal:null,
+    eligibleAfterOrdinal:null,
+    lastChoiceId:null,
+    status:null
+  };
+  const next = {
+    ...current,
+    sequence,
+    pending,
+    lastByEvent:{
+      ...current.lastByEvent,
+      [event.id]:{
+        ...previous,
+        seenCount:previous.seenCount + 1,
+        lastOrdinal:ordinal,
+        eligibleAfterOrdinal:ordinal + event.cooldownDays,
+        lastChoiceId:null,
+        status:"presented"
+      }
+    },
+    history:[...current.history,historyRow].slice(-STORYTELLER_HISTORY_LIMIT)
+  };
+  return {ok:true,state:next,pending:{...pending},error:null};
+}
+
+export function resolveStorytellerChoice(storyState,{eventId,choiceId,resolvedOrdinal} = {}){
+  const current = normalizeStorytellerState(storyState);
+  const event = eventById(eventId);
+  const choice = choiceById(event,choiceId);
+  if(!event)return transitionFailure("unknown_event","The Storyteller event ID is not defined by the game.",current);
+  if(!choice)return transitionFailure("unknown_choice","The Storyteller choice ID is not defined for this event.",current);
+  if(!current.pending)return transitionFailure("no_pending_story_event","No Storyteller event is awaiting a player choice.",current);
+  if(current.pending.eventId !== event.id)return transitionFailure("pending_event_mismatch","The pending Storyteller event does not match this choice.",current);
+  const rowIndex = current.history.findIndex(row=>row.sequence === current.pending.sequence && row.eventId === event.id);
+  if(rowIndex < 0)return transitionFailure("pending_history_missing","The pending Storyteller history record is unavailable.",current);
+  const resolutionOrdinal = positiveOrdinal(resolvedOrdinal) || current.pending.calendarOrdinal;
+  const history = current.history.map((row,index)=>index === rowIndex ? {
+    ...row,
+    status:"resolved",
+    choiceId:choice.id,
+    outcomeId:choice.id,
+    resolvedOrdinal:resolutionOrdinal
+  } : row);
+  const previous = current.lastByEvent[event.id] || normalizedLastEventRecord({},event,history);
+  const next = {
+    ...current,
+    pending:null,
+    globalEligibleAfterOrdinal:Math.max(
+      current.globalEligibleAfterOrdinal,
+      resolutionOrdinal + STORYTELLER_GLOBAL_COOLDOWN_DAYS
+    ),
+    lastByEvent:{
+      ...current.lastByEvent,
+      [event.id]:{
+        ...previous,
+        lastChoiceId:choice.id,
+        status:"resolved"
+      }
+    },
+    history
+  };
+  return {
+    ok:true,
+    state:next,
+    resolution:{
+      sequence:current.pending.sequence,
+      eventId:event.id,
+      choiceId:choice.id,
+      outcomeId:choice.id,
+      locationId:current.pending.locationId,
+      calendarOrdinal:current.pending.calendarOrdinal,
+      resolvedOrdinal:resolutionOrdinal
+    },
+    error:null
+  };
 }
 
 function storytellerState(world){
@@ -320,6 +627,27 @@ function eventProgressionEligible(event,{gameState,questSections}){
   return true;
 }
 
+function selectEventEligibilityState(event,{blockCode,placeContext,actionIds,gameState,questSections,storyState,history,calendar}){
+  const eligibleAfterOrdinal = eventEligibleAfterOrdinal(storyState,history,event);
+  const daysRemaining = calendar.valid && eligibleAfterOrdinal !== null
+    ? Math.max(0,eligibleAfterOrdinal - calendar.ordinal)
+    : 0;
+  let reasonCode = blockCode;
+  if(!reasonCode && !event.eligibleLocationIds.includes(placeContext.id))reasonCode = "location_not_supported";
+  if(!reasonCode && !actionIds.includes(event.requiredActionId))reasonCode = "required_action_unavailable";
+  if(!reasonCode && !eventProgressionEligible(event,{gameState,questSections}))reasonCode = "progression_requirement_unmet";
+  const count = occurrenceCount(storyState,history,event.id);
+  if(!reasonCode && Number.isFinite(event.maxOccurrences) && count >= event.maxOccurrences)reasonCode = "max_occurrences_reached";
+  if(!reasonCode && daysRemaining > 0)reasonCode = "event_cooldown";
+  return {
+    eventId:event.id,
+    eligible:reasonCode === null,
+    reasonCode:reasonCode || null,
+    eligibleAfterOrdinal,
+    daysRemaining
+  };
+}
+
 function projectEligibleEvent(event,{language,placeContext,storyState,history,calendar}){
   const count = occurrenceCount(storyState,history,event.id);
   return {
@@ -360,6 +688,23 @@ function blockedMessage(code,language){
 
 export function getStorytellerEventIds(){
   return [...STORYTELLER_EVENT_IDS];
+}
+
+export function selectStorytellerPresentation(eventId,language = "en"){
+  const event = eventById(eventId);
+  if(!event)return null;
+  const lang = languageCode(language);
+  return {
+    id:event.id,
+    category:event.category,
+    title:localized(event.copy?.[lang]?.title || event.copy?.en?.title,lang),
+    setup:localized(event.copy?.[lang]?.setup || event.copy?.en?.setup,lang),
+    choices:event.choices.map(choice=>({
+      id:choice.id,
+      label:localized(choice.label,lang),
+      outcome:localized(choice.outcome,lang)
+    }))
+  };
 }
 
 export function selectStorytellerOptions({
@@ -403,19 +748,20 @@ export function selectStorytellerOptions({
     calendar
   };
 
-  let eligibleEvents = [];
-  if(!blockCode){
-    eligibleEvents = EVENT_DEFINITIONS.filter(event=>{
-      if(!event.eligibleLocationIds.includes(placeContext.id))return false;
-      if(!actionIds.includes(event.requiredActionId))return false;
-      if(!eventProgressionEligible(event,{gameState,questSections}))return false;
-      const count = occurrenceCount(storyState,history,event.id);
-      if(Number.isFinite(event.maxOccurrences) && count >= event.maxOccurrences)return false;
-      const eligibleAfter = eventEligibleAfterOrdinal(storyState,history,event);
-      if(eligibleAfter !== null && eligibleAfter > calendar.ordinal)return false;
-      return true;
-    }).map(event=>projectEligibleEvent(event,{language:lang,placeContext,storyState,history,calendar}));
-  }
+  const eventEligibilityStates = EVENT_DEFINITIONS.map(event=>selectEventEligibilityState(event,{
+    blockCode,
+    placeContext,
+    actionIds,
+    gameState,
+    questSections,
+    storyState,
+    history,
+    calendar
+  }));
+  const eligibleEventIds = new Set(eventEligibilityStates.filter(item=>item.eligible).map(item=>item.eventId));
+  const eligibleEvents = EVENT_DEFINITIONS
+    .filter(event=>eligibleEventIds.has(event.id))
+    .map(event=>projectEligibleEvent(event,{language:lang,placeContext,storyState,history,calendar}));
 
   const resultReasonCode = blockCode || (eligibleEvents.length ? null : "no_eligible_events");
   const eventEligibilityState = EVENT_DEFINITIONS.map(event=>({
@@ -478,6 +824,7 @@ export function selectStorytellerOptions({
       globalReady:calendar.valid === true && globalDaysRemaining === 0,
       globalDaysRemaining
     },
+    eventEligibilityStates,
     eligibleEvents
   };
 }
