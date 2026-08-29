@@ -1847,6 +1847,18 @@ async function testStorytellerMutation(browser,baseUrl){
     const baseline = JSON.parse(JSON.stringify(stateModule.state));
     const saveKey = "fallenEmpireSave_1";
     const pause = (ms = 30)=>new Promise(resolve=>setTimeout(resolve,ms));
+    const waitForInvariant = async(predicate,label,timeoutMs = 5000)=>{
+      const deadline = Date.now() + timeoutMs;
+      while(Date.now() < deadline){
+        if(predicate())return;
+        await pause(16);
+      }
+      throw new Error(`Timed out waiting for ${label}`);
+    };
+    const isOnlyActiveScreen = id=>{
+      const activeScreens = [...document.querySelectorAll(".screen.active")];
+      return activeScreens.length === 1 && activeScreens[0].id === id;
+    };
     const clearUi = ()=>{
       window.FE.closeModals();
       document.querySelectorAll(".level-up-back,.encounter-transition,.court-crier-overlay,.toast").forEach(node=>node.remove());
@@ -1859,7 +1871,12 @@ async function testStorytellerMutation(browser,baseUrl){
       stateModule.setState(JSON.parse(JSON.stringify(baseline)));
       window.FE.show("home");
       stateModule.save(1);
-      await pause();
+      await waitForInvariant(
+        ()=>stateModule.currentScreen === "home"
+          && isOnlyActiveScreen("home")
+          && !document.querySelector(".screen.screen-leave"),
+        "the reset home screen to finish rendering"
+      );
       clearUi();
     };
     const storageSnapshot = ()=>JSON.stringify(Object.keys(localStorage).sort().map(key=>[key,localStorage.getItem(key)]));
@@ -1949,7 +1966,33 @@ async function testStorytellerMutation(browser,baseUrl){
       const marker = document.querySelector(`[data-storyteller-event="${eventId}"]`);
       const firstChoiceLabel = marker?.closest(".modal-back")?.querySelector("button")?.textContent?.trim() || null;
       marker?.closest(".modal-back")?.querySelector("button")?.click();
-      await pause(100);
+      if(eventId === eventIds[0]){
+        await waitForInvariant(()=>{
+          const modalRoot = document.querySelector(".modal-back");
+          const modalTitle = modalRoot?.querySelector("h2")?.textContent?.trim();
+          const modalButtons = [...(modalRoot?.querySelectorAll("button") || [])].map(button=>button.textContent.trim());
+          return stateModule.state.world.storyteller?.pending == null
+            && modalTitle === "Gang Pressure"
+            && modalButtons.includes("Pay 12 Gold")
+            && modalButtons.includes("Refuse Enforcer");
+        },`${eventId} to open the player-owned gang decision`);
+      }else{
+        const expectation = eventId === eventIds[1]
+          ? {service:"tavern",event:"suspicious_stranger",title:"Stranger",action:"Investigate"}
+          : {service:"market",event:"market_thief",title:"Cutpurse",action:"Chase"};
+        await waitForInvariant(()=>{
+          const dialogue = document.querySelector("#town .scene-dialogue-panel");
+          const dialogueTitle = dialogue?.querySelector("h2")?.textContent?.trim();
+          const dialogueButtons = [...(dialogue?.querySelectorAll("button") || [])].map(button=>button.textContent.trim());
+          const eventKey = `${stateModule.state.world.locationId}:${expectation.service}:${stateModule.state.world.day}`;
+          return stateModule.state.world.storyteller?.pending == null
+            && stateModule.currentScreen === "town"
+            && isOnlyActiveScreen("town")
+            && stateModule.state.world.dailyLocationEvents?.[eventKey] === expectation.event
+            && dialogueTitle === expectation.title
+            && dialogueButtons.includes(expectation.action);
+        },`${eventId} to finish its player-owned town route`);
+      }
       const activeScreen = document.querySelector(".screen.active")?.id || null;
       const modalRoot = document.querySelector(".modal-back");
       const dialogue = document.querySelector("#town .scene-dialogue-panel");
